@@ -23,8 +23,8 @@
  *
  *   p96cts CAPTURE                capture the reference into golden/clut/
  *   p96cts MONITOR=Z3660 DIFF     run on the board, compare against
- *                                 golden/clut/, write output/Z3660/<test>.bmp
- *                                 and, on mismatch, <test>.diff.bmp
+ *                                 golden/clut/, write output/Z3660/<test>.png
+ *                                 and, on mismatch, <test>.diff.png
  *   p96cts LIST                   dump the display database and exit
  *
  * TEST/M names the testcases to run; all of them by default.
@@ -64,105 +64,6 @@ void p96cts_clear(struct RastPort *rp, int w, int h, int pen) {
     SetDrMd(rp, JAM1);
     SetAPen(rp, pen);
     RectFill(rp, 0, 0, w - 1, h - 1);
-}
-
-/* --- indexed BMP (8-bit, uncompressed, bottom-up) ------------------------- */
-
-static void put_le32(UBYTE *p, ULONG v) {
-    p[0] = v;
-    p[1] = v >> 8;
-    p[2] = v >> 16;
-    p[3] = v >> 24;
-}
-
-static int write_bmp8(const char *path, const UBYTE *idx, int w, int h) {
-    int row_stride = (w + 3) & ~3;
-    ULONG data_size = (ULONG)row_stride * h;
-    UBYTE header[54];
-    UBYTE pal[256 * 4];
-    BPTR f;
-    int y, i;
-    UBYTE *line;
-
-    memset(header, 0, sizeof header);
-    header[0] = 'B';
-    header[1] = 'M';
-    put_le32(header + 2, 54 + sizeof(pal) + data_size);
-    put_le32(header + 10, 54 + sizeof(pal));
-    put_le32(header + 14, 40);
-    put_le32(header + 18, w);
-    put_le32(header + 22, h);
-    header[26] = 1;
-    header[28] = 8;
-    put_le32(header + 34, data_size);
-    put_le32(header + 46, 256);
-
-    /* B,G,R,0. Pens 0-4 are named colours, the rest a 3-3-2 RGB cube.
-     * A grey ramp would be useless here: COMPLEMENT turns pen 1 into pen 254
-     * and pen 0 into pen 255, which as greys are indistinguishable from the
-     * white they inverted, making the scene look blank. Under 3-3-2 they come
-     * out as clearly different colours. */
-    for (i = 0; i < 256; i++) {
-        pal[i * 4 + 0] = (UBYTE)(((i >> 6) & 3) * 85); /* B */
-        pal[i * 4 + 1] = (UBYTE)(((i >> 3) & 7) * 36); /* G */
-        pal[i * 4 + 2] = (UBYTE)((i & 7) * 36);        /* R */
-        pal[i * 4 + 3] = 0;
-    }
-    pal[0] = pal[1] = pal[2] = 0;               /* black */
-    pal[4] = pal[5] = pal[6] = 255;             /* white */
-    pal[8] = 0; pal[9] = 0; pal[10] = 255;      /* red   */
-    pal[12] = 0; pal[13] = 255; pal[14] = 0;    /* green */
-    pal[16] = 255; pal[17] = 0; pal[18] = 0;    /* blue  */
-    pal[20] = pal[21] = pal[22] = 64;           /* dim grey: diff context */
-
-    f = Open((STRPTR)path, MODE_NEWFILE);
-    if (!f) {
-        printf("cannot create %s\n", path);
-        return 1;
-    }
-    Write(f, header, 54);
-    Write(f, pal, sizeof pal);
-    line = AllocVec(row_stride, MEMF_CLEAR);
-    for (y = h - 1; y >= 0; y--) {
-        CopyMem((APTR)(idx + (ULONG)y * w), line, w);
-        Write(f, line, row_stride);
-    }
-    FreeVec(line);
-    Close(f);
-    return 0;
-}
-
-static UBYTE *read_bmp8(const char *path, int *w, int *h) {
-    UBYTE header[54];
-    BPTR f = Open((STRPTR)path, MODE_OLDFILE);
-    int bw, bh, row_stride, y;
-    ULONG offset;
-    UBYTE *idx, *line;
-
-    if (!f)
-        return NULL;
-    if (Read(f, header, 54) != 54 || header[0] != 'B' || header[1] != 'M' ||
-        header[28] != 8) {
-        printf("%s is not an 8-bit BMP\n", path);
-        Close(f);
-        return NULL;
-    }
-    bw = header[18] | (header[19] << 8) | (header[20] << 16) | (header[21] << 24);
-    bh = header[22] | (header[23] << 8) | (header[24] << 16) | (header[25] << 24);
-    offset = header[10] | (header[11] << 8) | (header[12] << 16) | (header[13] << 24);
-    row_stride = (bw + 3) & ~3;
-    Seek(f, offset, OFFSET_BEGINNING);
-    idx = AllocVec((ULONG)bw * bh, MEMF_ANY);
-    line = AllocVec(row_stride, MEMF_ANY);
-    for (y = bh - 1; y >= 0; y--) {
-        Read(f, line, row_stride);
-        CopyMem(line, (APTR)(idx + (ULONG)y * bw), bw);
-    }
-    FreeVec(line);
-    Close(f);
-    *w = bw;
-    *h = bh;
-    return idx;
 }
 
 /* --- display database ----------------------------------------------------- */
@@ -329,10 +230,10 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
 
     t->fn(rp, o->w, o->h);
     idx = read_pens(rp, o->w, o->h, o->depth);
-    sprintf(path, "%s/%s.bmp", o->dir, t->name);
+    sprintf(path, "%s/%s.png", o->dir, t->name);
 
     if (o->capture) {
-        if (write_bmp8(path, idx, o->w, o->h))
+        if (p96cts_write_png(path, idx, o->w, o->h))
             failed = 1;
         else
             printf("captured %s\n", path);
@@ -340,9 +241,9 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
         return failed;
     }
 
-    write_bmp8(path, idx, o->w, o->h); /* keep the run image beside the golden */
-    sprintf(path, "%s/%s.bmp", o->golden_dir, t->name);
-    gold = read_bmp8(path, &gw, &gh);
+    p96cts_write_png(path, idx, o->w, o->h); /* keep the run image beside the golden */
+    sprintf(path, "%s/%s.png", o->golden_dir, t->name);
+    gold = p96cts_read_png(path, &gw, &gh);
     if (!gold) {
         printf("FAIL %-18s no golden at %s\n", t->name, path);
         FreeVec(idx);
@@ -390,8 +291,8 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
                     ULONG p = (ULONG)y * o->w + x;
                     d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
                 }
-            sprintf(path, "%s/%s.diff.bmp", o->dir, t->name);
-            write_bmp8(path, d, o->w, o->h);
+            sprintf(path, "%s/%s.diff.png", o->dir, t->name);
+            p96cts_write_png(path, d, o->w, o->h);
             FreeVec(d);
         }
     }

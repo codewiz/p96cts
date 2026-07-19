@@ -20,7 +20,12 @@ CC       = m68k-amigaos-gcc
 P96INC  ?= /opt/amiga/m68k-amigaos/include
 
 TARGET   = p96cts
-OBJS     = p96cts.o drawline.o
+OBJS     = p96cts.o drawline.o png.o
+
+# zlib and libpng, built for this target and committed. See
+# third_party/README.md for provenance and how to rebuild them.
+PNGINC   = -Ithird_party/libpng/include -Ithird_party/zlib/include
+PNGLIB   = third_party/libpng/lib/libpng16.a third_party/zlib/lib/libz.a
 
 # Strict enough to catch the usual C mistakes without fighting the Amiga
 # headers. -Wstrict-prototypes and -Wold-style-definition matter here because
@@ -32,12 +37,14 @@ CFLAGS  ?= -O2 $(WARNINGS)
 
 # Kept apart from CFLAGS: a command-line CFLAGS= replaces the variable
 # entirely, and dropping -noixemul or the include path breaks the link.
-ALL_CFLAGS = $(CFLAGS) -noixemul -I$(P96INC)
+ALL_CFLAGS = $(CFLAGS) -noixemul -I$(P96INC) $(PNGINC)
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS)
+# libpng needs libm for its gamma arithmetic; both are software floating
+# point, so no FPU is required at runtime.
+$(TARGET): $(OBJS) $(PNGLIB)
+	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNGLIB) -lm
 
 %.o: %.c p96cts.h
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<

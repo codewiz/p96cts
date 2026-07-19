@@ -9,6 +9,8 @@
 #ifndef P96CTS_H
 #define P96CTS_H
 
+#include <exec/types.h>
+
 struct RastPort;
 
 /* One testcase: render a complete scene into rp, which is w x h pixels.
@@ -27,6 +29,11 @@ struct P96TestGroup {
 
 /* Fill the whole scene with one pen, in JAM1. */
 void p96cts_clear(struct RastPort *rp, int w, int h, int pen);
+
+/* Indexed 8-bit PNG images (png.c). Write returns 0 on success; read
+ * returns an AllocVec'd w*h buffer of pen values, or NULL. */
+int p96cts_write_png(const char *path, const UBYTE *idx, int w, int h);
+UBYTE *p96cts_read_png(const char *path, int *w, int *h);
 
 extern const struct P96TestGroup DrawLineGroup;
 

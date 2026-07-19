@@ -1,8 +1,9 @@
 *.o
 /p96cts
 
-# Reference and run images. Uncompressed BMP is too bulky to carry in git;
-# regenerate with "p96cts CAPTURE" until the writer moves to a compressed
-# format.
-/golden
+# Scratch: unpacked upstream tarballs, probe programs, build leftovers.
+/tmp
+
+# A run's own images. The references under golden/ are committed -- PNG makes
+# them small enough to carry -- but these are regenerated on every run.
 /output

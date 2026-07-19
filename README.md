@@ -31,6 +31,18 @@ With a toolchain that does not bundle them, point at an unpacked
     make CC=/path/to/bin/m68k-amigaos-gcc \
          P96INC=/path/to/Picasso96Develop/Include
 
+Images are read and written with zlib and libpng, which are committed under
+`third_party/` already built for this target, so nothing needs fetching or
+cross-building first. They rarely need rebuilding, but when they do, the same
+container runs their build script:
+
+    docker run --rm --user $(id -u):$(id -u) -v .:/src -w /src \
+        stefanreinauer/amiga-gcc:gcc-v16.1 bash third_party/build.sh
+
+The archives are reproducible, so a rebuild can be checked byte for byte
+against the committed ones. `third_party/README.md` has the upstream versions,
+checksums, and why both are built `-noixemul`.
+
 ## Running
 
 Capture the reference from P96's software rasteriser, then compare a board
@@ -49,8 +61,10 @@ Output looks like:
            at 247, 72 golden  89, got 166
 
 Reference images live in `golden/<pixel format>/`, a run's own images in
-`output/<monitor>/`, and `DIFF` additionally writes `<test>.diff.bmp` marking
-the differing pixels in red.
+`output/<monitor>/`, and `DIFF` additionally writes `<test>.diff.png` marking
+the differing pixels in red. All images are 8-bit palette PNGs, which compress
+these flat synthetic scenes to a few hundred bytes and can be viewed anywhere,
+so the references are committed rather than regenerated.
 
 ### Arguments
 
