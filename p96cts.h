@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: 0BSD */
 
-/* p96cts -- Picasso96 driver conformance test suite.
+/* p96cts -- P96 driver conformance test suite.
  *
  * Test groups live in their own translation units (drawline.c, ...) and
  * register themselves through a P96TestGroup that p96cts.c walks.

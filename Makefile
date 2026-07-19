@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: 0BSD
 #
-# p96cts -- Picasso96 driver conformance test suite (AmigaOS m68k target).
+# p96cts -- P96 driver conformance test suite (AmigaOS m68k target).
 #
 # Needs an m68k-amigaos-gcc and the Picasso96 developer includes. The default
 # P96INC is where the amiga-gcc toolchain ships them, so a containerised build

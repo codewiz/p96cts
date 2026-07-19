@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: 0BSD */
 
-/* p96cts -- Picasso96 driver conformance test suite.
+/* p96cts -- P96 driver conformance test suite.
  *
  * Renders a table of scenes, reads each back as chunky pen values, and either
  * captures it as a golden image or compares it against a previously captured

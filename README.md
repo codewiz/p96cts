@@ -1,15 +1,17 @@
-# P96CTS -- Conformance Test Suite for Amiga P96 card drivers
+# P96CTS -- P96 driver Conformance Test Suite
 
-A conformance test suite for [Picasso96](https://wiki.icomp.de/wiki/Picasso96)
-card drivers.
+Validates the rendering primitives of [P96](https://wiki.icomp.de/wiki/P96)
+RTG card drivers as well as the graphics.library accelerated rendering
+routines.
 
-Each testcase renders a scene twice: once through the driver under test, and
-once through P96's own software rasteriser. The two are compared pixel by
-pixel, so a driver is checked against P96's implementation of the same
-primitives rather than against a stored picture of what someone thought the
-result should look like. Runs are non-interactive and the exit code reflects
-the result, so the suite works as an automated check -- including under an
-emulator with no display.
+Each testcase renders a scene and compares it pixel by pixel against a
+committed reference in `golden/`. The references are captured from a working
+implementation rather than drawn by hand: `golden/clut` comes from AGA
+chipset modes, so a driver is checked against what the Amiga's own graphics
+hardware produces for the same primitives.
+
+Runs are non-interactive and the exit code reflects the result, so the suite
+works as an automated check -- including under an emulator with no display.
 
 This is a different tool from iComp's
 [P96Tests](https://aminet.net/package/dev/src/P96Tests), which is an
@@ -66,7 +68,7 @@ lists.
 
 ## Building
 
-The default include path is where the amiga-gcc toolchain ships the Picasso96
+The default include path is where the amiga-gcc toolchain ships the P96
 headers, so a containerised build takes no arguments:
 
     docker run --rm --user $(id -u):$(id -u) -v .:/src -w /src \
