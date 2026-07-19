@@ -6,7 +6,7 @@
 # P96INC is where the amiga-gcc toolchain ships them, so a containerised build
 # needs no arguments at all:
 #
-#   docker run --rm --user $(id -u):$(id -u) -v .:/src -w /src stefanreinauer/amiga-gcc:gcc-v16.1 make
+#   make docker-build
 #
 # With a toolchain that does not bundle them (e.g. bebbo's), point at an
 # unpacked P96Develop.lha instead:

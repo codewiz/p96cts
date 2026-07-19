@@ -71,8 +71,7 @@ lists.
 The default include path is where the amiga-gcc toolchain ships the P96
 headers, so a containerised build takes no arguments:
 
-    docker run --rm --user $(id -u):$(id -u) -v .:/src -w /src \
-        stefanreinauer/amiga-gcc:gcc-v16.1 make
+    make docker-build
 
 With a toolchain that does not bundle them, point at an unpacked
 `P96Develop.lha`:
@@ -85,7 +84,7 @@ Images are read and written with zlib and libpng, which are committed under
 cross-building first. They rarely need rebuilding, but when they do, the same
 container runs their build script:
 
-    docker run --rm --user $(id -u):$(id -u) -v .:/src -w /src \
+    docker run --rm --user $(id -u):$(id -g) -v .:/src -w /src \
         stefanreinauer/amiga-gcc:gcc-v16.1 bash third_party/build.sh
 
 The archives are reproducible, so a rebuild can be checked byte for byte

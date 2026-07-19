@@ -2,7 +2,7 @@
 # Build zlib and libpng for m68k-amigaos without ixemul and install them into
 # third_party/. Run from the repository root inside the amiga-gcc container:
 #
-#   docker run --rm --user $(id -u):$(id -u) -v .:/src -w /src \
+#   docker run --rm --user $(id -u):$(id -g) -v .:/src -w /src \
 #       stefanreinauer/amiga-gcc:gcc-v16.1 bash third_party/build.sh
 #
 # Expects the upstream tarballs already unpacked under tmp/. See
