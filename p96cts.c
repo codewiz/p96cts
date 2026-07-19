@@ -241,7 +241,7 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
         printf("FAIL %-18s memory allocation failed\n", t->name);
         return 1;
     }
-    sprintf(path, "%s/%s.png", o->dir, t->name);
+    snprintf(path, sizeof path, "%s/%s.png", o->dir, t->name);
 
     if (o->capture) {
         if (p96cts_write_png(path, idx, o->w, o->h))
@@ -253,7 +253,7 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
     }
 
     p96cts_write_png(path, idx, o->w, o->h); /* keep the run image beside the golden */
-    sprintf(path, "%s/%s.png", o->golden_dir, t->name);
+    snprintf(path, sizeof path, "%s/%s.png", o->golden_dir, t->name);
     gold = p96cts_read_png(path, &gw, &gh);
     if (!gold) {
         printf("FAIL %-18s no golden at %s\n", t->name, path);
@@ -305,7 +305,7 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
                         ULONG p = (ULONG)y * o->w + x;
                         d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
                     }
-                sprintf(path, "%s/%s.diff.png", o->dir, t->name);
+                snprintf(path, sizeof path, "%s/%s.diff.png", o->dir, t->name);
                 p96cts_write_png(path, d, o->w, o->h);
                 FreeVec(d);
             }
@@ -454,8 +454,8 @@ int main(void) {
         }
         /* Goldens are per pixel format; run output is per monitor, so several
          * boards can be compared against the one reference set. */
-        sprintf(golden_buf, "golden/%s", format_name(fmt));
-        sprintf(output_buf, "output/%s", monitor ? monitor : "softrast");
+        snprintf(golden_buf, sizeof golden_buf, "golden/%s", format_name(fmt));
+        snprintf(output_buf, sizeof output_buf, "output/%s", monitor ? monitor : "softrast");
         o.golden_dir = args[4] ? (const char *)args[4] : golden_buf;
         o.dir = args[3] ? (const char *)args[3]
                         : (o.capture ? o.golden_dir : output_buf);
