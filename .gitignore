@@ -1,0 +1,8 @@
+*.o
+/p96cts
+
+# Reference and run images. Uncompressed BMP is too bulky to carry in git;
+# regenerate with "p96cts CAPTURE" until the writer moves to a compressed
+# format.
+/golden
+/output
