@@ -1,4 +1,4 @@
-# p96cts
+# P96CTS -- Conformance Test Suite for Amiga P96 card drivers
 
 A conformance test suite for [Picasso96](https://wiki.icomp.de/wiki/Picasso96)
 card drivers.
@@ -16,6 +16,53 @@ This is a different tool from iComp's
 interactive visual suite by the P96 maintainer and covers far more of the
 driver surface. Use that one to look at a driver; use this one to gate a
 change.
+
+
+## Running
+
+Capture the reference from P96's software rasteriser, then compare a board
+against it:
+
+    p96cts CAPTURE
+    p96cts MONITOR=Z3660 MODE=640x400x8 DIFF
+
+Output looks like:
+
+    p96cts 0.1 (19.7.2026)
+    testing Z3660:640x400  8bit, 640x400x8, scene 320x200, comparing against golden/clut
+    PASS lines-solid        0 pixels differ
+    PASS lines-pattern      0 pixels differ
+    FAIL lines-complement   4 of 64000 pixels differ
+           at 247, 72 golden  89, got 166
+
+Reference images live in `golden/<pixel format>/`, a run's own images in
+`output/<monitor>/`, and `DIFF` additionally writes `<test>.diff.png` marking
+the differing pixels in red. All images are 8-bit palette PNGs, which compress
+these flat synthetic scenes to a few hundred bytes and can be viewed anywhere,
+so the references are committed rather than regenerated.
+
+
+### Arguments
+
+| Argument | Meaning |
+|---|---|
+| `TEST/M` | Testcases to run; all of them by default |
+| `CAPTURE/S` | Write the reference instead of comparing against it |
+| `MONITOR/K` | Render on a screen of this monitor; omit to use the software rasteriser |
+| `MODE/K` | Screen mode as `WxHxD` (default: the scene size) |
+| `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
+| `GOLDEN/K` | Reference directory (default `golden/<format>`) |
+| `DIR/K` | Output directory (default `output/<monitor>`) |
+| `THRESHOLD/K/N` | Tolerate up to this many differing pixels |
+| `DIFF/S` | Write a diff image on mismatch |
+| `LIST/S` | Dump the display database and exit |
+
+`MODE` and `SCENE` are separate because a board need not offer a mode as small
+as the scene. The smallest Z3660 mode is 640x400, so a 320x200 scene is drawn
+into the corner of a larger screen and only that corner is compared, which
+keeps reference images small and comparable across boards with different mode
+lists.
+
 
 ## Building
 
@@ -43,49 +90,6 @@ The archives are reproducible, so a rebuild can be checked byte for byte
 against the committed ones. `third_party/README.md` has the upstream versions,
 checksums, and why both are built `-noixemul`.
 
-## Running
-
-Capture the reference from P96's software rasteriser, then compare a board
-against it:
-
-    p96cts CAPTURE
-    p96cts MONITOR=Z3660 MODE=640x400x8 DIFF
-
-Output looks like:
-
-    p96cts 0.1 (19.7.2026)
-    testing Z3660:640x400  8bit, 640x400x8, scene 320x200, comparing against golden/clut
-    PASS lines-solid        0 pixels differ
-    PASS lines-pattern      0 pixels differ
-    FAIL lines-complement   4 of 64000 pixels differ
-           at 247, 72 golden  89, got 166
-
-Reference images live in `golden/<pixel format>/`, a run's own images in
-`output/<monitor>/`, and `DIFF` additionally writes `<test>.diff.png` marking
-the differing pixels in red. All images are 8-bit palette PNGs, which compress
-these flat synthetic scenes to a few hundred bytes and can be viewed anywhere,
-so the references are committed rather than regenerated.
-
-### Arguments
-
-| Argument | Meaning |
-|---|---|
-| `TEST/M` | Testcases to run; all of them by default |
-| `CAPTURE/S` | Write the reference instead of comparing against it |
-| `MONITOR/K` | Render on a screen of this monitor; omit to use the software rasteriser |
-| `MODE/K` | Screen mode as `WxHxD` (default: the scene size) |
-| `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
-| `GOLDEN/K` | Reference directory (default `golden/<format>`) |
-| `DIR/K` | Output directory (default `output/<monitor>`) |
-| `THRESHOLD/K/N` | Tolerate up to this many differing pixels |
-| `DIFF/S` | Write a diff image on mismatch |
-| `LIST/S` | Dump the display database and exit |
-
-`MODE` and `SCENE` are separate because a board need not offer a mode as small
-as the scene. The smallest Z3660 mode is 640x400, so a 320x200 scene is drawn
-into the corner of a larger screen and only that corner is compared, which
-keeps reference images small and comparable across boards with different mode
-lists.
 
 ## Adding testcases
 
@@ -102,11 +106,13 @@ solid lines in one pen, for instance, cannot detect a pixel written twice --
 it takes a mode like `COMPLEMENT`, where writing twice is not the same as
 writing once, and a figure whose lines actually cross.
 
+
 ## Status
 
 Only 8-bit palette (`clut`) is supported so far: results are read back with
 `ReadPixelArray8`, which yields pen values. Deeper formats need
 `p96ReadPixelArray` and a wider comparison path.
+
 
 ## Licence
 
