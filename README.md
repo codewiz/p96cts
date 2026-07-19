@@ -84,8 +84,7 @@ Images are read and written with zlib and libpng, which are committed under
 cross-building first. They rarely need rebuilding, but when they do, the same
 container runs their build script:
 
-    docker run --rm --user $(id -u):$(id -g) -v .:/src -w /src \
-        stefanreinauer/amiga-gcc:gcc-v16.1 bash third_party/build.sh
+    make docker-thirdparty
 
 The archives are reproducible, so a rebuild can be checked byte for byte
 against the committed ones. `third_party/README.md` has the upstream versions,

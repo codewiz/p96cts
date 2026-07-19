@@ -23,8 +23,7 @@ Both were built with `m68k-amigaos-gcc (GCC) 16.1.1b 20260516` and are
 byte-identical across rebuilds (`ar rcsD`, no timestamps). To reproduce, unpack
 both tarballs into `tmp/` and run, from the repository root:
 
-    docker run --rm --user $(id -u):$(id -g) -v .:/src -w /src \
-        stefanreinauer/amiga-gcc:gcc-v16.1 bash third_party/build.sh
+    make docker-thirdparty
 
     sha256sum third_party/*/lib/*.a
     1449a800f879690fc3a246764c42dbd35f3917ef0feea5624e4842a45e8d3cf9  third_party/zlib/lib/libz.a

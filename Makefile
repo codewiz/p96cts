@@ -19,7 +19,7 @@
 CC       = m68k-amigaos-gcc
 P96INC  ?= /opt/amiga/m68k-amigaos/include
 
-DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v $(CURDIR):/src -w /src stefanreinauer/amiga-gcc:gcc-v16.1
+DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src stefanreinauer/amiga-gcc:gcc-v16.1
 
 TARGET   = p96cts
 OBJS     = p96cts.o drawline.o png.o
@@ -60,4 +60,7 @@ docker-build:
 docker-clean:
 	$(DOCKER_RUN) make clean
 
-.PHONY: all clean docker-build docker-clean
+docker-thirdparty:
+	$(DOCKER_RUN) bash third_party/build.sh
+
+.PHONY: all clean docker-build docker-clean docker-thirdparty
