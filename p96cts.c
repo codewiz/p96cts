@@ -191,9 +191,16 @@ static const char *format_name(ULONG fmt) {
 static UBYTE *read_pens(struct RastPort *rp, int w, int h, int depth) {
     struct RastPort temprp = *rp;
     UBYTE *idx = AllocVec((ULONG)w * h, MEMF_ANY);
+    if (!idx)
+        return NULL;
 
     temprp.Layer = NULL;
     temprp.BitMap = AllocBitMap(w, 1, depth, 0, rp->BitMap);
+    if (!temprp.BitMap) {
+        FreeVec(idx);
+        return NULL;
+    }
+
     ReadPixelArray8(rp, 0, 0, w - 1, h - 1, idx, &temprp);
     FreeBitMap(temprp.BitMap);
     return idx;
@@ -230,6 +237,10 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
 
     t->fn(rp, o->w, o->h);
     idx = read_pens(rp, o->w, o->h, o->depth);
+    if (!idx) {
+        printf("FAIL %-18s memory allocation failed\n", t->name);
+        return 1;
+    }
     sprintf(path, "%s/%s.png", o->dir, t->name);
 
     if (o->capture) {
@@ -286,14 +297,18 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
             /* Differing pixels in red over the golden scene dimmed to grey:
              * at full intensity the scene buries a few single-pixel diffs. */
             UBYTE *d = AllocVec((ULONG)o->w * o->h, MEMF_CLEAR);
-            for (y = 0; y < o->h; y++)
-                for (x = 0; x < o->w; x++) {
-                    ULONG p = (ULONG)y * o->w + x;
-                    d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
-                }
-            sprintf(path, "%s/%s.diff.png", o->dir, t->name);
-            p96cts_write_png(path, d, o->w, o->h);
-            FreeVec(d);
+            if (!d) {
+                printf("WARNING: failed to allocate diff buffer for %s\n", t->name);
+            } else {
+                for (y = 0; y < o->h; y++)
+                    for (x = 0; x < o->w; x++) {
+                        ULONG p = (ULONG)y * o->w + x;
+                        d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
+                    }
+                sprintf(path, "%s/%s.diff.png", o->dir, t->name);
+                p96cts_write_png(path, d, o->w, o->h);
+                FreeVec(d);
+            }
         }
     }
     FreeVec(gold);
@@ -309,7 +324,7 @@ int main(void) {
     struct RDArgs *rda;
     struct RunOpts o;
     const char *monitor;
-    int failures = 0, g, i;
+    int failures = 0, rc = 0, g, i;
     int screen_w = 0, screen_h = 0;
     ULONG id;
     struct Screen *scr = NULL;
@@ -370,8 +385,8 @@ int main(void) {
     P96Base = OpenLibrary((STRPTR)"Picasso96API.library", 2);
     if (!IntuitionBase || !GfxBase || !P96Base) {
         printf("failed to open libraries\n");
-        FreeArgs(rda);
-        return 20;
+        rc = 20;
+        goto out;
     }
 
     if (args[9]) {
@@ -475,5 +490,5 @@ out:
     if (IntuitionBase)
         CloseLibrary((struct Library *)IntuitionBase);
     FreeArgs(rda);
-    return failures ? 1 : 0;
+    return rc ? rc : (failures ? 1 : 0);
 }
