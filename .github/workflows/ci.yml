@@ -17,8 +17,20 @@ jobs:
       - name: Build binary inside Amiga GCC container
         run: make docker-build
 
-      - name: Upload p96cts binary
+      - name: Install lha
+        run: sudo apt-get update && sudo apt-get install -y lha
+
+      # The same script the release uses, so every push exercises the
+      # packaging rather than a tag push being the first to try it.
+      - name: Create archive
+        run: ./release.sh "${GITHUB_SHA::7}"
+
+      # The archive rather than the bare binary: it carries the golden set
+      # built from the same commit, which is what makes a CI build directly
+      # deployable to an emulator. GitHub zips artifacts, so this arrives as
+      # a zip around the LHA -- worth the extra unwrap for a matched pair.
+      - name: Upload p96cts archive
         uses: actions/upload-artifact@v7
         with:
           name: p96cts
-          path: p96cts
+          path: p96cts-*.lha
