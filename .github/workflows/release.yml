@@ -22,13 +22,12 @@ jobs:
       - name: Build binary inside Amiga GCC container
         run: make docker-build
 
-      - name: Install lha
-        run: sudo apt-get update && sudo apt-get install -y lha
-
+      # Packed in the toolchain container, which carries a working LHa;
+      # Ubuntu's "lha" is now lhasa, which only extracts.
       - name: Create release archive
         env:
           TAG: ${{ github.ref_name }}
-        run: ./release.sh "$TAG"
+        run: make docker-release TAG="$TAG"
 
       - name: Create release
         env:

@@ -54,6 +54,24 @@ $(TARGET): $(OBJS) $(PNGLIB)
 clean:
 	rm -f $(OBJS) $(TARGET)
 
+# The git tag is "v0.1"; the archive is "p96cts-0.1.lha", matching both the
+# Aminet convention and the program's own "p96cts 0.1" banner.
+RELDIR = $(TARGET)-$(TAG:v%=%)
+
+# Pack the binary, its documentation and the golden set built from the same
+# commit, so the archive drops onto an Amiga as a matched pair. Needs LHa for
+# UNIX: distributions now ship lhasa, which only extracts, so on most hosts
+# this wants the docker-release target below.
+release: $(TARGET)
+	@test -n "$(TAG)" || { echo "usage: make release TAG=v0.1" >&2; exit 2; }
+	rm -rf $(RELDIR) $(RELDIR).lha
+	mkdir -p $(RELDIR)
+	cp $(TARGET) README.md LICENSE $(RELDIR)/
+	cp -r golden $(RELDIR)/
+	lha a $(RELDIR).lha $(RELDIR)/
+	rm -rf $(RELDIR)
+	@echo "wrote $(RELDIR).lha"
+
 docker-build:
 	$(DOCKER_RUN) make all
 
@@ -63,4 +81,7 @@ docker-clean:
 docker-thirdparty:
 	$(DOCKER_RUN) bash third_party/build.sh
 
-.PHONY: all clean docker-build docker-clean docker-thirdparty
+docker-release:
+	$(DOCKER_RUN) make release TAG=$(TAG)
+
+.PHONY: all clean release docker-build docker-clean docker-thirdparty docker-release

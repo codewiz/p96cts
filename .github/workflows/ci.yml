@@ -17,13 +17,12 @@ jobs:
       - name: Build binary inside Amiga GCC container
         run: make docker-build
 
-      - name: Install lha
-        run: sudo apt-get update && sudo apt-get install -y lha
-
       # The same script the release uses, so every push exercises the
-      # packaging rather than a tag push being the first to try it.
+      # packaging rather than a tag push being the first to try it. Packing
+      # happens in the toolchain container, which carries a working LHa;
+      # Ubuntu's "lha" is now lhasa, which only extracts.
       - name: Create archive
-        run: ./release.sh "${GITHUB_SHA::7}"
+        run: make docker-release TAG="${GITHUB_SHA::7}"
 
       # The archive rather than the bare binary: it carries the golden set
       # built from the same commit, which is what makes a CI build directly
