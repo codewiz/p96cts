@@ -28,11 +28,7 @@ jobs:
       - name: Create release archive
         env:
           TAG: ${{ github.ref_name }}
-        run: |
-          mkdir -p "p96cts-$TAG"
-          cp p96cts README.md LICENSE "p96cts-$TAG/"
-          cp -r golden "p96cts-$TAG/"
-          lha a "p96cts-$TAG.lha" "p96cts-$TAG/"
+        run: ./release.sh "$TAG"
 
       - name: Create release
         env:
