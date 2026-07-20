@@ -52,7 +52,7 @@
 #include "p96cts.h"
 
 /* Standard AmigaOS version tag, readable with the Version command. */
-static const char VERSTAG[] = "$VER: p96cts 0.1 (20.7.2026)";
+static const char VERSTAG[] = "$VER: p96cts 0.2 (20.7.2026)";
 #define VERSION_LINE (VERSTAG + 6)
 
 struct IntuitionBase *IntuitionBase;
@@ -410,14 +410,14 @@ int main(void) {
     struct RastPort rp_off, *rp;
     char golden_buf[64], output_buf[64], mode_name[64];
 
-    printf("%s\n", VERSION_LINE);
-
     memset(args, 0, sizeof args);
     rda = ReadArgs((STRPTR)TEMPLATE, args, NULL);
     if (!rda) {
         PrintFault(IoErr(), (STRPTR)"p96cts");
         return 20;
     }
+
+    printf("%s\n", VERSION_LINE);
 
     memset(&o, 0, sizeof o);
     /* Amiga low-res NTSC. Every primitive is testable at this size, and it
