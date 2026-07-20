@@ -64,7 +64,7 @@ so the references are committed rather than regenerated.
 | `DIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
 | `THRESHOLD/K/N` | Tolerate up to this many differing pixels |
 | `DIFF/S` | Write a diff image on mismatch |
-| `LIST/S` | Dump the display database and exit |
+| `LISTMODES/S` | Dump the display database and exit |
 
 `MODE` and `SCENE` are separate because a board need not offer a mode as small
 as the scene. The smallest Z3660 mode is 640x400, so a 320x200 scene is drawn

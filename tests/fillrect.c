@@ -51,7 +51,7 @@ static const UBYTE MODES[COLS] = {
  * modes collapse onto the same output. */
 static void mode_row(struct RastPort *rp, SHORT x, SHORT y, SHORT tile,
                      SHORT mask) {
-    SHORT c, inset = tile / 4;
+    SHORT inset = tile / 4;
 
     rp->Mask = 0xFF;
     SetDrMd(rp, JAM1);
@@ -62,7 +62,7 @@ static void mode_row(struct RastPort *rp, SHORT x, SHORT y, SHORT tile,
     SetBPen(rp, BG);
     rp->Mask = (UBYTE)mask;
 
-    for (c = 0; c < COLS; c++) {
+    for (SHORT c = 0; c < COLS; c++) {
         SetDrMd(rp, MODES[c]);
         RectFill(rp, x + c * tile, y, x + (c + 1) * tile - 1, y + tile - 1);
     }
@@ -76,13 +76,12 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT tile = w / COLS;
     SHORT pitch = h / NMASKS;
     SHORT x = (w - COLS * tile) / 2;
-    SHORT r;
 
     if (tile > pitch)
         tile = pitch;
 
     p96cts_clear(rp, w, h, SCENE_BG);
-    for (r = 0; r < NMASKS; r++)
+    for (SHORT r = 0; r < NMASKS; r++)
         mode_row(rp, x, r * pitch + (pitch - tile) / 2, tile, MASKS[r]);
 }
 
@@ -93,7 +92,6 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
  * driver that passes them through unsorted fills nothing or runs away. */
 static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT n = (w < h ? w : h) / 8;
-    SHORT i;
 
     p96cts_clear(rp, w, h, SCENE_BG);
     SetDrMd(rp, JAM1);
@@ -102,15 +100,15 @@ static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
      * growing length, so an off-by-one in either axis shows up as a short
      * run rather than as nothing at all. */
     SetAPen(rp, FG);
-    for (i = 0; i < n; i++)
+    for (SHORT i = 0; i < n; i++)
         RectFill(rp, 2 + i * 4, 2 + i * 4, 2 + i * 4, 2 + i * 4);
 
     SetAPen(rp, BAND_BG);
-    for (i = 0; i < n; i++)
+    for (SHORT i = 0; i < n; i++)
         RectFill(rp, w / 2, 2 + i * 4, w / 2 + i, 2 + i * 4);
 
     SetAPen(rp, BG);
-    for (i = 0; i < n; i++)
+    for (SHORT i = 0; i < n; i++)
         RectFill(rp, 2 + i * 4, h / 2, 2 + i * 4, h / 2 + i);
 
     /* Corners given the wrong way round: graphics.library normalises them,

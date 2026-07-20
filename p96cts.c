@@ -28,7 +28,7 @@
  *                                 golden/320x200x8/, write
  *                                 output/Z3660/320x200x8/<test>.png
  *                                 and, on mismatch, <test>.diff.png
- *   p96cts LIST                   dump the display database and exit
+ *   p96cts LISTMODES              dump the display database and exit
  *
  * TEST/M names the testcases to run; all of them by default.
  *
@@ -78,6 +78,28 @@ void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, int pen) {
  * a ULONG display id is a signedness mismatch. */
 #define INVALID ((ULONG)INVALID_ID)
 
+/* Why P96 marked a mode NotAvailable. From P96's boardinfo.h, which lives in
+ * PrivateInclude and is not shipped with the toolchain, so the values are
+ * repeated rather than included.
+ *
+ * MONITOOL is the one worth recognising: P96 publishes a template entry per
+ * pixel format for the mode prefs editor to enumerate ("Z36600-P96Mode 8bit"
+ * and friends, at a nominal 320x200). They are not real modes and never
+ * open. */
+#define DI_P96_INVALID 0x1000
+#define DI_P96_MONITOOL 0x2000
+#define DI_P96_COERCED 0x4000
+
+static const char *unavailable_reason(UWORD na) {
+    if (na & DI_P96_MONITOOL)
+        return " template";
+    if (na & DI_P96_COERCED)
+        return " coerced";
+    if (na & DI_P96_INVALID)
+        return " invalid";
+    return " unavailable";
+}
+
 /* Find a display id of the given size/depth. `monitor` selects by mode-name
  * prefix ("PAL", "Z3660", ...), which is the only unambiguous discriminator:
  * plain OCS modes set neither DIPF_IS_ECS nor DIPF_IS_AA, so the property
@@ -93,8 +115,9 @@ static ULONG find_mode(int w, int h, int depth, const char *monitor,
         struct NameInfo ni;
 
         /* Skip modes the database itself says cannot be opened. P96 publishes
-         * template and coerced entries (DI_P96_MONITOOL, DI_P96_INVALID,
-         * DI_P96_COERCED) that match on name and size but fail to open. */
+         * entries that match on name and size but fail to open -- the
+         * DI_P96_* reasons below. Without this test one of them wins the
+         * search and OpenScreen then fails. */
         if (!GetDisplayInfoData(NULL, (UBYTE *)&dinfo, sizeof dinfo, DTAG_DISP, id))
             continue;
         if (dinfo.NotAvailable)
@@ -126,11 +149,12 @@ static ULONG find_mode(int w, int h, int depth, const char *monitor,
 static void list_modes(void) {
     ULONG id = INVALID;
 
-    printf("%-10s %-28s %5s %5s %5s  flags\n", "id", "name", "w", "h", "depth");
+    printf("%-10s %-28s %-14s flags\n", "id", "name", "mode");
     while ((id = NextDisplayInfo(id)) != INVALID) {
         struct DimensionInfo dim;
         struct DisplayInfo dinfo;
         struct NameInfo ni;
+        char mode[24];
         int mw = 0, mh = 0, md = 0;
         if (!GetDisplayInfoData(NULL, (UBYTE *)&dinfo, sizeof dinfo, DTAG_DISP, id))
             continue;
@@ -143,10 +167,10 @@ static void list_modes(void) {
          * come back blank. */
         ni.Name[0] = 0;
         GetDisplayInfoData(NULL, (UBYTE *)&ni, sizeof ni, DTAG_NAME, id);
-        printf("0x%08lx %-28s %5d %5d %5d  0x%08lx%s%s\n", (unsigned long)id,
-               ni.Name, mw, mh, md, (unsigned long)dinfo.PropertyFlags,
-               (dinfo.PropertyFlags & (DIPF_IS_ECS | DIPF_IS_AA)) ? " chipset" : "",
-               dinfo.NotAvailable ? " unavailable" : "");
+        snprintf(mode, sizeof mode, "%dx%dx%d", mw, mh, md);
+        printf("0x%08lx %-28s %-14s 0x%08lx%s\n", (unsigned long)id, ni.Name,
+               mode, (unsigned long)dinfo.PropertyFlags,
+               dinfo.NotAvailable ? unavailable_reason(dinfo.NotAvailable) : "");
     }
 }
 
@@ -350,9 +374,12 @@ static int run_test(const struct P96Test *t, const char *name,
             printf("FAIL %-24s %lu of %lu pixels differ\n", name,
                    (unsigned long)bad, (unsigned long)pixels);
             failed = 1;
-        } else {
+        } else if (bad) {
+            /* Under THRESHOLD, so a pass -- but say how close it came. */
             printf("PASS %-24s %lu pixels differ\n", name,
                    (unsigned long)bad);
+        } else {
+            printf("PASS %s\n", name);
         }
         if (bad) {
             /* Hunting a handful of single pixels in a 320x200 image by eye is
@@ -397,7 +424,7 @@ static int run_test(const struct P96Test *t, const char *name,
 int main(void) {
     static const char *TEMPLATE =
         "TEST/M,CAPTURE/S,MONITOR/K,DIR/K,GOLDEN/K,MODE/K,SCENE/K,"
-        "THRESHOLD/K/N,DIFF/S,LIST/S";
+        "THRESHOLD/K/N,DIFF/S,LISTMODES/S";
     LONG args[10];
     struct RDArgs *rda;
     struct RunOpts o;
@@ -408,7 +435,7 @@ int main(void) {
     struct Screen *scr = NULL;
     struct BitMap *bm = NULL;
     struct RastPort rp_off, *rp;
-    char golden_buf[64], output_buf[64], mode_name[64];
+    char golden_buf[64], output_buf[64];
 
     memset(args, 0, sizeof args);
     rda = ReadArgs((STRPTR)TEMPLATE, args, NULL);
@@ -490,10 +517,8 @@ int main(void) {
         goto out;
     }
 
-    mode_name[0] = 0;
     if (monitor) {
-        id = find_mode(screen_w, screen_h, o.depth, monitor, mode_name,
-                       sizeof mode_name);
+        id = find_mode(screen_w, screen_h, o.depth, monitor, NULL, 0);
         if (id == INVALID) {
             printf("no %s mode %dx%dx%d in the display database\n", monitor,
                    screen_w, screen_h, o.depth);
@@ -568,13 +593,15 @@ int main(void) {
                         : (o.capture ? o.golden_dir : output_buf);
     }
 
-    printf("testing %s, %dx%dx%d %s, scene %dx%d, %s %s\n",
-           monitor ? (mode_name[0] ? mode_name : monitor)
-                   : "P96 software rasteriser",
-           screen_w, screen_h, o.depth,
-           format_name(p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT)),
-           o.w, o.h, o.capture ? "capturing to" : "comparing against",
-           o.golden_dir);
+    printf("testing %s %dx%dx%d %s, scene %dx%d",
+           monitor ? monitor : "P96 software rasteriser", screen_w, screen_h,
+           o.depth, format_name(p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT)),
+           o.w, o.h);
+    /* Where a comparison reads from is determined by the scene, so it is not
+     * worth a line; where a capture writes to is a side effect worth naming. */
+    if (o.capture)
+        printf(", capturing to %s", o.golden_dir);
+    printf("\n");
 
     make_path(o.dir);
 

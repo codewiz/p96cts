@@ -71,8 +71,6 @@ static void t_overlap_right(struct RastPort *rp, SHORT w, SHORT h) {
  * come out identical whichever direction the driver walks, so a failure here
  * is a plain addressing bug rather than a direction bug. */
 static void t_disjoint(struct RastPort *rp, SHORT w, SHORT h) {
-    SHORT i;
-
     p96cts_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
     p96cts_backdrop(rp, w / 2, h);
@@ -81,7 +79,7 @@ static void t_disjoint(struct RastPort *rp, SHORT w, SHORT h) {
 
     /* Single-pixel, single-row and single-column copies: the same off-by-one
      * that RectFill can have, on the blit path. */
-    for (i = 0; i < 16; i++) {
+    for (SHORT i = 0; i < 16; i++) {
         selfblit(rp, i * 4, h / 2, w / 2 + i * 4, h / 2, 1, 1);
         selfblit(rp, 0, h / 2 + 4 + i, w / 2, h / 2 + 4 + i, i + 1, 1);
         selfblit(rp, i * 4, h - h / 4, w / 2 + i * 4, h - h / 4, 1, i + 1);

@@ -70,30 +70,26 @@ static int ridge(int x, int seed, int amp, int base, int step) {
  * on one would display as e.g. white in the middle of a dark red; push those
  * up into the blue half of the cube instead. */
 static UBYTE pen_of(int r, int g, int b) {
-    int pen;
-
     r = r < 0 ? 0 : (r > 255 ? 255 : r);
     g = g < 0 ? 0 : (g > 255 ? 255 : g);
     b = b < 0 ? 0 : (b > 255 ? 255 : b);
-    pen = (r >> 5) | ((g >> 5) << 3) | ((b >> 6) << 6);
+
+    int pen = (r >> 5) | ((g >> 5) << 3) | ((b >> 6) << 6);
     return (UBYTE)(pen < 6 ? pen | 0x40 : pen);
 }
 
 void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
-    struct RastPort temprp = *rp;
-    UBYTE *px;
-    SHORT x, y;
     int horizon = h * 3 / 5;
     int sun_x = w * 7 / 10, sun_y = h * 7 / 25, sun_r = h / 7;
     int boat_x = w / 4, boat_y = horizon + h / 5;
     int boat_w = w / 12, boat_h = h / 25;
 
-    px = AllocVec((ULONG)w * h, MEMF_ANY);
+    UBYTE *px = AllocVec((ULONG)w * h, MEMF_ANY);
     if (!px)
         return;
 
-    for (y = 0; y < h; y++) {
-        for (x = 0; x < w; x++) {
+    for (SHORT y = 0; y < h; y++) {
+        for (SHORT x = 0; x < w; x++) {
             /* Scaled to a bit under one palette step, so the dither shapes
              * the boundary between two adjacent shades rather than adding
              * visible speckle. */
@@ -168,6 +164,7 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
 
     /* WritePixelArray8 needs a single-row scratch RastPort, like the
      * readback in p96cts.c. */
+    struct RastPort temprp = *rp;
     temprp.Layer = NULL;
     temprp.BitMap = AllocBitMap(w, 1, 8, 0, rp->BitMap);
     if (temprp.BitMap) {
