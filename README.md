@@ -6,9 +6,9 @@ routines.
 
 Each testcase renders a scene and compares it pixel by pixel against a
 committed reference in `golden/`. The references are captured from a working
-implementation rather than drawn by hand: `golden/320x200x8` comes from AGA
-chipset modes, so a driver is checked against what the Amiga's own graphics
-hardware produces for the same primitives.
+implementation rather than drawn by hand: they come from P96's own software
+rasteriser, so a driver is checked against what P96 produces for the same
+primitives without a board involved.
 
 Runs are non-interactive and the exit code reflects the result, so the suite
 works as an automated check -- including under an emulator with no display.
@@ -30,12 +30,15 @@ against it:
 
 Output looks like:
 
-    p96cts 0.1 (19.7.2026)
+    p96cts 0.2 (20.7.2026)
     testing Z3660:640x400  8bit, 640x400x8 clut, scene 320x200, comparing against golden/320x200x8
-    PASS lines-solid        0 pixels differ
-    PASS lines-pattern      0 pixels differ
-    FAIL lines-complement   4 of 64000 pixels differ
+    PASS drawline-solid           0 pixels differ
+    PASS drawline-pattern         0 pixels differ
+    FAIL drawline-complement      4 of 64000 pixels differ
            at 247, 72 golden  89, got 166
+
+Testcases are named `<group>-<test>`, after the group that renders them, and
+their images on disk carry the same name.
 
 Reference images live in `golden/<scene>x<depth>/`, a run's own images in
 `output/<monitor>/<scene>x<depth>/` -- the same leaf name, so a run can be
@@ -95,9 +98,10 @@ checksums, and why both are built `-noixemul`.
 
 ## Adding testcases
 
-A test group is one translation unit exporting a `P96TestGroup`; see
-`drawline.c`. Add the file to `OBJS` in the Makefile and the group to `GROUPS`
-in `p96cts.c`.
+A test group is one translation unit in `tests/` exporting a `P96TestGroup`;
+see `tests/drawline.c`. Add the file to `OBJS` in the Makefile and the group to
+`GROUPS` in `p96cts.c`. Testcases are named for what they do (`solid`,
+`overlap-down`); the group supplies the rest of the name.
 
 A testcase renders a complete scene, clearing it first, and must keep all
 drawing inside the bitmap: the RastPort has no Layer, so graphics.library does
