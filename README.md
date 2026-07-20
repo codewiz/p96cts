@@ -6,7 +6,7 @@ routines.
 
 Each testcase renders a scene and compares it pixel by pixel against a
 committed reference in `golden/`. The references are captured from a working
-implementation rather than drawn by hand: `golden/clut` comes from AGA
+implementation rather than drawn by hand: `golden/320x200x8` comes from AGA
 chipset modes, so a driver is checked against what the Amiga's own graphics
 hardware produces for the same primitives.
 
@@ -31,15 +31,17 @@ against it:
 Output looks like:
 
     p96cts 0.1 (19.7.2026)
-    testing Z3660:640x400  8bit, 640x400x8, scene 320x200, comparing against golden/clut
+    testing Z3660:640x400  8bit, 640x400x8 clut, scene 320x200, comparing against golden/320x200x8
     PASS lines-solid        0 pixels differ
     PASS lines-pattern      0 pixels differ
     FAIL lines-complement   4 of 64000 pixels differ
            at 247, 72 golden  89, got 166
 
-Reference images live in `golden/<pixel format>/`, a run's own images in
-`output/<monitor>/`, and `DIFF` additionally writes `<test>.diff.png` marking
-the differing pixels in red. All images are 8-bit palette PNGs, which compress
+Reference images live in `golden/<scene>x<depth>/`, a run's own images in
+`output/<monitor>/<scene>x<depth>/` -- the same leaf name, so a run can be
+diffed against its reference directly. `DIFF` additionally writes
+`<test>.diff.png` marking the differing pixels in red. All images are 8-bit
+palette PNGs, which compress
 these flat synthetic scenes to a few hundred bytes and can be viewed anywhere,
 so the references are committed rather than regenerated.
 
@@ -53,8 +55,8 @@ so the references are committed rather than regenerated.
 | `MONITOR/K` | Render on a screen of this monitor; omit to use the software rasteriser |
 | `MODE/K` | Screen mode as `WxHxD` (default: the scene size) |
 | `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
-| `GOLDEN/K` | Reference directory (default `golden/<format>`) |
-| `DIR/K` | Output directory (default `output/<monitor>`) |
+| `GOLDEN/K` | Reference directory (default `golden/<scene>x<depth>`) |
+| `DIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
 | `THRESHOLD/K/N` | Tolerate up to this many differing pixels |
 | `DIFF/S` | Write a diff image on mismatch |
 | `LIST/S` | Dump the display database and exit |

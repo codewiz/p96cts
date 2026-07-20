@@ -17,13 +17,16 @@
  *                   reference: P96's own implementation of the primitives,
  *                   at any resolution, independent of card driver and blitter.
  *
- * Goldens live in golden/<pixel format>/ and are only comparable within one
- * format; a run's own images go to output/<monitor>/, so several boards can be
- * compared against the same reference set. DIR and GOLDEN override either.
+ * Goldens live in golden/<scene>x<depth>/ and are only comparable within one
+ * scene size and depth. A run's own images go to
+ * output/<monitor>/<scene>x<depth>/, so several boards can be compared
+ * against the same reference set, and the leaf name matches the golden
+ * directory it is compared with. DIR and GOLDEN override either.
  *
- *   p96cts CAPTURE                capture the reference into golden/clut/
+ *   p96cts CAPTURE                capture the reference into golden/320x200x8/
  *   p96cts MONITOR=Z3660 DIFF     run on the board, compare against
- *                                 golden/clut/, write output/Z3660/<test>.png
+ *                                 golden/320x200x8/, write
+ *                                 output/Z3660/320x200x8/<test>.png
  *                                 and, on mismatch, <test>.diff.png
  *   p96cts LIST                   dump the display database and exit
  *
@@ -169,13 +172,11 @@ static void make_path(const char *path) {
     }
 }
 
-/* Directory name for the golden set: goldens are only comparable within one
- * pixel format, so each format gets its own tree.
- *
- * The format is a property of the bitmap, not of its depth: P96 has three
- * 15-bit formats, three 16-bit, two 24-bit and four 32-bit, differing in
- * channel order and byte swapping. So this is indexed by the RGBFormat the
- * bitmap reports, never derived from the depth. */
+/* Reported so a run says what it actually rendered on. The format is a
+ * property of the bitmap, not of its depth: P96 has three 15-bit formats,
+ * three 16-bit, two 24-bit and four 32-bit, differing in channel order and
+ * byte swapping. So this is indexed by the RGBFormat the bitmap reports,
+ * never derived from the depth. */
 static const char *format_name(ULONG fmt) {
     static const char *const NAMES[] = {
         "planar",   "clut",     "r8g8b8",   "b8g8r8",   "r5g6b5pc",
@@ -531,21 +532,33 @@ int main(void) {
             failures = 1;
             goto cleanup;
         }
-        /* Goldens are per pixel format; run output is per monitor, so several
-         * boards can be compared against the one reference set. */
-        snprintf(golden_buf, sizeof golden_buf, "golden/%s", format_name(fmt));
-        snprintf(output_buf, sizeof output_buf, "output/%s", monitor ? monitor : "softrast");
+        /* Goldens are named for what they contain -- the scene, at a depth --
+         * so a differently sized scene cannot overwrite an existing set, and
+         * a deeper one can sit beside it later. Not the MODE: the same scene
+         * drawn into the corner of a larger screen must compare equal to it
+         * on a screen its own size, which is why the two are separate.
+         *
+         * Depth is enough while clut is the only supported format. It stops
+         * being enough at 16-bit, where r5g6b5 and r5g5b5 differ, so a wider
+         * comparison path wants the format in the name too.
+         *
+         * Run output is per monitor, so several boards can be compared
+         * against the one reference set. */
+        snprintf(golden_buf, sizeof golden_buf, "golden/%dx%dx%d", o.w, o.h, o.depth);
+        snprintf(output_buf, sizeof output_buf, "output/%s/%dx%dx%d",
+                 monitor ? monitor : "softrast", o.w, o.h, o.depth);
         o.golden_dir = args[4] ? (const char *)args[4] : golden_buf;
         o.dir = args[3] ? (const char *)args[3]
                         : (o.capture ? o.golden_dir : output_buf);
     }
 
-    printf("testing %s, %dx%dx%d, scene %dx%d, %s golden/%s\n",
+    printf("testing %s, %dx%dx%d %s, scene %dx%d, %s %s\n",
            monitor ? (mode_name[0] ? mode_name : monitor)
                    : "P96 software rasteriser",
-           screen_w, screen_h, o.depth, o.w, o.h,
-           o.capture ? "capturing to" : "comparing against",
-           format_name(p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT)));
+           screen_w, screen_h, o.depth,
+           format_name(p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT)),
+           o.w, o.h, o.capture ? "capturing to" : "comparing against",
+           o.golden_dir);
 
     make_path(o.dir);
 

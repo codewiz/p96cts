@@ -1,6 +1,9 @@
 *.o
 /p96cts
 
+# Release archives built by "make release".
+/p96cts-*.lha
+
 # Scratch: unpacked upstream tarballs, probe programs, build leftovers.
 /tmp
 
