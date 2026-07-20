@@ -61,6 +61,8 @@ struct Library *P96Base;
 
 static const struct P96TestGroup *const GROUPS[] = {
     &DrawLineGroup,
+    &FillRectGroup,
+    &CopyRectGroup,
 };
 #define NGROUPS ((int)(sizeof GROUPS / sizeof GROUPS[0]))
 
@@ -223,13 +225,24 @@ static int selected(STRPTR *names, const char *name) {
     return 0;
 }
 
+/* Compose a testcase's full name. Testcases are named for what they do
+ * ("solid", "overlap-down") and the group supplies the subject, so the name
+ * a user types and the name on disk are both "<group>-<test>". */
+static void test_name(char *buf, size_t len, const struct P96TestGroup *grp,
+                      const struct P96Test *t) {
+    snprintf(buf, len, "%s-%s", grp->name, t->name);
+}
+
 static int known_test(const char *name) {
     int g, i;
 
     for (g = 0; g < NGROUPS; g++)
-        for (i = 0; i < GROUPS[g]->count; i++)
-            if (!strcmp(name, GROUPS[g]->tests[i].name))
+        for (i = 0; i < GROUPS[g]->count; i++) {
+            char full[64];
+            test_name(full, sizeof full, GROUPS[g], &GROUPS[g]->tests[i]);
+            if (!strcmp(name, full))
                 return 1;
+        }
     return 0;
 }
 
@@ -283,8 +296,11 @@ static int parse_mode(const char *s, SHORT *w, SHORT *h, int *depth) {
 }
 
 /* Render one testcase and capture or compare it. Returns 1 on failure. */
-static int run_test(const struct P96Test *t, struct RastPort *rp,
-                    const struct RunOpts *o) {
+/* `name` is the testcase's full "<group>-<test>" name: the group qualifies it,
+ * so two groups can both have an "edges" scene and their images cannot
+ * collide in golden/. */
+static int run_test(const struct P96Test *t, const char *name,
+                    struct RastPort *rp, const struct RunOpts *o) {
     UBYTE *idx, *gold;
     SHORT gw, gh, x, y;
     int failed = 0;
@@ -295,10 +311,10 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
     t->fn(rp, o->w, o->h);
     idx = read_pens(rp, o->w, o->h, o->depth);
     if (!idx) {
-        printf("FAIL %-18s memory allocation failed\n", t->name);
+        printf("FAIL %-24s memory allocation failed\n", name);
         return 1;
     }
-    snprintf(path, sizeof path, "%s/%s.png", o->dir, t->name);
+    snprintf(path, sizeof path, "%s/%s.png", o->dir, name);
 
     if (o->capture) {
         if (p96cts_write_png(path, idx, o->w, o->h))
@@ -313,16 +329,16 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
         FreeVec(idx);
         return 1;
     }
-    snprintf(path, sizeof path, "%s/%s.png", o->golden_dir, t->name);
+    snprintf(path, sizeof path, "%s/%s.png", o->golden_dir, name);
     gold = p96cts_read_png(path, &gw, &gh);
     if (!gold) {
-        printf("FAIL %-18s no golden at %s\n", t->name, path);
+        printf("FAIL %-24s no golden at %s\n", name, path);
         FreeVec(idx);
         return 1;
     }
 
     if (gw != o->w || gh != o->h) {
-        printf("FAIL %-18s golden is %dx%d, scene is %dx%d\n", t->name, gw, gh,
+        printf("FAIL %-24s golden is %dx%d, scene is %dx%d\n", name, gw, gh,
                o->w, o->h);
         failed = 1;
     } else {
@@ -331,11 +347,11 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
                 if (idx[(ULONG)y * o->w + x] != gold[(ULONG)y * o->w + x])
                     bad++;
         if (bad > o->threshold) {
-            printf("FAIL %-18s %lu of %lu pixels differ\n", t->name,
+            printf("FAIL %-24s %lu of %lu pixels differ\n", name,
                    (unsigned long)bad, (unsigned long)pixels);
             failed = 1;
         } else {
-            printf("PASS %-18s %lu pixels differ\n", t->name,
+            printf("PASS %-24s %lu pixels differ\n", name,
                    (unsigned long)bad);
         }
         if (bad) {
@@ -359,14 +375,14 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
              * at full intensity the scene buries a few single-pixel diffs. */
             UBYTE *d = AllocVec(pixels, MEMF_CLEAR);
             if (!d) {
-                printf("WARNING: failed to allocate diff buffer for %s\n", t->name);
+                printf("WARNING: failed to allocate diff buffer for %s\n", name);
             } else {
                 for (y = 0; y < o->h; y++)
                     for (x = 0; x < o->w; x++) {
                         ULONG p = (ULONG)y * o->w + x;
                         d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
                     }
-                snprintf(path, sizeof path, "%s/%s.diff.png", o->dir, t->name);
+                snprintf(path, sizeof path, "%s/%s.diff.png", o->dir, name);
                 if (p96cts_write_png(path, d, o->w, o->h))
                     failed = 1;
                 FreeVec(d);
@@ -565,8 +581,10 @@ int main(void) {
     for (g = 0; g < NGROUPS; g++)
         for (i = 0; i < GROUPS[g]->count; i++) {
             const struct P96Test *t = &GROUPS[g]->tests[i];
-            if (selected((STRPTR *)args[0], t->name)) {
-                failures += run_test(t, rp, &o);
+            char full[64];
+            test_name(full, sizeof full, GROUPS[g], t);
+            if (selected((STRPTR *)args[0], full)) {
+                failures += run_test(t, full, rp, &o);
             }
         }
 

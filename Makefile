@@ -22,7 +22,10 @@ P96INC  ?= /opt/amiga/m68k-amigaos/include
 DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src stefanreinauer/amiga-gcc:gcc-v16.1
 
 TARGET   = p96cts
-OBJS     = p96cts.o drawline.o png.o
+# Testcase scenes live in tests/, one translation unit per group; the harness
+# and the PNG codec stay at the top level.
+OBJS     = p96cts.o png.o backdrop.o \
+           tests/drawline.o tests/fillrect.o tests/copyrect.o
 
 # zlib and libpng, built for this target and committed. See
 # third_party/README.md for provenance and how to rebuild them.
@@ -39,7 +42,7 @@ CFLAGS  ?= -O2 $(WARNINGS)
 
 # Kept apart from CFLAGS: a command-line CFLAGS= replaces the variable
 # entirely, and dropping -noixemul or the include path breaks the link.
-ALL_CFLAGS = $(CFLAGS) -noixemul -I$(P96INC) $(PNGINC)
+ALL_CFLAGS = $(CFLAGS) -noixemul -I. -I$(P96INC) $(PNGINC)
 
 all: $(TARGET)
 

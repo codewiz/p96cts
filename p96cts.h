@@ -30,11 +30,18 @@ struct P96TestGroup {
 /* Fill the whole scene with one pen, in JAM1. */
 void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, int pen);
 
+/* Draw the shared backdrop scene (backdrop.c): a landscape, textured per
+ * pixel so no region of it is flat enough to hide a misplaced pixel. For
+ * testcases that need something substantial to draw over or copy around. */
+void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h);
+
 /* Indexed 8-bit PNG images (png.c). Write returns 0 on success; read
  * returns an AllocVec'd w*h buffer of pen values, or NULL. */
 int p96cts_write_png(const char *path, const UBYTE *idx, SHORT w, SHORT h);
 UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h);
 
 extern const struct P96TestGroup DrawLineGroup;
+extern const struct P96TestGroup FillRectGroup;
+extern const struct P96TestGroup CopyRectGroup;
 
 #endif
