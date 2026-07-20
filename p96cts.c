@@ -52,7 +52,7 @@
 #include "p96cts.h"
 
 /* Standard AmigaOS version tag, readable with the Version command. */
-static const char VERSTAG[] = "$VER: p96cts 0.1 (19.7.2026)";
+static const char VERSTAG[] = "$VER: p96cts 0.1 (20.7.2026)";
 #define VERSION_LINE (VERSTAG + 6)
 
 struct IntuitionBase *IntuitionBase;
