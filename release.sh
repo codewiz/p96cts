@@ -22,7 +22,9 @@ if [ ! -f p96cts ]; then
     exit 1
 fi
 
-DIR="p96cts-$TAG"
+# The git tag is "v0.1"; the archive is "p96cts-0.1.lha", matching both the
+# Aminet convention and the program's own "p96cts 0.1" banner.
+DIR="p96cts-${TAG#v}"
 rm -rf "$DIR" "$DIR.lha"
 mkdir -p "$DIR"
 cp p96cts README.md LICENSE "$DIR/"

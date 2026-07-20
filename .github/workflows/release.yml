@@ -48,5 +48,5 @@ jobs:
             echo
             git log --pretty=format:"- %h: %s" "$RANGE"
           } > notes.md
-          gh release create "$TAG" "p96cts-$TAG.lha" \
+          gh release create "$TAG" "p96cts-${TAG#v}.lha" \
             --title "Release $TAG" --notes-file notes.md
