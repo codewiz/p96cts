@@ -26,7 +26,7 @@ static const short DIRS[24][2] = {
 /* A star of 24 rays centred in the scene. The radius keeps every ray inside
  * the bitmap: a RastPort without a Layer is not clipped by graphics.library,
  * so a ray leaving the bitmap would corrupt memory rather than be clipped. */
-static void star(struct RastPort *rp, int w, int h, UWORD pattern) {
+static void star(struct RastPort *rp, SHORT w, SHORT h, UWORD pattern) {
     int cx = w / 2, cy = h / 2, k;
     int r = ((w < h ? w : h) / 2) - 8;
 
@@ -38,21 +38,21 @@ static void star(struct RastPort *rp, int w, int h, UWORD pattern) {
     SetDrPt(rp, 0xFFFF);
 }
 
-static void t_solid(struct RastPort *rp, int w, int h) {
+static void t_solid(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
     SetAPen(rp, 1);
     star(rp, w, h, 0xFFFF);
 }
 
-static void t_pattern(struct RastPort *rp, int w, int h) {
+static void t_pattern(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
     SetAPen(rp, 1);
     star(rp, w, h, 0xF0F0);
 }
 
-static void t_jam2(struct RastPort *rp, int w, int h) {
+static void t_jam2(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_clear(rp, w, h, 0);
     SetDrMd(rp, JAM2);
     SetAPen(rp, 1);
@@ -61,7 +61,7 @@ static void t_jam2(struct RastPort *rp, int w, int h) {
     SetBPen(rp, 0);
 }
 
-static void t_inversvid(struct RastPort *rp, int w, int h) {
+static void t_inversvid(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1 | INVERSVID); /* the pattern is inverted */
     SetAPen(rp, 1);
@@ -78,7 +78,7 @@ static const short PENTA[5][2] = {
  * so under COMPLEMENT they inverse twice and must come back to exactly the
  * background value -- which is what makes this scene test XOR semantics
  * rather than just "some pixels changed". */
-static void pentagram(struct RastPort *rp, int w, int h) {
+static void pentagram(struct RastPort *rp, SHORT w, SHORT h) {
     static const int ORDER[6] = {0, 2, 4, 1, 3, 0};
     int cx = w / 2, cy = h / 2;
     int r = ((w < h ? w : h) / 2) - 8;
@@ -99,7 +99,7 @@ static void pentagram(struct RastPort *rp, int w, int h) {
 #define COMPLEMENT_BG_LEFT 0x35
 #define COMPLEMENT_BG_RIGHT 0xA6
 
-static void t_complement(struct RastPort *rp, int w, int h) {
+static void t_complement(struct RastPort *rp, SHORT w, SHORT h) {
     /* Two background tones, so the same COMPLEMENT produces two different
      * results in one scene and a driver that ignores the destination cannot
      * pass by writing a constant. */

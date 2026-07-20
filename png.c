@@ -12,6 +12,7 @@
 #include <proto/exec.h>
 
 #include <png.h>
+#include <limits.h>
 #include <stdio.h>
 
 #include "p96cts.h"
@@ -60,7 +61,7 @@ static void dos_read(png_structp png, png_bytep data, size_t length) {
 
 /* --- write ---------------------------------------------------------------- */
 
-int p96cts_write_png(const char *path, const UBYTE *idx, int w, int h) {
+int p96cts_write_png(const char *path, const UBYTE *idx, SHORT w, SHORT h) {
     png_structp png = NULL;
     png_infop info = NULL;
     png_color pal[256];
@@ -103,7 +104,7 @@ int p96cts_write_png(const char *path, const UBYTE *idx, int w, int h) {
 /* --- read ----------------------------------------------------------------- */
 
 /* Returns an AllocVec'd w*h buffer of pen values, or NULL. */
-UBYTE *p96cts_read_png(const char *path, int *w, int *h) {
+UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h) {
     png_structp png = NULL;
     png_infop info = NULL;
     /* volatile: written after setjmp and freed on the error path, so a
@@ -111,7 +112,8 @@ UBYTE *p96cts_read_png(const char *path, int *w, int *h) {
     UBYTE *volatile idx = NULL;
     BPTR f;
     png_uint_32 pw, ph;
-    int depth, colour, y;
+    int depth, colour;
+    SHORT y;
 
     f = Open((STRPTR)path, MODE_OLDFILE);
     if (!f)
@@ -145,17 +147,19 @@ UBYTE *p96cts_read_png(const char *path, int *w, int *h) {
         Close(f);
         return NULL;
     }
+    if (!pw || !ph || pw > (png_uint_32)SHRT_MAX || ph > (png_uint_32)SHRT_MAX)
+        png_error(png, "image dimensions are too large");
 
     idx = AllocVec((ULONG)pw * ph, MEMF_ANY);
     if (!idx)
         png_error(png, "out of memory");
-    for (y = 0; y < (int)ph; y++)
+    for (y = 0; y < (SHORT)ph; y++)
         png_read_row(png, (png_bytep)(idx + (ULONG)y * pw), NULL);
     png_read_end(png, NULL);
     png_destroy_read_struct(&png, &info, NULL);
     Close(f);
 
-    *w = (int)pw;
-    *h = (int)ph;
+    *w = (SHORT)pw;
+    *h = (SHORT)ph;
     return idx;
 }

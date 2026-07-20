@@ -18,7 +18,7 @@ struct RastPort;
  * reused across testcases. */
 struct P96Test {
     const char *name;
-    void (*fn)(struct RastPort *rp, int w, int h);
+    void (*fn)(struct RastPort *rp, SHORT w, SHORT h);
 };
 
 struct P96TestGroup {
@@ -28,12 +28,12 @@ struct P96TestGroup {
 };
 
 /* Fill the whole scene with one pen, in JAM1. */
-void p96cts_clear(struct RastPort *rp, int w, int h, int pen);
+void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, int pen);
 
 /* Indexed 8-bit PNG images (png.c). Write returns 0 on success; read
  * returns an AllocVec'd w*h buffer of pen values, or NULL. */
-int p96cts_write_png(const char *path, const UBYTE *idx, int w, int h);
-UBYTE *p96cts_read_png(const char *path, int *w, int *h);
+int p96cts_write_png(const char *path, const UBYTE *idx, SHORT w, SHORT h);
+UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h);
 
 extern const struct P96TestGroup DrawLineGroup;
 

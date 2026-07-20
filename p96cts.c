@@ -41,6 +41,7 @@
 #include <graphics/gfxmacros.h>
 #include <graphics/rastport.h>
 #include <graphics/displayinfo.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,7 +61,7 @@ static const struct P96TestGroup *const GROUPS[] = {
 };
 #define NGROUPS ((int)(sizeof GROUPS / sizeof GROUPS[0]))
 
-void p96cts_clear(struct RastPort *rp, int w, int h, int pen) {
+void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, int pen) {
     SetDrMd(rp, JAM1);
     SetAPen(rp, pen);
     RectFill(rp, 0, 0, w - 1, h - 1);
@@ -188,9 +189,11 @@ static const char *format_name(ULONG fmt) {
     return NAMES[fmt];
 }
 
-static UBYTE *read_pens(struct RastPort *rp, int w, int h, int depth) {
+static UBYTE *read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
     struct RastPort temprp = *rp;
-    UBYTE *idx = AllocVec((ULONG)w * h, MEMF_ANY);
+    UBYTE *idx;
+
+    idx = AllocVec((ULONG)w * h, MEMF_ANY);
     if (!idx)
         return NULL;
 
@@ -219,22 +222,75 @@ static int selected(STRPTR *names, const char *name) {
     return 0;
 }
 
+static int known_test(const char *name) {
+    int g, i;
+
+    for (g = 0; g < NGROUPS; g++)
+        for (i = 0; i < GROUPS[g]->count; i++)
+            if (!strcmp(name, GROUPS[g]->tests[i].name))
+                return 1;
+    return 0;
+}
+
+static int validate_tests(STRPTR *names) {
+    int i;
+
+    if (!names || !names[0])
+        return 1;
+    for (i = 0; names[i]; i++)
+        if (!known_test((const char *)names[i])) {
+            printf("unknown test: %s\n", names[i]);
+            return 0;
+        }
+    return 1;
+}
+
 #define MAX_REPORTED_DIFFS 8
 
 struct RunOpts {
     const char *dir, *golden_dir;
-    int w, h;    /* scene: the region rendered and compared */
-    int depth, threshold;
+    SHORT w, h;  /* scene: the region rendered and compared */
+    int depth;
+    ULONG threshold;
     int capture, want_diff;
 };
+
+static int parse_scene(const char *s, SHORT *w, SHORT *h) {
+    int n, parsed_w, parsed_h;
+
+    if (sscanf(s, "%dx%d%n", &parsed_w, &parsed_h, &n) != 2 || s[n] ||
+        parsed_w <= 0 || parsed_h <= 0 ||
+        parsed_w > SHRT_MAX || parsed_h > SHRT_MAX)
+        return 0;
+    *w = (SHORT)parsed_w;
+    *h = (SHORT)parsed_h;
+    return 1;
+}
+
+static int parse_mode(const char *s, SHORT *w, SHORT *h, int *depth) {
+    int n, parsed_w, parsed_h, parsed_depth;
+
+    if (sscanf(s, "%dx%dx%d%n", &parsed_w, &parsed_h, &parsed_depth, &n) != 3 ||
+        s[n] || parsed_w <= 0 || parsed_h <= 0 || parsed_depth < 1 ||
+        parsed_depth > 32 ||
+        parsed_w > SHRT_MAX || parsed_h > SHRT_MAX)
+        return 0;
+    *w = (SHORT)parsed_w;
+    *h = (SHORT)parsed_h;
+    *depth = parsed_depth;
+    return 1;
+}
 
 /* Render one testcase and capture or compare it. Returns 1 on failure. */
 static int run_test(const struct P96Test *t, struct RastPort *rp,
                     const struct RunOpts *o) {
     UBYTE *idx, *gold;
-    int gw, gh, x, y, bad = 0, failed = 0;
+    SHORT gw, gh, x, y;
+    int failed = 0;
+    ULONG pixels, bad = 0;
     char path[256];
 
+    pixels = (ULONG)o->w * o->h;
     t->fn(rp, o->w, o->h);
     idx = read_pens(rp, o->w, o->h, o->depth);
     if (!idx) {
@@ -252,7 +308,10 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
         return failed;
     }
 
-    p96cts_write_png(path, idx, o->w, o->h); /* keep the run image beside the golden */
+    if (p96cts_write_png(path, idx, o->w, o->h)) {
+        FreeVec(idx);
+        return 1;
+    }
     snprintf(path, sizeof path, "%s/%s.png", o->golden_dir, t->name);
     gold = p96cts_read_png(path, &gw, &gh);
     if (!gold) {
@@ -271,11 +330,12 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
                 if (idx[(ULONG)y * o->w + x] != gold[(ULONG)y * o->w + x])
                     bad++;
         if (bad > o->threshold) {
-            printf("FAIL %-18s %d of %d pixels differ\n", t->name, bad,
-                   o->w * o->h);
+            printf("FAIL %-18s %lu of %lu pixels differ\n", t->name,
+                   (unsigned long)bad, (unsigned long)pixels);
             failed = 1;
         } else {
-            printf("PASS %-18s %d pixels differ\n", t->name, bad);
+            printf("PASS %-18s %lu pixels differ\n", t->name,
+                   (unsigned long)bad);
         }
         if (bad) {
             /* Hunting a handful of single pixels in a 320x200 image by eye is
@@ -290,13 +350,13 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
                            gold[p], idx[p]);
                     shown++;
                 }
-            if (bad > shown)
-                printf("       ... and %d more\n", bad - shown);
+            if (bad > (ULONG)shown)
+                printf("       ... and %lu more\n", (unsigned long)(bad - shown));
         }
         if (o->want_diff && bad) {
             /* Differing pixels in red over the golden scene dimmed to grey:
              * at full intensity the scene buries a few single-pixel diffs. */
-            UBYTE *d = AllocVec((ULONG)o->w * o->h, MEMF_CLEAR);
+            UBYTE *d = AllocVec(pixels, MEMF_CLEAR);
             if (!d) {
                 printf("WARNING: failed to allocate diff buffer for %s\n", t->name);
             } else {
@@ -306,7 +366,8 @@ static int run_test(const struct P96Test *t, struct RastPort *rp,
                         d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
                     }
                 snprintf(path, sizeof path, "%s/%s.diff.png", o->dir, t->name);
-                p96cts_write_png(path, d, o->w, o->h);
+                if (p96cts_write_png(path, d, o->w, o->h))
+                    failed = 1;
                 FreeVec(d);
             }
         }
@@ -325,7 +386,7 @@ int main(void) {
     struct RunOpts o;
     const char *monitor;
     int failures = 0, rc = 0, g, i;
-    int screen_w = 0, screen_h = 0;
+    SHORT screen_w = 0, screen_h = 0;
     ULONG id;
     struct Screen *scr = NULL;
     struct BitMap *bm = NULL;
@@ -349,16 +410,23 @@ int main(void) {
     o.depth = 8;
     o.capture = args[1] != 0;
     monitor = args[2] ? (const char *)args[2] : NULL;
-    if (args[6])
-        sscanf((const char *)args[6], "%dx%d", &o.w, &o.h);
+    if (args[6] && !parse_scene((const char *)args[6], &o.w, &o.h)) {
+        printf("SCENE must be WxH\n");
+        FreeArgs(rda);
+        return 5;
+    }
 
     /* MODE sizes the screen, SCENE the region actually rendered and compared.
      * They differ because a board need not offer a mode as small as the scene:
      * the smallest Z3660 mode is 640x400, so a 320x200 scene is drawn into the
      * corner of a larger screen and only that corner is compared. Goldens stay
      * small and portable across boards with different mode lists. */
-    if (args[5])
-        sscanf((const char *)args[5], "%dx%dx%d", &screen_w, &screen_h, &o.depth);
+    if (args[5] && !parse_mode((const char *)args[5], &screen_w, &screen_h,
+                               &o.depth)) {
+        printf("MODE must be WxHxD with dimensions up to 32767 and depth 1 through 32\n");
+        FreeArgs(rda);
+        return 5;
+    }
     if (!screen_w)
         screen_w = o.w;
     if (!screen_h)
@@ -370,12 +438,23 @@ int main(void) {
         return 5;
     }
 
-    if (args[7])
-        o.threshold = *(LONG *)args[7];
+    if (args[7]) {
+        LONG threshold = *(LONG *)args[7];
+        if (threshold < 0) {
+            printf("THRESHOLD must not be negative\n");
+            FreeArgs(rda);
+            return 5;
+        }
+        o.threshold = (ULONG)threshold;
+    }
     o.want_diff = args[8] != 0;
 
     if (o.w & 15) {
         printf("width %d must be a multiple of 16\n", o.w);
+        FreeArgs(rda);
+        return 5;
+    }
+    if (!validate_tests((STRPTR *)args[0])) {
         FreeArgs(rda);
         return 5;
     }
@@ -473,8 +552,9 @@ int main(void) {
     for (g = 0; g < NGROUPS; g++)
         for (i = 0; i < GROUPS[g]->count; i++) {
             const struct P96Test *t = &GROUPS[g]->tests[i];
-            if (selected((STRPTR *)args[0], t->name))
+            if (selected((STRPTR *)args[0], t->name)) {
                 failures += run_test(t, rp, &o);
+            }
         }
 
 cleanup:
