@@ -1,5 +1,7 @@
 # P96CTS -- P96 driver Conformance Test Suite
 
+![P96CTS](logo/p96cts-logo-medium.png)
+
 Validates the rendering primitives of [P96](https://wiki.icomp.de/wiki/P96)
 RTG card drivers as well as the graphics.library accelerated rendering
 routines.
