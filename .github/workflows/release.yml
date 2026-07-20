@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Built here rather than downloaded from the CI run: pushing a tag
+      # starts its own CI run, so fetching that run's artifact races it.
+      - name: Build binary inside Amiga GCC container
+        run: make docker-build
+
+      - name: Install lha
+        run: sudo apt-get update && sudo apt-get install -y lha
+
+      - name: Create release archive
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir -p "p96cts-$TAG"
+          cp p96cts README.md LICENSE "p96cts-$TAG/"
+          cp -r golden "p96cts-$TAG/"
+          lha a "p96cts-$TAG.lha" "p96cts-$TAG/"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="$PREV_TAG..$TAG"
+          else
+            RANGE="$TAG"
+          fi
+          # --notes-file, so a commit subject can never be read as workflow
+          # syntax the way a $GITHUB_OUTPUT heredoc can.
+          {
+            echo "## Changes"
+            echo
+            git log --pretty=format:"- %h: %s" "$RANGE"
+          } > notes.md
+          gh release create "$TAG" "p96cts-$TAG.lha" \
+            --title "Release $TAG" --notes-file notes.md
