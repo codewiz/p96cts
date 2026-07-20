@@ -117,9 +117,19 @@ writing once, and a figure whose lines actually cross.
 
 ## Status
 
-Only 8-bit palette (`clut`) is supported so far: results are read back with
-`ReadPixelArray8`, which yields pen values. Deeper formats need
-`p96ReadPixelArray` and a wider comparison path.
+Two depths are supported. 8 compares pen values, read back with
+`ReadPixelArray8`. 24 compares R8G8B8 read back through `p96ReadPixelArray`,
+which converts from whatever the screen's actual format is -- a 24-bit packed
+screen and a 32-bit BGRA one produce identical buffers and share one golden
+set:
+
+    p96cts CAPTURE MODE=320x200x24
+    p96cts MONITOR=Z3660 MODE=640x400x24 DIFF
+
+Groups whose scenes pick colours by pen number (`drawline`, `fillrect`) are
+skipped on truecolor runs until they learn `p96EncodeColor`. 15/16-bit modes
+are the deliberate gap: their reference would have to be rendered at the same
+5-6-5 precision, not just converted to it.
 
 
 ## Licence

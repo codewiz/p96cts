@@ -1,10 +1,11 @@
 /* SPDX-License-Identifier: 0BSD */
 
-/* Indexed PNG reading and writing.
+/* PNG reading and writing.
  *
- * Images are 8-bit palette PNGs: the suite compares pen values, so the pixels
- * must survive a round trip untouched. libpng is driven through dos.library
- * handles rather than stdio, matching the rest of p96cts.
+ * Palette runs use 8-bit palette PNGs so pen values survive the round trip
+ * untouched; truecolor runs use 8-bit RGB. Either way the file holds exactly
+ * the compared bytes. libpng is driven through dos.library handles rather
+ * than stdio, matching the rest of p96cts.
  */
 
 #include <exec/memory.h>
@@ -61,14 +62,13 @@ static void dos_read(png_structp png, png_bytep data, size_t length) {
 
 /* --- write ---------------------------------------------------------------- */
 
-int p96cts_write_png(const char *path, const UBYTE *idx, SHORT w, SHORT h) {
+int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
+                     int bpp) {
     png_structp png = NULL;
     png_infop info = NULL;
     png_color pal[256];
-    BPTR f;
-    int y;
 
-    f = Open((STRPTR)path, MODE_NEWFILE);
+    BPTR f = Open((STRPTR)path, MODE_NEWFILE);
     if (!f) {
         printf("cannot create %s\n", path);
         return 1;
@@ -86,15 +86,18 @@ int p96cts_write_png(const char *path, const UBYTE *idx, SHORT w, SHORT h) {
         return 1;
     }
 
-    build_palette(pal);
     png_set_write_fn(png, (png_voidp)f, dos_write, dos_flush);
     png_set_IHDR(png, info, (png_uint_32)w, (png_uint_32)h, 8,
-                 PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
-                 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-    png_set_PLTE(png, info, pal, 256);
+                 bpp == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_PALETTE,
+                 PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+                 PNG_FILTER_TYPE_DEFAULT);
+    if (bpp != 3) {
+        build_palette(pal);
+        png_set_PLTE(png, info, pal, 256);
+    }
     png_write_info(png, info);
-    for (y = 0; y < h; y++)
-        png_write_row(png, (png_bytep)(idx + (ULONG)y * w));
+    for (int y = 0; y < h; y++)
+        png_write_row(png, (png_bytep)(px + (ULONG)y * w * bpp));
     png_write_end(png, info);
     png_destroy_write_struct(&png, &info);
     Close(f);
@@ -103,19 +106,16 @@ int p96cts_write_png(const char *path, const UBYTE *idx, SHORT w, SHORT h) {
 
 /* --- read ----------------------------------------------------------------- */
 
-/* Returns an AllocVec'd w*h buffer of pen values, or NULL. */
-UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h) {
+UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
     png_structp png = NULL;
     png_infop info = NULL;
     /* volatile: written after setjmp and freed on the error path, so a
      * longjmp must not leave it holding a stale register copy. */
     UBYTE *volatile idx = NULL;
-    BPTR f;
     png_uint_32 pw, ph;
     int depth, colour;
-    SHORT y;
 
-    f = Open((STRPTR)path, MODE_OLDFILE);
+    BPTR f = Open((STRPTR)path, MODE_OLDFILE);
     if (!f)
         return NULL;
 
@@ -140,9 +140,11 @@ UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h) {
     colour = png_get_color_type(png, info);
 
     /* Anything else would have to be converted, and a converted reference is
-     * no longer a reference: the comparison is on pen values. */
-    if (depth != 8 || colour != PNG_COLOR_TYPE_PALETTE) {
-        printf("%s is not an 8-bit palette PNG\n", path);
+     * no longer a reference: the comparison is on the stored bytes. */
+    if (depth != 8 ||
+        colour != (bpp == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_PALETTE)) {
+        printf("%s is not an 8-bit %s PNG\n", path,
+               bpp == 3 ? "RGB" : "palette");
         png_destroy_read_struct(&png, &info, NULL);
         Close(f);
         return NULL;
@@ -150,11 +152,11 @@ UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h) {
     if (!pw || !ph || pw > (png_uint_32)SHRT_MAX || ph > (png_uint_32)SHRT_MAX)
         png_error(png, "image dimensions are too large");
 
-    idx = AllocVec((ULONG)pw * ph, MEMF_ANY);
+    idx = AllocVec((ULONG)pw * ph * bpp, MEMF_ANY);
     if (!idx)
         png_error(png, "out of memory");
-    for (y = 0; y < (SHORT)ph; y++)
-        png_read_row(png, (png_bytep)(idx + (ULONG)y * pw), NULL);
+    for (SHORT y = 0; y < (SHORT)ph; y++)
+        png_read_row(png, (png_bytep)(idx + (ULONG)y * pw * bpp), NULL);
     png_read_end(png, NULL);
     png_destroy_read_struct(&png, &info, NULL);
     Close(f);

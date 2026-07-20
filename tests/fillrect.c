@@ -129,5 +129,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup FillRectGroup = {
-    "fillrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "fillrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0]), 1 /* clut_only */
 };

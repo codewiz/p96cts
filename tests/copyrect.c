@@ -95,5 +95,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup CopyRectGroup = {
-    "copyrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "copyrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0]), 0 /* any depth */
 };

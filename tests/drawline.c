@@ -122,5 +122,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup DrawLineGroup = {
-    "drawline", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "drawline", TESTS, (int)(sizeof TESTS / sizeof TESTS[0]), 1 /* clut_only */
 };

@@ -12,6 +12,7 @@
 #include <graphics/rastport.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
+#include <proto/Picasso96.h>
 
 #include "p96cts.h"
 
@@ -65,16 +66,16 @@ static int ridge(int x, int seed, int amp, int base, int step) {
     return base - (a + (b - a) * f / step);
 }
 
+static UBYTE clamp8(int v) {
+    return (UBYTE)(v < 0 ? 0 : (v > 255 ? 255 : v));
+}
+
 /* Quantise to the writer's 3-3-2 palette cube (see build_palette in png.c).
  * Pens 0-5 are overridden there with named colours, so a scene colour landing
  * on one would display as e.g. white in the middle of a dark red; push those
  * up into the blue half of the cube instead. */
 static UBYTE pen_of(int r, int g, int b) {
-    r = r < 0 ? 0 : (r > 255 ? 255 : r);
-    g = g < 0 ? 0 : (g > 255 ? 255 : g);
-    b = b < 0 ? 0 : (b > 255 ? 255 : b);
-
-    int pen = (r >> 5) | ((g >> 5) << 3) | ((b >> 6) << 6);
+    int pen = (clamp8(r) >> 5) | ((clamp8(g) >> 5) << 3) | ((clamp8(b) >> 6) << 6);
     return (UBYTE)(pen < 6 ? pen | 0x40 : pen);
 }
 
@@ -83,8 +84,9 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
     int sun_x = w * 7 / 10, sun_y = h * 7 / 25, sun_r = h / 7;
     int boat_x = w / 4, boat_y = horizon + h / 5;
     int boat_w = w / 12, boat_h = h / 25;
+    int bpp = p96cts_truecolor ? 3 : 1;
 
-    UBYTE *px = AllocVec((ULONG)w * h, MEMF_ANY);
+    UBYTE *px = AllocVec((ULONG)w * h * bpp, MEMF_ANY);
     if (!px)
         return;
 
@@ -158,18 +160,36 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
                 b = 210;
             }
 
-            px[y * w + x] = pen_of(r + d, g + d, b + d);
+            if (p96cts_truecolor) {
+                ULONG p = ((ULONG)y * w + x) * 3;
+                px[p] = clamp8(r + d);
+                px[p + 1] = clamp8(g + d);
+                px[p + 2] = clamp8(b + d);
+            } else {
+                px[y * w + x] = pen_of(r + d, g + d, b + d);
+            }
         }
     }
 
-    /* WritePixelArray8 needs a single-row scratch RastPort, like the
-     * readback in p96cts.c. */
-    struct RastPort temprp = *rp;
-    temprp.Layer = NULL;
-    temprp.BitMap = AllocBitMap(w, 1, 8, 0, rp->BitMap);
-    if (temprp.BitMap) {
-        WritePixelArray8(rp, 0, 0, w - 1, h - 1, px, &temprp);
-        FreeBitMap(temprp.BitMap);
+    if (p96cts_truecolor) {
+        /* The buffer is already R8G8B8; p96WritePixelArray converts to
+         * whatever the screen's format is. */
+        struct RenderInfo ri;
+        ri.Memory = px;
+        ri.BytesPerRow = w * 3;
+        ri.pad = 0;
+        ri.RGBFormat = RGBFB_R8G8B8;
+        p96WritePixelArray(&ri, 0, 0, rp, 0, 0, w, h);
+    } else {
+        /* WritePixelArray8 needs a single-row scratch RastPort, like the
+         * readback in p96cts.c. */
+        struct RastPort temprp = *rp;
+        temprp.Layer = NULL;
+        temprp.BitMap = AllocBitMap(w, 1, 8, 0, rp->BitMap);
+        if (temprp.BitMap) {
+            WritePixelArray8(rp, 0, 0, w - 1, h - 1, px, &temprp);
+            FreeBitMap(temprp.BitMap);
+        }
     }
     FreeVec(px);
 }

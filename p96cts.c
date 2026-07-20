@@ -66,9 +66,15 @@ static const struct P96TestGroup *const GROUPS[] = {
 };
 #define NGROUPS ((int)(sizeof GROUPS / sizeof GROUPS[0]))
 
-void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, int pen) {
+int p96cts_truecolor;
+
+void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG colour) {
+    if (p96cts_truecolor) {
+        p96RectFill(rp, 0, 0, w - 1, h - 1, colour);
+        return;
+    }
     SetDrMd(rp, JAM1);
-    SetAPen(rp, pen);
+    SetAPen(rp, colour);
     RectFill(rp, 0, 0, w - 1, h - 1);
 }
 
@@ -236,6 +242,23 @@ static UBYTE *read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
     return idx;
 }
 
+/* Read the scene back as R8G8B8, whatever the screen's own format:
+ * p96ReadPixelArray converts into the RenderInfo's format, so a BGRA screen
+ * and an RGB one produce identical buffers and share one golden set. */
+static UBYTE *read_rgb(struct RastPort *rp, SHORT w, SHORT h) {
+    UBYTE *px = AllocVec((ULONG)w * h * 3, MEMF_ANY);
+    if (!px)
+        return NULL;
+
+    struct RenderInfo ri;
+    ri.Memory = px;
+    ri.BytesPerRow = w * 3;
+    ri.pad = 0;
+    ri.RGBFormat = RGBFB_R8G8B8;
+    p96ReadPixelArray(&ri, 0, 0, rp, 0, 0, w, h);
+    return px;
+}
+
 /* --- run ------------------------------------------------------------------ */
 
 static int selected(STRPTR *names, const char *name) {
@@ -289,6 +312,7 @@ struct RunOpts {
     const char *dir, *golden_dir;
     SHORT w, h;  /* scene: the region rendered and compared */
     int depth;
+    int bpp; /* bytes per compared pixel: 1 (pen) or 3 (R8G8B8) */
     ULONG threshold;
     int capture, want_diff;
 };
@@ -325,15 +349,14 @@ static int parse_mode(const char *s, SHORT *w, SHORT *h, int *depth) {
  * collide in golden/. */
 static int run_test(const struct P96Test *t, const char *name,
                     struct RastPort *rp, const struct RunOpts *o) {
-    UBYTE *idx, *gold;
     SHORT gw, gh, x, y;
-    int failed = 0;
-    ULONG pixels, bad = 0;
+    int failed = 0, bpp = o->bpp;
+    ULONG pixels = (ULONG)o->w * o->h, bad = 0;
     char path[256];
 
-    pixels = (ULONG)o->w * o->h;
     t->fn(rp, o->w, o->h);
-    idx = read_pens(rp, o->w, o->h, o->depth);
+    UBYTE *idx = bpp == 3 ? read_rgb(rp, o->w, o->h)
+                          : read_pens(rp, o->w, o->h, o->depth);
     if (!idx) {
         printf("FAIL %-24s memory allocation failed\n", name);
         return 1;
@@ -341,7 +364,7 @@ static int run_test(const struct P96Test *t, const char *name,
     snprintf(path, sizeof path, "%s/%s.png", o->dir, name);
 
     if (o->capture) {
-        if (p96cts_write_png(path, idx, o->w, o->h))
+        if (p96cts_write_png(path, idx, o->w, o->h, bpp))
             failed = 1;
         else
             printf("captured %s\n", path);
@@ -349,12 +372,12 @@ static int run_test(const struct P96Test *t, const char *name,
         return failed;
     }
 
-    if (p96cts_write_png(path, idx, o->w, o->h)) {
+    if (p96cts_write_png(path, idx, o->w, o->h, bpp)) {
         FreeVec(idx);
         return 1;
     }
     snprintf(path, sizeof path, "%s/%s.png", o->golden_dir, name);
-    gold = p96cts_read_png(path, &gw, &gh);
+    UBYTE *gold = p96cts_read_png(path, &gw, &gh, bpp);
     if (!gold) {
         printf("FAIL %-24s no golden at %s\n", name, path);
         FreeVec(idx);
@@ -367,9 +390,11 @@ static int run_test(const struct P96Test *t, const char *name,
         failed = 1;
     } else {
         for (y = 0; y < o->h; y++)
-            for (x = 0; x < o->w; x++)
-                if (idx[(ULONG)y * o->w + x] != gold[(ULONG)y * o->w + x])
+            for (x = 0; x < o->w; x++) {
+                ULONG p = ((ULONG)y * o->w + x) * bpp;
+                if (memcmp(idx + p, gold + p, bpp))
                     bad++;
+            }
         if (bad > o->threshold) {
             printf("FAIL %-24s %lu of %lu pixels differ\n", name,
                    (unsigned long)bad, (unsigned long)pixels);
@@ -387,11 +412,17 @@ static int run_test(const struct P96Test *t, const char *name,
             int shown = 0;
             for (y = 0; y < o->h && shown < MAX_REPORTED_DIFFS; y++)
                 for (x = 0; x < o->w && shown < MAX_REPORTED_DIFFS; x++) {
-                    ULONG p = (ULONG)y * o->w + x;
-                    if (idx[p] == gold[p])
+                    ULONG p = ((ULONG)y * o->w + x) * bpp;
+                    if (!memcmp(idx + p, gold + p, bpp))
                         continue;
-                    printf("       at %3d,%3d golden %3d, got %3d\n", x, y,
-                           gold[p], idx[p]);
+                    if (bpp == 3)
+                        printf("       at %3d,%3d golden %02X%02X%02X, "
+                               "got %02X%02X%02X\n", x, y,
+                               gold[p], gold[p + 1], gold[p + 2],
+                               idx[p], idx[p + 1], idx[p + 2]);
+                    else
+                        printf("       at %3d,%3d golden %3d, got %3d\n", x, y,
+                               gold[p], idx[p]);
                     shown++;
                 }
             if (bad > (ULONG)shown)
@@ -400,17 +431,29 @@ static int run_test(const struct P96Test *t, const char *name,
         if (o->want_diff && bad) {
             /* Differing pixels in red over the golden scene dimmed to grey:
              * at full intensity the scene buries a few single-pixel diffs. */
-            UBYTE *d = AllocVec(pixels, MEMF_CLEAR);
+            UBYTE *d = AllocVec(pixels * bpp, MEMF_CLEAR);
             if (!d) {
                 printf("WARNING: failed to allocate diff buffer for %s\n", name);
             } else {
                 for (y = 0; y < o->h; y++)
                     for (x = 0; x < o->w; x++) {
-                        ULONG p = (ULONG)y * o->w + x;
-                        d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
+                        ULONG p = ((ULONG)y * o->w + x) * bpp;
+                        if (bpp == 3) {
+                            if (memcmp(idx + p, gold + p, 3)) {
+                                d[p] = 255;
+                                d[p + 1] = d[p + 2] = 0;
+                            } else {
+                                /* The golden pixel, dimmed to a grey. */
+                                UBYTE grey = (UBYTE)((gold[p] + gold[p + 1] +
+                                                      gold[p + 2]) / 6);
+                                d[p] = d[p + 1] = d[p + 2] = grey;
+                            }
+                        } else {
+                            d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
+                        }
                     }
                 snprintf(path, sizeof path, "%s/%s.diff.png", o->dir, name);
-                if (p96cts_write_png(path, d, o->w, o->h))
+                if (p96cts_write_png(path, d, o->w, o->h, bpp))
                     failed = 1;
                 FreeVec(d);
             }
@@ -493,6 +536,18 @@ int main(void) {
     }
     o.want_diff = args[8] != 0;
 
+    /* 8 compares pen values; 24 compares R8G8B8, which any truecolor screen
+     * canonicalises to on readback. 15/16-bit modes are the deliberate gap:
+     * their reference would have to be rendered in the same 5-6-5 precision,
+     * not just converted to it, so they need their own path. */
+    if (o.depth != 8 && o.depth != 24) {
+        printf("depth %d is not supported (8 or 24)\n", o.depth);
+        FreeArgs(rda);
+        return 5;
+    }
+    o.bpp = o.depth > 8 ? 3 : 1;
+    p96cts_truecolor = o.depth > 8;
+
     if (o.w & 15) {
         printf("width %d must be a multiple of 16\n", o.w);
         FreeArgs(rda);
@@ -543,7 +598,8 @@ int main(void) {
          * reference: P96's own software implementation of the same
          * primitives, independent of any card driver and of the blitter. */
         bm = p96AllocBitMap(screen_w, screen_h, o.depth,
-                            BMF_CLEAR | BMF_USERPRIVATE, NULL, RGBFB_CLUT);
+                            BMF_CLEAR | BMF_USERPRIVATE, NULL,
+                            o.depth > 8 ? RGBFB_R8G8B8 : RGBFB_CLUT);
         if (!bm) {
             printf("p96AllocBitMap %dx%dx%d failed\n", screen_w, screen_h,
                    o.depth);
@@ -555,15 +611,15 @@ int main(void) {
         rp = &rp_off;
     }
 
-    /* Ask the bitmap what it actually is rather than assuming from depth, and
-     * refuse formats the readback cannot express: ReadPixelArray8 yields pen
-     * values, which only means anything for a palette bitmap. */
+    /* Ask the bitmap what it actually is rather than assuming from depth.
+     * A depth-8 run compares pen values, so it must be a palette bitmap; a
+     * deeper run reads back through p96ReadPixelArray, which converts any
+     * truecolor format to R8G8B8, so there only CLUT itself is refused. */
     {
         ULONG fmt = p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT);
-        if (fmt != RGBFB_CLUT) {
-            printf("mode is %s; only clut is supported so far "
-                   "(readback is ReadPixelArray8)\n",
-                   format_name(fmt));
+        if (o.depth <= 8 ? fmt != RGBFB_CLUT : fmt == RGBFB_CLUT) {
+            printf("mode is %s, which does not match depth %d\n",
+                   format_name(fmt), o.depth);
             failures = 1;
             goto cleanup;
         }
@@ -605,7 +661,12 @@ int main(void) {
 
     make_path(o.dir);
 
-    for (g = 0; g < NGROUPS; g++)
+    for (g = 0; g < NGROUPS; g++) {
+        if (p96cts_truecolor && GROUPS[g]->clut_only) {
+            printf("skip %s: its scenes pick colours by pen number\n",
+                   GROUPS[g]->name);
+            continue;
+        }
         for (i = 0; i < GROUPS[g]->count; i++) {
             const struct P96Test *t = &GROUPS[g]->tests[i];
             char full[64];
@@ -614,6 +675,7 @@ int main(void) {
                 failures += run_test(t, full, rp, &o);
             }
         }
+    }
 
 cleanup:
     if (scr)
