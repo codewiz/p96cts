@@ -1,0 +1,38 @@
+# clangd only; the real build flags live in the Makefile. The point here is to
+# make the editor see the same world the cross-compiler does: AmigaOS headers,
+# no host glibc, and 32-bit pointers.
+#
+# Paths are absolute because clangd expands neither ~ nor $HOME. Adjust them if
+# your toolchain and P96Develop live elsewhere.
+CompileFlags:
+  Compiler: clang
+  Add:
+    # 32-bit pointers and 16-bit int-vs-pointer rules. Without this, LONG is
+    # narrower than a pointer on the host and every ReadArgs cast warns.
+    - --target=m68k-unknown-amigaos
+    # -nostdinc plus -isystem, not -I: the host's /usr/include must not be
+    # searched at all. glibc's sys/select.h defines struct timeval, and so does
+    # the NDK's devices/timer.h, so any file reaching both fails to parse.
+    - -nostdinc
+    - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/m68k-amigaos/ndk-include
+    - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/m68k-amigaos/sys-include
+    - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/m68k-amigaos/include
+    - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/lib/gcc/m68k-amigaos/6.5.0b/include
+    - -I.
+    - -I/home/bernie/emu/amiga/devel/Picasso96Develop/Include
+    - -Ithird_party/libpng/include
+    - -Ithird_party/zlib/include
+    # proto/Picasso96.h picks its inline glue on __GNUC__ alone, with no
+    # _NO_INLINE escape hatch like the NDK's headers have, and that glue is
+    # m68k register asm clang cannot parse. Pre-defining the inline header's
+    # own guard skips it; the clib prototypes proto/ also includes are enough
+    # for navigation and diagnostics.
+    - -D_INLINE_PICASSO96API_H
+    - -D_NO_INLINE
+    # bebbo's calling-convention attributes, which clang does not know.
+    - -D__stdargs=
+    - -D__regargs=
+    - -D__saveds=
+  Remove:
+    - -m68*
+    - -noixemul
