@@ -463,12 +463,17 @@ int main(void) {
     }
 
     /* Ask the bitmap what it actually is rather than assuming from depth.
-     * A depth-8 run compares pen values, so it must be a palette bitmap; a
-     * deeper run reads back through p96ReadPixelArray, which converts any
-     * truecolor format to R8G8B8, so there only CLUT itself is refused. */
+     * A depth-8 run compares pen values, so it needs a bitmap addressed by
+     * pen: chunky RGBFB_CLUT on an RTG board, or RGBFB_NONE for the planar
+     * bitmaps AGA gives -- the name is historical, and ReadPixelArray8 reads
+     * either. A deeper run reads back through p96ReadPixelArray, which
+     * converts any truecolor format to R8G8B8, so there it is those same two
+     * that are refused. */
     {
         ULONG fmt = p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT);
-        if (o.depth <= 8 ? fmt != RGBFB_CLUT : fmt == RGBFB_CLUT) {
+        int by_pen = fmt == RGBFB_CLUT || fmt == RGBFB_NONE;
+
+        if (o.depth <= 8 ? !by_pen : by_pen) {
             printf("mode is %s, which does not match depth %d\n",
                    p96cts_format_name(fmt), o.depth);
             failures = 1;
