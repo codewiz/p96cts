@@ -396,7 +396,7 @@ int main(void) {
         rp = &scr->RastPort;
     } else {
         /* BMF_USERPRIVATE is documented as fast-memory and never touched by
-         * board hardware, so rtg.library rasterises this itself. That is the
+         * board hardware, so rtg.library rasterizes this itself. That is the
          * reference: P96's own software implementation of the same
          * primitives, independent of any card driver and of the blitter. */
         bm = p96AllocBitMap(screen_w, screen_h, o.depth,
@@ -452,7 +452,7 @@ int main(void) {
     }
 
     printf("testing %s %dx%dx%d %s, scene %dx%d",
-           monitor ? monitor : "P96 software rasteriser", screen_w, screen_h,
+           monitor ? monitor : "P96 software rasterizer", screen_w, screen_h,
            o.depth, p96cts_format_name(p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT)),
            o.w, o.h);
     /* Where a comparison reads from is determined by the scene, so it is not

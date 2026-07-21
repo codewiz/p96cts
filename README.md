@@ -9,7 +9,7 @@ routines.
 Each testcase renders a scene and compares it pixel by pixel against a
 committed reference in `golden/`. The references are captured from a working
 implementation rather than drawn by hand: they come from P96's own software
-rasteriser, so a driver is checked against what P96 produces for the same
+rasterizer, so a driver is checked against what P96 produces for the same
 primitives without a board involved.
 
 Runs are non-interactive and the exit code reflects the result, so the suite
@@ -24,7 +24,7 @@ change.
 
 ## Running
 
-Capture the reference from P96's software rasteriser, then compare a board
+Capture the reference from P96's software rasterizer, then compare a board
 against it:
 
     p96cts CAPTURE
@@ -57,7 +57,7 @@ so the references are committed rather than regenerated.
 |---|---|
 | `TEST/M` | Testcases to run; all of them by default |
 | `CAPTURE/S` | Write the reference instead of comparing against it |
-| `MONITOR/K` | Render on a screen of this monitor; omit to use the software rasteriser |
+| `MONITOR/K` | Render on a screen of this monitor; omit to use the software rasterizer |
 | `MODE/K` | Screen mode as `WxHxD` (default: the scene size) |
 | `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
 | `GOLDEN/K` | Reference directory (default `golden/<scene>x<depth>`) |
