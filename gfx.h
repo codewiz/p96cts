@@ -41,6 +41,13 @@ void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color);
 void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                  ULONG color);
 
+/* --- palette -------------------------------------------------------------- */
+
+/* The screen's palette, as a LoadRGB32 table to hand to SA_Colors32. Every pen
+ * is defined, so that a truecolor golden records this palette rather than the
+ * capturing machine's Preferences. */
+const ULONG *p96cts_palette(void);
+
 /* --- modes and readback --------------------------------------------------- */
 
 /* No display id matched. graphics/modeid.h defines INVALID_ID as ~0, an int,

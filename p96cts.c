@@ -405,19 +405,29 @@ int main(void) {
             goto out;
         }
     }
-    scr = monitor ? OpenScreenTags(NULL, SA_DisplayID, id, SA_Width, screen_w,
-                                   SA_Height, screen_h, SA_Depth, o.depth,
-                                   SA_Quiet, TRUE, SA_ShowTitle, FALSE, TAG_DONE)
-                  : OpenScreenTags(NULL, SA_DisplayID, id, SA_Depth, o.depth,
-                                   SA_Quiet, TRUE, SA_ShowTitle, FALSE, TAG_DONE);
+    /* SA_Pens with an empty spec so Intuition reserves none of them: every pen
+     * belongs to the scenes. SA_Colors32 rather than SetRGB32 afterwards
+     * because it takes precedence over every other way the palette gets set. */
+    {
+        static WORD no_pens[] = {~0};
+        const ULONG *colors = p96cts_palette();
+
+        /* The driver run is rendered on the screen, so it gets the size the
+         * mode was asked for. The reference run only borrows the screen and
+         * renders into its own bitmap, so it takes the mode's own dimensions:
+         * STDSCREENWIDTH/HEIGHT ask for the DisplayClip rectangle. */
+        scr = OpenScreenTags(NULL, SA_DisplayID, id,
+                             SA_Width, monitor ? screen_w : STDSCREENWIDTH,
+                             SA_Height, monitor ? screen_h : STDSCREENHEIGHT,
+                             SA_Depth, o.depth, SA_Pens, (ULONG)no_pens,
+                             SA_Colors32, (ULONG)colors, SA_Quiet, TRUE,
+                             SA_ShowTitle, FALSE, TAG_DONE);
+    }
     if (!scr) {
         printf("OpenScreen failed\n");
         failures = 1;
         goto out;
     }
-    SetRGB32(&scr->ViewPort, 0, 0, 0, 0);
-    SetRGB32(&scr->ViewPort, 1, ~0UL, ~0UL, ~0UL);
-    SetRGB32(&scr->ViewPort, 2, ~0UL, 0, 0);
 
     if (monitor) {
         rp = &scr->RastPort;
