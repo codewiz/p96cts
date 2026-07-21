@@ -12,6 +12,7 @@
 #include <graphics/rastport.h>
 
 #include "p96cts.h"
+#include "gfx.h"
 
 /* Unit vectors * 1024 at 15-degree steps: every octant and both major axes,
  * which is what Bresenham stepping is defined over. */

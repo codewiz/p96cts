@@ -2,37 +2,8 @@
 
 /* p96cts -- P96 driver conformance test suite.
  *
- * Renders a table of scenes, reads each back as chunky pen values, and either
- * captures it as a golden image or compares it against a previously captured
- * one, reporting per-pixel differences. Exit code is non-zero if any testcase
- * fails, so a run is usable as an automated check.
- *
- * The reference and the subject are the same scenes rendered through
- * different paths:
- *
- *   MONITOR=<name>  open a screen on that monitor. For an RTG monitor this is
- *                   what exercises the card driver's blitter callbacks.
- *   (no MONITOR)    render into a BMF_USERPRIVATE bitmap, which no board
- *                   touches, so P96 rasterises it in software. That is the
- *                   reference: P96's own implementation of the primitives,
- *                   at any resolution, independent of card driver and blitter.
- *
- * Goldens live in golden/<scene>x<depth>/ and are only comparable within one
- * scene size and depth. A run's own images go to
- * output/<monitor>/<scene>x<depth>/, so several boards can be compared
- * against the same reference set, and the leaf name matches the golden
- * directory it is compared with. DIR and GOLDEN override either.
- *
- *   p96cts CAPTURE                capture the reference into golden/320x200x8/
- *   p96cts MONITOR=Z3660 DIFF     run on the board, compare against
- *                                 golden/320x200x8/, write
- *                                 output/Z3660/320x200x8/<test>.png
- *                                 and, on mismatch, <test>.diff.png
- *   p96cts LISTMODES              dump the display database and exit
- *
- * TEST/M names the testcases to run; all of them by default.
- *
- * Screen width must be a multiple of 16 (ReadPixelArray8 granularity).
+ * This file is the harness: arguments, the run loop, and the comparison.
+ * Scenes live in tests/, the graphics.library and P96 calls in gfx.c.
  */
 
 #include <proto/exec.h>
@@ -41,15 +12,15 @@
 #include <proto/graphics.h>
 #include <proto/Picasso96.h>
 #include <intuition/screens.h>
-#include <graphics/gfxmacros.h>
 #include <graphics/rastport.h>
-#include <graphics/displayinfo.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "p96cts.h"
+#include "gfx.h"
+#include "pngio.h"
 
 /* Standard AmigaOS version tag, readable with the Version command. */
 static const char VERSTAG[] = "$VER: p96cts 0.2 (20.7.2026)";
@@ -65,132 +36,6 @@ static const struct P96TestGroup *const GROUPS[] = {
     &CopyRectGroup,
 };
 #define NGROUPS ((int)(sizeof GROUPS / sizeof GROUPS[0]))
-
-int p96cts_truecolor;
-
-ULONG p96cts_color(ULONG pen, ULONG rgb) {
-    return p96cts_truecolor ? rgb : pen;
-}
-
-void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
-                 ULONG color) {
-    if (p96cts_truecolor) {
-        SHORT t;
-        if (x1 > x2) { t = x1; x1 = x2; x2 = t; }
-        if (y1 > y2) { t = y1; y1 = y2; y2 = t; }
-        p96RectFill(rp, x1, y1, x2, y2, color);
-        return;
-    }
-    SetDrMd(rp, JAM1);
-    SetAPen(rp, color);
-    RectFill(rp, x1, y1, x2, y2);
-}
-
-void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
-    p96cts_fill(rp, 0, 0, w - 1, h - 1, color);
-}
-
-/* --- display database ----------------------------------------------------- */
-
-/* graphics/modeid.h defines INVALID_ID as ~0, an int, so comparing it against
- * a ULONG display id is a signedness mismatch. */
-#define INVALID ((ULONG)INVALID_ID)
-
-/* Why P96 marked a mode NotAvailable. From P96's boardinfo.h, which lives in
- * PrivateInclude and is not shipped with the toolchain, so the values are
- * repeated rather than included.
- *
- * MONITOOL is the one worth recognizing: P96 publishes a template entry per
- * pixel format for the mode prefs editor to enumerate ("Z36600-P96Mode 8bit"
- * and friends, at a nominal 320x200). They are not real modes and never
- * open. */
-#define DI_P96_INVALID 0x1000
-#define DI_P96_MONITOOL 0x2000
-#define DI_P96_COERCED 0x4000
-
-static const char *unavailable_reason(UWORD na) {
-    if (na & DI_P96_MONITOOL)
-        return " template";
-    if (na & DI_P96_COERCED)
-        return " coerced";
-    if (na & DI_P96_INVALID)
-        return " invalid";
-    return " unavailable";
-}
-
-/* Find a display id of the given size/depth. `monitor` selects by mode-name
- * prefix ("PAL", "Z3660", ...), which is the only unambiguous discriminator:
- * plain OCS modes set neither DIPF_IS_ECS nor DIPF_IS_AA, so the property
- * flags cannot separate native from RTG. */
-static ULONG find_mode(int w, int h, int depth, const char *monitor,
-                       char *name_out, int name_len) {
-    ULONG id = INVALID;
-    size_t mlen = monitor ? strlen(monitor) : 0;
-
-    while ((id = NextDisplayInfo(id)) != INVALID) {
-        struct DimensionInfo dim;
-        struct DisplayInfo dinfo;
-        struct NameInfo ni;
-
-        /* Skip modes the database itself says cannot be opened. P96 publishes
-         * entries that match on name and size but fail to open -- the
-         * DI_P96_* reasons below. Without this test one of them wins the
-         * search and OpenScreen then fails. */
-        if (!GetDisplayInfoData(NULL, (UBYTE *)&dinfo, sizeof dinfo, DTAG_DISP, id))
-            continue;
-        if (dinfo.NotAvailable)
-            continue;
-
-        ni.Name[0] = 0;
-        if (mlen) {
-            if (!GetDisplayInfoData(NULL, (UBYTE *)&ni, sizeof ni, DTAG_NAME, id))
-                continue;
-            if (strncmp((const char *)ni.Name, monitor, mlen))
-                continue;
-        }
-        if (GetDisplayInfoData(NULL, (UBYTE *)&dim, sizeof dim, DTAG_DIMS, id)) {
-            int mw = dim.Nominal.MaxX - dim.Nominal.MinX + 1;
-            int mh = dim.Nominal.MaxY - dim.Nominal.MinY + 1;
-            if (mw == w && mh == h && dim.MaxDepth >= depth) {
-                if (name_out) {
-                    strncpy(name_out, (const char *)ni.Name, name_len - 1);
-                    name_out[name_len - 1] = 0;
-                }
-                return id;
-            }
-        }
-    }
-    return INVALID;
-}
-
-/* Dump the display database so a usable mode can be picked. */
-static void list_modes(void) {
-    ULONG id = INVALID;
-
-    printf("%-10s %-28s %-14s flags\n", "id", "name", "mode");
-    while ((id = NextDisplayInfo(id)) != INVALID) {
-        struct DimensionInfo dim;
-        struct DisplayInfo dinfo;
-        struct NameInfo ni;
-        char mode[24];
-        int mw = 0, mh = 0, md = 0;
-        if (!GetDisplayInfoData(NULL, (UBYTE *)&dinfo, sizeof dinfo, DTAG_DISP, id))
-            continue;
-        if (GetDisplayInfoData(NULL, (UBYTE *)&dim, sizeof dim, DTAG_DIMS, id)) {
-            mw = dim.Nominal.MaxX - dim.Nominal.MinX + 1;
-            mh = dim.Nominal.MaxY - dim.Nominal.MinY + 1;
-            md = dim.MaxDepth;
-        }
-        /* DTAG_NAME only names base modes, so EHB/HAM/dual-playfield variants
-         * come back blank. */
-        ni.Name[0] = 0;
-        GetDisplayInfoData(NULL, (UBYTE *)&ni, sizeof ni, DTAG_NAME, id);
-        snprintf(mode, sizeof mode, "%dx%dx%d", mw, mh, md);
-        printf("0x%08lx %-28s %-14s 0x%08lx%s\n", (unsigned long)id, ni.Name,
-               mode, (unsigned long)dinfo.PropertyFlags,
-               dinfo.NotAvailable ? unavailable_reason(dinfo.NotAvailable) : "");
-    }
-}
 
 /* CreateDir() makes one level, so walk the path creating each component.
  * Components that already exist fail harmlessly with ERROR_OBJECT_EXISTS. */
@@ -214,61 +59,6 @@ static void make_path(const char *path) {
         if (lock)
             UnLock(lock);
     }
-}
-
-/* Reported so a run says what it actually rendered on. The format is a
- * property of the bitmap, not of its depth: P96 has three 15-bit formats,
- * three 16-bit, two 24-bit and four 32-bit, differing in channel order and
- * byte swapping. So this is indexed by the RGBFormat the bitmap reports,
- * never derived from the depth. */
-static const char *format_name(ULONG fmt) {
-    static const char *const NAMES[] = {
-        "planar",   "clut",     "r8g8b8",   "b8g8r8",   "r5g6b5pc",
-        "r5g5b5pc", "a8r8g8b8", "a8b8g8r8", "r8g8b8a8", "b8g8r8a8",
-        "r5g6b5",   "r5g5b5",   "b5g6r5pc", "b5g5r5pc", "yuv422cgx",
-        "yuv411",   "yuv411pc", "yuv422",   "yuv422pc", "yuv422pa",
-        "yuv422papc",
-    };
-    if (fmt >= (ULONG)(sizeof NAMES / sizeof NAMES[0]))
-        return "unknown";
-    return NAMES[fmt];
-}
-
-static UBYTE *read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
-    struct RastPort temprp = *rp;
-    UBYTE *idx;
-
-    idx = AllocVec((ULONG)w * h, MEMF_ANY);
-    if (!idx)
-        return NULL;
-
-    temprp.Layer = NULL;
-    temprp.BitMap = AllocBitMap(w, 1, depth, 0, rp->BitMap);
-    if (!temprp.BitMap) {
-        FreeVec(idx);
-        return NULL;
-    }
-
-    ReadPixelArray8(rp, 0, 0, w - 1, h - 1, idx, &temprp);
-    FreeBitMap(temprp.BitMap);
-    return idx;
-}
-
-/* Read the scene back as R8G8B8, whatever the screen's own format:
- * p96ReadPixelArray converts into the RenderInfo's format, so a BGRA screen
- * and an RGB one produce identical buffers and share one golden set. */
-static UBYTE *read_rgb(struct RastPort *rp, SHORT w, SHORT h) {
-    UBYTE *px = AllocVec((ULONG)w * h * 3, MEMF_ANY);
-    if (!px)
-        return NULL;
-
-    struct RenderInfo ri;
-    ri.Memory = px;
-    ri.BytesPerRow = w * 3;
-    ri.pad = 0;
-    ri.RGBFormat = RGBFB_R8G8B8;
-    p96ReadPixelArray(&ri, 0, 0, rp, 0, 0, w, h);
-    return px;
 }
 
 /* --- run ------------------------------------------------------------------ */
@@ -367,8 +157,8 @@ static int run_test(const struct P96Test *t, const char *name,
     char path[256];
 
     t->fn(rp, o->w, o->h);
-    UBYTE *idx = bpp == 3 ? read_rgb(rp, o->w, o->h)
-                          : read_pens(rp, o->w, o->h, o->depth);
+    UBYTE *idx = bpp == 3 ? p96cts_read_rgb(rp, o->w, o->h)
+                          : p96cts_read_pens(rp, o->w, o->h, o->depth);
     if (!idx) {
         printf("FAIL %-24s memory allocation failed\n", name);
         return 1;
@@ -580,13 +370,13 @@ int main(void) {
     }
 
     if (args[9]) {
-        list_modes();
+        p96cts_list_modes();
         goto out;
     }
 
     if (monitor) {
-        id = find_mode(screen_w, screen_h, o.depth, monitor, NULL, 0);
-        if (id == INVALID) {
+        id = p96cts_find_mode(screen_w, screen_h, o.depth, monitor, NULL, 0);
+        if (id == P96CTS_INVALID_MODE) {
             printf("no %s mode %dx%dx%d in the display database\n", monitor,
                    screen_w, screen_h, o.depth);
             failures = 1;
@@ -631,7 +421,7 @@ int main(void) {
         ULONG fmt = p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT);
         if (o.depth <= 8 ? fmt != RGBFB_CLUT : fmt == RGBFB_CLUT) {
             printf("mode is %s, which does not match depth %d\n",
-                   format_name(fmt), o.depth);
+                   p96cts_format_name(fmt), o.depth);
             failures = 1;
             goto cleanup;
         }
@@ -663,7 +453,7 @@ int main(void) {
 
     printf("testing %s %dx%dx%d %s, scene %dx%d",
            monitor ? monitor : "P96 software rasteriser", screen_w, screen_h,
-           o.depth, format_name(p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT)),
+           o.depth, p96cts_format_name(p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT)),
            o.w, o.h);
     /* Where a comparison reads from is determined by the scene, so it is not
      * worth a line; where a capture writes to is a side effect worth naming. */

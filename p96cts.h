@@ -1,9 +1,10 @@
 /* SPDX-License-Identifier: 0BSD */
 
-/* p96cts -- P96 driver conformance test suite.
+/* How a testcase registers itself with the harness, and nothing else.
  *
- * Test groups live in their own translation units (drawline.c, ...) and
- * register themselves through a P96TestGroup that p96cts.c walks.
+ * Test groups live in their own translation units (tests/drawline.c, ...) and
+ * define a P96TestGroup that p96cts.c walks. What the scenes draw *with* is
+ * in gfx.h and backdrop.h.
  */
 
 #ifndef P96CTS_H
@@ -32,39 +33,7 @@ struct P96TestGroup {
     int clut_only;
 };
 
-/* Whether the current run is on a truecolor mode (depth > 8). Testcases that
- * run on both kinds of screen branch on this to pick their color calls:
- * pens on a palette screen, direct RGB on truecolor. */
-extern int p96cts_truecolor;
-
-/* Fill the whole scene with one color, in JAM1: a pen number on a palette
- * screen, 0x00RRGGBB on truecolor. 0 is black either way. */
-void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color);
-
-/* JAM1-fill a rectangle in the given color (pen or 0x00RRGGBB as above).
- * On a palette screen the corners go to RectFill as given, including
- * deliberately swapped ones; the truecolor path sorts them first, since
- * p96RectFill's contract requires min <= max. */
-void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
-                 ULONG color);
-
-/* The color for the current run: a pen number on a palette screen, direct
- * 0x00RRGGBB on truecolor. Scenes pass both and let the run pick. */
-ULONG p96cts_color(ULONG pen, ULONG rgb);
-
-/* Draw the shared backdrop scene (backdrop.c): a landscape, textured per
- * pixel so no region of it is flat enough to hide a misplaced pixel. For
- * testcases that need something substantial to draw over or copy around. */
-void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h);
-
-/* PNG images (png.c). bpp is 1 for an indexed image of pen values or 3 for
- * RGB. Write returns 0 on success; read returns an AllocVec'd w*h*bpp
- * buffer, or NULL -- an image of the other kind is refused, not converted,
- * since a converted reference is no longer a reference. */
-int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
-                     int bpp);
-UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h, int bpp);
-
+/* The groups the harness walks. Each is defined by its own file in tests/. */
 extern const struct P96TestGroup DrawLineGroup;
 extern const struct P96TestGroup FillRectGroup;
 extern const struct P96TestGroup CopyRectGroup;

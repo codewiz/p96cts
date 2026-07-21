@@ -16,7 +16,7 @@
 #include <limits.h>
 #include <stdio.h>
 
-#include "p96cts.h"
+#include "pngio.h"
 
 /* --- palette --------------------------------------------------------------
  *

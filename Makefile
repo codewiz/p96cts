@@ -22,9 +22,9 @@ P96INC  ?= /opt/amiga/m68k-amigaos/include
 DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src stefanreinauer/amiga-gcc:gcc-v16.1
 
 TARGET   = p96cts
-# Testcase scenes live in tests/, one translation unit per group; the harness
-# and the PNG codec stay at the top level.
-OBJS     = p96cts.o png.o backdrop.o \
+# Testcase scenes live in tests/, one translation unit per group; the harness,
+# the graphics layer and the PNG codec stay at the top level.
+OBJS     = p96cts.o gfx.o pngio.o backdrop.o \
            tests/drawline.o tests/fillrect.o tests/copyrect.o
 
 # zlib and libpng, built for this target and committed. See
@@ -51,7 +51,9 @@ all: $(TARGET)
 $(TARGET): $(OBJS) $(PNGLIB)
 	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNGLIB) -lm
 
-%.o: %.c p96cts.h
+HEADERS  = p96cts.h gfx.h pngio.h backdrop.h
+
+%.o: %.c $(HEADERS)
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<
 
 clean:

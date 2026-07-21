@@ -14,7 +14,8 @@
 #include <proto/graphics.h>
 #include <proto/Picasso96.h>
 
-#include "p96cts.h"
+#include "backdrop.h"
+#include "gfx.h"
 
 /* The backdrop is a landscape: an off-center sun over two irregular ridges,
  * with rippled water below and a boat well off to one side.

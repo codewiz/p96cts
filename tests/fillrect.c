@@ -14,6 +14,7 @@
 #include <proto/graphics.h>
 
 #include "p96cts.h"
+#include "gfx.h"
 
 /* Tiles: 8 drawmode columns across, one row per write mask. Sized from the
  * scene rather than fixed, so the grid still fits when SCENE is smaller than

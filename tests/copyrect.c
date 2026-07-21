@@ -16,6 +16,8 @@
 #include <proto/graphics.h>
 
 #include "p96cts.h"
+#include "gfx.h"
+#include "backdrop.h"
 
 /* Copy a rectangle within the RastPort's own bitmap. ClipBlit is the
  * documented way to do this and is what P96 routes to the driver's blit;
