@@ -8,9 +8,19 @@ routines.
 
 Each testcase renders a scene and compares it pixel by pixel against a
 committed reference in `golden/`. The references are captured from a working
-implementation rather than drawn by hand: they come from P96's own software
-rasterizer, so a driver is checked against what P96 produces for the same
-primitives without a board involved.
+implementation rather than drawn by hand: they come from `rtg.library`, P96's
+own software rasterizer, so a driver is checked against what P96 produces for
+the same primitives without a board involved.
+
+Keeping that reference honest takes some care. The bitmap is allocated wider
+than any board will accept, which is what forces it into fast memory --
+`BMF_USERPRIVATE` alone does not, once the bitmap is friended to a screen's.
+Friended it must be, because a pen is not a color on its own: the mapping from
+pen number to color comes from the screen, and an unfriended offscreen bitmap
+renders every pen black on a truecolor screen. The screen's whole palette is
+set explicitly for the same reason -- Intuition initializes only pens 0-3 and
+17-19, from the user's Preferences, so a truecolor reference would otherwise
+record the colors of the machine it was captured on.
 
 Runs are non-interactive and the exit code reflects the result, so the suite
 works as an automated check -- including under an emulator with no display.
@@ -33,9 +43,9 @@ against it:
 Output looks like:
 
     p96cts 0.2 (20.7.2026)
-    testing Z3660:640x400  8bit, 640x400x8 clut, scene 320x200, comparing against golden/320x200x8
-    PASS drawline-solid           0 pixels differ
-    PASS drawline-pattern         0 pixels differ
+    testing Z3660 640x400x8 clut, scene 320x200
+    PASS drawline-solid
+    PASS drawline-pattern
     FAIL drawline-complement      4 of 64000 pixels differ
            at 247, 72 golden  89, got 166
 
@@ -45,10 +55,10 @@ their images on disk carry the same name.
 Reference images live in `golden/<scene>x<depth>/`, a run's own images in
 `output/<monitor>/<scene>x<depth>/` -- the same leaf name, so a run can be
 diffed against its reference directly. `DIFF` additionally writes
-`<test>.diff.png` marking the differing pixels in red. All images are 8-bit
-palette PNGs, which compress
-these flat synthetic scenes to a few hundred bytes and can be viewed anywhere,
-so the references are committed rather than regenerated.
+`<test>.diff.png` marking the differing pixels in red. Images are PNGs, 8-bit
+palette for a palette run and RGB for a truecolor one, which compresses these
+flat synthetic scenes to a few kilobytes at most and can be viewed anywhere, so
+the references are committed rather than regenerated.
 
 
 ### Arguments
@@ -58,7 +68,7 @@ so the references are committed rather than regenerated.
 | `TEST/M` | Testcases to run; all of them by default |
 | `CAPTURE/S` | Write the reference instead of comparing against it |
 | `MONITOR/K` | Render on a screen of this monitor; omit to use the software rasterizer |
-| `MODE/K` | Screen mode as `WxHxD` (default: the scene size) |
+| `MODE/K` | Screen mode as `WxHxD` (default: the scene size at depth 8) |
 | `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
 | `GOLDEN/K` | Reference directory (default `golden/<scene>x<depth>`) |
 | `DIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
@@ -67,9 +77,10 @@ so the references are committed rather than regenerated.
 | `LISTMODES/S` | Dump the display database and exit |
 
 `MODE` and `SCENE` are separate because a board need not offer a mode as small
-as the scene. The smallest Z3660 mode is 640x400, so a 320x200 scene is drawn
-into the corner of a larger screen and only that corner is compared, which
-keeps reference images small and comparable across boards with different mode
+as the scene -- RTG boards typically start around 640x400, and P96's 320x200
+entries are mode prefs templates that never open. A smaller scene is drawn into
+the corner of a larger screen and only that corner is compared, which keeps
+reference images small and comparable across boards with different mode
 lists.
 
 
@@ -123,13 +134,15 @@ which converts from whatever the screen's actual format is -- a 24-bit packed
 screen and a 32-bit BGRA one produce identical buffers and share one golden
 set:
 
-    p96cts CAPTURE MODE=320x200x24
-    p96cts MONITOR=Z3660 MODE=640x400x24 DIFF
+    p96cts CAPTURE MODE=640x480x24 SCENE=320x200
+    p96cts MONITOR=Z3660 MODE=640x480x24 SCENE=320x200 DIFF
 
-Groups whose scenes pick colors by pen number (`drawline`, `fillrect`) are
-skipped on truecolor runs until they learn `p96EncodeColor`. 15/16-bit modes
-are the deliberate gap: their reference would have to be rendered at the same
-5-6-5 precision, not just converted to it.
+One scene is palette-only, and permanently: `fillrect-drawmodes` sweeps its
+grid across `rp->Mask`, which selects bitplanes and has no truecolor
+counterpart. Everything else runs at both depths.
+
+15/16-bit modes are the deliberate gap: their reference would have to be
+rendered at the same 5-6-5 precision, not just converted to it.
 
 
 ## License
