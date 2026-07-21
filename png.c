@@ -20,11 +20,11 @@
 
 /* --- palette --------------------------------------------------------------
  *
- * Pens 0-4 are named colours and pen 5 is a dim grey, with the rest a 3-3-2
- * RGB cube. A grey ramp would be useless: COMPLEMENT turns pen 1 into pen 254
- * and pen 0 into pen 255, which as greys are indistinguishable from the white
+ * Pens 0-4 are named colors and pen 5 is a dim gray, with the rest a 3-3-2
+ * RGB cube. A gray ramp would be useless: COMPLEMENT turns pen 1 into pen 254
+ * and pen 0 into pen 255, which as grays are indistinguishable from the white
  * they inverted, making the scene look blank. Under 3-3-2 they come out as
- * clearly different colours.
+ * clearly different colors.
  */
 static void build_palette(png_color *pal) {
     int i;
@@ -113,7 +113,7 @@ UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
      * longjmp must not leave it holding a stale register copy. */
     UBYTE *volatile idx = NULL;
     png_uint_32 pw, ph;
-    int depth, colour;
+    int depth, color;
 
     BPTR f = Open((STRPTR)path, MODE_OLDFILE);
     if (!f)
@@ -137,12 +137,12 @@ UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
     pw = png_get_image_width(png, info);
     ph = png_get_image_height(png, info);
     depth = png_get_bit_depth(png, info);
-    colour = png_get_color_type(png, info);
+    color = png_get_color_type(png, info);
 
     /* Anything else would have to be converted, and a converted reference is
      * no longer a reference: the comparison is on the stored bytes. */
     if (depth != 8 ||
-        colour != (bpp == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_PALETTE)) {
+        color != (bpp == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_PALETTE)) {
         printf("%s is not an 8-bit %s PNG\n", path,
                bpp == 3 ? "RGB" : "palette");
         png_destroy_read_struct(&png, &info, NULL);

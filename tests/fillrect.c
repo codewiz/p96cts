@@ -96,15 +96,15 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
 /* Degenerate geometry. P96 fills the rectangle inclusive of both corners, so
  * a single pixel and a single row/column are legal fills, and a driver that
  * computes width as (x1 - x0) rather than (x1 - x0 + 1) drops them entirely.
- * Swapped corners are the other half: graphics.library normalises them, and a
+ * Swapped corners are the other half: graphics.library normalizes them, and a
  * driver that passes them through unsorted fills nothing or runs away. */
 static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT n = (w < h ? w : h) / 8;
-    ULONG fg = p96cts_colour(FG, FG_RGB);
-    ULONG bg = p96cts_colour(BG, BG_RGB);
-    ULONG band = p96cts_colour(BAND_BG, BAND_BG_RGB);
+    ULONG fg = p96cts_color(FG, FG_RGB);
+    ULONG bg = p96cts_color(BG, BG_RGB);
+    ULONG band = p96cts_color(BAND_BG, BAND_BG_RGB);
 
-    p96cts_clear(rp, w, h, p96cts_colour(SCENE_BG, SCENE_BG_RGB));
+    p96cts_clear(rp, w, h, p96cts_color(SCENE_BG, SCENE_BG_RGB));
 
     /* A diagonal of single pixels, then single-pixel rows and columns of
      * growing length, so an off-by-one in either axis shows up as a short
@@ -118,7 +118,7 @@ static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
     for (SHORT i = 0; i < n; i++)
         p96cts_fill(rp, 2 + i * 4, h / 2, 2 + i * 4, h / 2 + i, bg);
 
-    /* Corners given the wrong way round: graphics.library normalises them,
+    /* Corners given the wrong way round: graphics.library normalizes them,
      * and a driver that passes them through unsorted fills nothing or runs
      * away. (Only the palette path reaches RectFill with them swapped;
      * p96cts_fill sorts them for p96RectFill, whose contract is min <= max.)
@@ -131,19 +131,19 @@ static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_fill(rp, w - 1, 0, w - 1, h - 1, fg);
 }
 
-/* COMPLEMENT inverts the destination and needs no colour at all, which makes
+/* COMPLEMENT inverts the destination and needs no color at all, which makes
  * it the one drawmode that works identically on palette and truecolor
  * screens -- on truecolor it is the driver's InvertRect. The double-inverted
  * rectangle is the heart of the scene: it must come back bit-exact, which no
  * "fill with something plausible" implementation survives. */
 static void t_invert(struct RastPort *rp, SHORT w, SHORT h) {
-    p96cts_clear(rp, w, h, p96cts_colour(SCENE_BG, SCENE_BG_RGB));
+    p96cts_clear(rp, w, h, p96cts_color(SCENE_BG, SCENE_BG_RGB));
 
-    /* Three bands, so the inversions below each cross a colour boundary. */
-    p96cts_fill(rp, 0, 0, w / 3 - 1, h - 1, p96cts_colour(FG, FG_RGB));
+    /* Three bands, so the inversions below each cross a color boundary. */
+    p96cts_fill(rp, 0, 0, w / 3 - 1, h - 1, p96cts_color(FG, FG_RGB));
     p96cts_fill(rp, w / 3, 0, 2 * w / 3 - 1, h - 1,
-                p96cts_colour(BAND_BG, BAND_BG_RGB));
-    p96cts_fill(rp, 2 * w / 3, 0, w - 1, h - 1, p96cts_colour(BG, BG_RGB));
+                p96cts_color(BAND_BG, BAND_BG_RGB));
+    p96cts_fill(rp, 2 * w / 3, 0, w - 1, h - 1, p96cts_color(BG, BG_RGB));
 
     SetDrMd(rp, COMPLEMENT);
     /* One inversion across all three bands; one double inversion, which
@@ -157,7 +157,7 @@ static void t_invert(struct RastPort *rp, SHORT w, SHORT h) {
 
 static const struct P96Test TESTS[] = {
     /* The drawmode grid stays palette-only: JAM2 and INVERSVID take their
-     * second colour from BPen, and rp->Mask selects bitplanes -- neither
+     * second color from BPen, and rp->Mask selects bitplanes -- neither
      * concept exists on a truecolor screen. */
     {"drawmodes", t_drawmodes, 1},
     {"edges", t_edges, 0},

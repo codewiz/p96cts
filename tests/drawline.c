@@ -23,7 +23,7 @@ static const short DIRS[24][2] = {
     {512, -887},  {724, -724},  {887, -512},  {989, -265},
 };
 
-/* A star of 24 rays centred in the scene. The radius keeps every ray inside
+/* A star of 24 rays centerd in the scene. The radius keeps every ray inside
  * the bitmap: a RastPort without a Layer is not clipped by graphics.library,
  * so a ray leaving the bitmap would corrupt memory rather than be clipped. */
 static void star(struct RastPort *rp, SHORT w, SHORT h, UWORD pattern) {

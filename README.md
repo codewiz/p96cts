@@ -126,14 +126,14 @@ set:
     p96cts CAPTURE MODE=320x200x24
     p96cts MONITOR=Z3660 MODE=640x400x24 DIFF
 
-Groups whose scenes pick colours by pen number (`drawline`, `fillrect`) are
+Groups whose scenes pick colors by pen number (`drawline`, `fillrect`) are
 skipped on truecolor runs until they learn `p96EncodeColor`. 15/16-bit modes
 are the deliberate gap: their reference would have to be rendered at the same
 5-6-5 precision, not just converted to it.
 
 
-## Licence
+## License
 
 0BSD, the same terms iComp chose for P96Tests, so testcases can move freely
 between the two and either can be absorbed into a driver tree regardless of
-its own licence. See `LICENSE`.
+its own license. See `LICENSE`.

@@ -3,7 +3,7 @@
 /* The shared backdrop scene.
  *
  * Testcases that need a non-trivial destination to draw over or copy around
- * share this one, so a scene is recognisable across groups and only has to
+ * share this one, so a scene is recognizable across groups and only has to
  * be justified once.
  */
 
@@ -16,7 +16,7 @@
 
 #include "p96cts.h"
 
-/* The backdrop is a landscape: an off-centre sun over two irregular ridges,
+/* The backdrop is a landscape: an off-center sun over two irregular ridges,
  * with rippled water below and a boat well off to one side.
  *
  * It is a picture rather than a ramp because a human has to read the diff.
@@ -24,7 +24,7 @@
  * a landscape it visibly tears the horizon, which is the difference between
  * spotting a driver bug and squinting at one.
  *
- * A picture alone would not do, though. Detecting a smear needs neighbouring
+ * A picture alone would not do, though. Detecting a smear needs neighboring
  * pixels to differ -- a flat sky would swallow a copy that replicated one row
  * down the overlap -- so the gradients are ordered-dithered before being
  * quantised to the palette, in the manner of a copper gradient.
@@ -33,7 +33,7 @@
  * shift of (dx, dy) leaves the pattern unchanged only when both dx and dy are
  * multiples of 4, and the shifts used by the testcases (5 rows, 3 columns)
  * are neither. Three quarters of the pixels in any smeared region therefore
- * land on the wrong dither phase, even inside what looks like flat colour.
+ * land on the wrong dither phase, even inside what looks like flat color.
  *
  * Written through WritePixelArray8; a RectFill per pixel would be tens of
  * thousands of driver calls per scene.
@@ -71,7 +71,7 @@ static UBYTE clamp8(int v) {
 }
 
 /* Quantise to the writer's 3-3-2 palette cube (see build_palette in png.c).
- * Pens 0-5 are overridden there with named colours, so a scene colour landing
+ * Pens 0-5 are overridden there with named colors, so a scene color landing
  * on one would display as e.g. white in the middle of a dark red; push those
  * up into the blue half of the cube instead. */
 static UBYTE pen_of(int r, int g, int b) {

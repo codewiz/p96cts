@@ -68,26 +68,26 @@ static const struct P96TestGroup *const GROUPS[] = {
 
 int p96cts_truecolor;
 
-ULONG p96cts_colour(ULONG pen, ULONG rgb) {
+ULONG p96cts_color(ULONG pen, ULONG rgb) {
     return p96cts_truecolor ? rgb : pen;
 }
 
 void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
-                 ULONG colour) {
+                 ULONG color) {
     if (p96cts_truecolor) {
         SHORT t;
         if (x1 > x2) { t = x1; x1 = x2; x2 = t; }
         if (y1 > y2) { t = y1; y1 = y2; y2 = t; }
-        p96RectFill(rp, x1, y1, x2, y2, colour);
+        p96RectFill(rp, x1, y1, x2, y2, color);
         return;
     }
     SetDrMd(rp, JAM1);
-    SetAPen(rp, colour);
+    SetAPen(rp, color);
     RectFill(rp, x1, y1, x2, y2);
 }
 
-void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG colour) {
-    p96cts_fill(rp, 0, 0, w - 1, h - 1, colour);
+void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
+    p96cts_fill(rp, 0, 0, w - 1, h - 1, color);
 }
 
 /* --- display database ----------------------------------------------------- */
@@ -100,7 +100,7 @@ void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG colour) {
  * PrivateInclude and is not shipped with the toolchain, so the values are
  * repeated rather than included.
  *
- * MONITOOL is the one worth recognising: P96 publishes a template entry per
+ * MONITOOL is the one worth recognizing: P96 publishes a template entry per
  * pixel format for the mode prefs editor to enumerate ("Z36600-P96Mode 8bit"
  * and friends, at a nominal 320x200). They are not real modes and never
  * open. */
@@ -441,7 +441,7 @@ static int run_test(const struct P96Test *t, const char *name,
                 printf("       ... and %lu more\n", (unsigned long)(bad - shown));
         }
         if (o->want_diff && bad) {
-            /* Differing pixels in red over the golden scene dimmed to grey:
+            /* Differing pixels in red over the golden scene dimmed to gray:
              * at full intensity the scene buries a few single-pixel diffs. */
             UBYTE *d = AllocVec(pixels * bpp, MEMF_CLEAR);
             if (!d) {
@@ -455,10 +455,10 @@ static int run_test(const struct P96Test *t, const char *name,
                                 d[p] = 255;
                                 d[p + 1] = d[p + 2] = 0;
                             } else {
-                                /* The golden pixel, dimmed to a grey. */
-                                UBYTE grey = (UBYTE)((gold[p] + gold[p + 1] +
+                                /* The golden pixel, dimmed to a gray. */
+                                UBYTE gray = (UBYTE)((gold[p] + gold[p + 1] +
                                                       gold[p + 2]) / 6);
-                                d[p] = d[p + 1] = d[p + 2] = grey;
+                                d[p] = d[p + 1] = d[p + 2] = gray;
                             }
                         } else {
                             d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
@@ -549,7 +549,7 @@ int main(void) {
     o.want_diff = args[8] != 0;
 
     /* 8 compares pen values; 24 compares R8G8B8, which any truecolor screen
-     * canonicalises to on readback. 15/16-bit modes are the deliberate gap:
+     * canonicalizes to on readback. 15/16-bit modes are the deliberate gap:
      * their reference would have to be rendered in the same 5-6-5 precision,
      * not just converted to it, so they need their own path. */
     if (o.depth != 8 && o.depth != 24) {
@@ -675,7 +675,7 @@ int main(void) {
 
     for (g = 0; g < NGROUPS; g++) {
         if (p96cts_truecolor && GROUPS[g]->clut_only) {
-            printf("skip %s: its scenes pick colours by pen number\n",
+            printf("skip %s: its scenes pick colors by pen number\n",
                    GROUPS[g]->name);
             continue;
         }
@@ -686,7 +686,7 @@ int main(void) {
             if (!selected((STRPTR *)args[0], full))
                 continue;
             if (p96cts_truecolor && t->clut_only) {
-                printf("skip %s: the scene picks colours by pen number\n",
+                printf("skip %s: the scene picks colors by pen number\n",
                        full);
                 continue;
             }

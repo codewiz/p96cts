@@ -26,31 +26,31 @@ struct P96TestGroup {
     const char *name;
     const struct P96Test *tests;
     int count;
-    /* The group's scenes pick colours with SetAPen/SetBPen, which sets a pen
+    /* The group's scenes pick colors with SetAPen/SetBPen, which sets a pen
      * number: meaningful on a palette screen, undefined on a truecolor one.
      * Such a group only runs at depth 8 until it learns p96EncodeColor. */
     int clut_only;
 };
 
 /* Whether the current run is on a truecolor mode (depth > 8). Testcases that
- * run on both kinds of screen branch on this to pick their colour calls:
+ * run on both kinds of screen branch on this to pick their color calls:
  * pens on a palette screen, direct RGB on truecolor. */
 extern int p96cts_truecolor;
 
-/* Fill the whole scene with one colour, in JAM1: a pen number on a palette
+/* Fill the whole scene with one color, in JAM1: a pen number on a palette
  * screen, 0x00RRGGBB on truecolor. 0 is black either way. */
-void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG colour);
+void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color);
 
-/* JAM1-fill a rectangle in the given colour (pen or 0x00RRGGBB as above).
+/* JAM1-fill a rectangle in the given color (pen or 0x00RRGGBB as above).
  * On a palette screen the corners go to RectFill as given, including
  * deliberately swapped ones; the truecolor path sorts them first, since
  * p96RectFill's contract requires min <= max. */
 void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
-                 ULONG colour);
+                 ULONG color);
 
-/* The colour for the current run: a pen number on a palette screen, direct
+/* The color for the current run: a pen number on a palette screen, direct
  * 0x00RRGGBB on truecolor. Scenes pass both and let the run pick. */
-ULONG p96cts_colour(ULONG pen, ULONG rgb);
+ULONG p96cts_color(ULONG pen, ULONG rgb);
 
 /* Draw the shared backdrop scene (backdrop.c): a landscape, textured per
  * pixel so no region of it is flat enough to hide a misplaced pixel. For
