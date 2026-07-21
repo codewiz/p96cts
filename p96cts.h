@@ -19,6 +19,7 @@ struct RastPort;
 struct P96Test {
     const char *name;
     void (*fn)(struct RastPort *rp, SHORT w, SHORT h);
+    int clut_only; /* as for the group flag, but for one scene */
 };
 
 struct P96TestGroup {
@@ -39,6 +40,17 @@ extern int p96cts_truecolor;
 /* Fill the whole scene with one colour, in JAM1: a pen number on a palette
  * screen, 0x00RRGGBB on truecolor. 0 is black either way. */
 void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG colour);
+
+/* JAM1-fill a rectangle in the given colour (pen or 0x00RRGGBB as above).
+ * On a palette screen the corners go to RectFill as given, including
+ * deliberately swapped ones; the truecolor path sorts them first, since
+ * p96RectFill's contract requires min <= max. */
+void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
+                 ULONG colour);
+
+/* The colour for the current run: a pen number on a palette screen, direct
+ * 0x00RRGGBB on truecolor. Scenes pass both and let the run pick. */
+ULONG p96cts_colour(ULONG pen, ULONG rgb);
 
 /* Draw the shared backdrop scene (backdrop.c): a landscape, textured per
  * pixel so no region of it is flat enough to hide a misplaced pixel. For

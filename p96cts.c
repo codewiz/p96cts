@@ -68,14 +68,26 @@ static const struct P96TestGroup *const GROUPS[] = {
 
 int p96cts_truecolor;
 
-void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG colour) {
+ULONG p96cts_colour(ULONG pen, ULONG rgb) {
+    return p96cts_truecolor ? rgb : pen;
+}
+
+void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
+                 ULONG colour) {
     if (p96cts_truecolor) {
-        p96RectFill(rp, 0, 0, w - 1, h - 1, colour);
+        SHORT t;
+        if (x1 > x2) { t = x1; x1 = x2; x2 = t; }
+        if (y1 > y2) { t = y1; y1 = y2; y2 = t; }
+        p96RectFill(rp, x1, y1, x2, y2, colour);
         return;
     }
     SetDrMd(rp, JAM1);
     SetAPen(rp, colour);
-    RectFill(rp, 0, 0, w - 1, h - 1);
+    RectFill(rp, x1, y1, x2, y2);
+}
+
+void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG colour) {
+    p96cts_fill(rp, 0, 0, w - 1, h - 1, colour);
 }
 
 /* --- display database ----------------------------------------------------- */
@@ -671,9 +683,14 @@ int main(void) {
             const struct P96Test *t = &GROUPS[g]->tests[i];
             char full[64];
             test_name(full, sizeof full, GROUPS[g], t);
-            if (selected((STRPTR *)args[0], full)) {
-                failures += run_test(t, full, rp, &o);
+            if (!selected((STRPTR *)args[0], full))
+                continue;
+            if (p96cts_truecolor && t->clut_only) {
+                printf("skip %s: the scene picks colours by pen number\n",
+                       full);
+                continue;
             }
+            failures += run_test(t, full, rp, &o);
         }
     }
 

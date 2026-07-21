@@ -30,6 +30,14 @@
 #define SCENE_BG 0x35
 #define BAND_BG 0xC6
 
+/* The truecolor equivalents, all channel-asymmetric: a driver that swaps
+ * red and blue, or renders BGRA data as RGBA, produces a different pixel
+ * for every one of these. */
+#define FG_RGB 0xE07010UL       /* orange */
+#define BG_RGB 0x8020C0UL       /* purple */
+#define SCENE_BG_RGB 0x203040UL /* dark slate */
+#define BAND_BG_RGB 0x10C0E0UL  /* cyan */
+
 static const UBYTE MASKS[] = {0xFF, 0x0F, 0x55, 0x81};
 #define NMASKS ((SHORT)(sizeof MASKS / sizeof MASKS[0]))
 
@@ -92,42 +100,70 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
  * driver that passes them through unsorted fills nothing or runs away. */
 static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT n = (w < h ? w : h) / 8;
+    ULONG fg = p96cts_colour(FG, FG_RGB);
+    ULONG bg = p96cts_colour(BG, BG_RGB);
+    ULONG band = p96cts_colour(BAND_BG, BAND_BG_RGB);
 
-    p96cts_clear(rp, w, h, SCENE_BG);
-    SetDrMd(rp, JAM1);
+    p96cts_clear(rp, w, h, p96cts_colour(SCENE_BG, SCENE_BG_RGB));
 
     /* A diagonal of single pixels, then single-pixel rows and columns of
      * growing length, so an off-by-one in either axis shows up as a short
      * run rather than as nothing at all. */
-    SetAPen(rp, FG);
     for (SHORT i = 0; i < n; i++)
-        RectFill(rp, 2 + i * 4, 2 + i * 4, 2 + i * 4, 2 + i * 4);
+        p96cts_fill(rp, 2 + i * 4, 2 + i * 4, 2 + i * 4, 2 + i * 4, fg);
 
-    SetAPen(rp, BAND_BG);
     for (SHORT i = 0; i < n; i++)
-        RectFill(rp, w / 2, 2 + i * 4, w / 2 + i, 2 + i * 4);
+        p96cts_fill(rp, w / 2, 2 + i * 4, w / 2 + i, 2 + i * 4, band);
 
-    SetAPen(rp, BG);
     for (SHORT i = 0; i < n; i++)
-        RectFill(rp, 2 + i * 4, h / 2, 2 + i * 4, h / 2 + i);
+        p96cts_fill(rp, 2 + i * 4, h / 2, 2 + i * 4, h / 2 + i, bg);
 
     /* Corners given the wrong way round: graphics.library normalises them,
      * and a driver that passes them through unsorted fills nothing or runs
-     * away. Then the scene's own edges, where a fill that is off by one
-     * writes outside the bitmap entirely. */
-    SetAPen(rp, FG);
-    RectFill(rp, w - 2, h - 2, w - n, h - n);
-    RectFill(rp, 0, 0, w - 1, 0);
-    RectFill(rp, 0, h - 1, w - 1, h - 1);
-    RectFill(rp, 0, 0, 0, h - 1);
-    RectFill(rp, w - 1, 0, w - 1, h - 1);
+     * away. (Only the palette path reaches RectFill with them swapped;
+     * p96cts_fill sorts them for p96RectFill, whose contract is min <= max.)
+     * Then the scene's own edges, where a fill that is off by one writes
+     * outside the bitmap entirely. */
+    p96cts_fill(rp, w - 2, h - 2, w - n, h - n, fg);
+    p96cts_fill(rp, 0, 0, w - 1, 0, fg);
+    p96cts_fill(rp, 0, h - 1, w - 1, h - 1, fg);
+    p96cts_fill(rp, 0, 0, 0, h - 1, fg);
+    p96cts_fill(rp, w - 1, 0, w - 1, h - 1, fg);
+}
+
+/* COMPLEMENT inverts the destination and needs no colour at all, which makes
+ * it the one drawmode that works identically on palette and truecolor
+ * screens -- on truecolor it is the driver's InvertRect. The double-inverted
+ * rectangle is the heart of the scene: it must come back bit-exact, which no
+ * "fill with something plausible" implementation survives. */
+static void t_invert(struct RastPort *rp, SHORT w, SHORT h) {
+    p96cts_clear(rp, w, h, p96cts_colour(SCENE_BG, SCENE_BG_RGB));
+
+    /* Three bands, so the inversions below each cross a colour boundary. */
+    p96cts_fill(rp, 0, 0, w / 3 - 1, h - 1, p96cts_colour(FG, FG_RGB));
+    p96cts_fill(rp, w / 3, 0, 2 * w / 3 - 1, h - 1,
+                p96cts_colour(BAND_BG, BAND_BG_RGB));
+    p96cts_fill(rp, 2 * w / 3, 0, w - 1, h - 1, p96cts_colour(BG, BG_RGB));
+
+    SetDrMd(rp, COMPLEMENT);
+    /* One inversion across all three bands; one double inversion, which
+     * must restore the bands exactly; one single pixel. */
+    RectFill(rp, w / 8, h / 4, w - w / 8 - 1, h / 2 - 1);
+    RectFill(rp, w / 8, h - h / 3, w - w / 8 - 1, h - h / 6);
+    RectFill(rp, w / 8, h - h / 3, w - w / 8 - 1, h - h / 6);
+    RectFill(rp, w / 2, h * 3 / 4, w / 2, h * 3 / 4);
+    SetDrMd(rp, JAM1);
 }
 
 static const struct P96Test TESTS[] = {
-    {"drawmodes", t_drawmodes},
-    {"edges", t_edges},
+    /* The drawmode grid stays palette-only: JAM2 and INVERSVID take their
+     * second colour from BPen, and rp->Mask selects bitplanes -- neither
+     * concept exists on a truecolor screen. */
+    {"drawmodes", t_drawmodes, 1},
+    {"edges", t_edges, 0},
+    {"invert", t_invert, 0},
 };
 
 const struct P96TestGroup FillRectGroup = {
-    "fillrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0]), 1 /* clut_only */
+    "fillrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0]), 0 /* any depth */
 };

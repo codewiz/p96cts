@@ -87,11 +87,11 @@ static void t_disjoint(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {"overlap-down", t_overlap_down},
-    {"overlap-up", t_overlap_up},
-    {"overlap-left", t_overlap_left},
-    {"overlap-right", t_overlap_right},
-    {"disjoint", t_disjoint},
+    {"overlap-down", t_overlap_down, 0},
+    {"overlap-up", t_overlap_up, 0},
+    {"overlap-left", t_overlap_left, 0},
+    {"overlap-right", t_overlap_right, 0},
+    {"disjoint", t_disjoint, 0},
 };
 
 const struct P96TestGroup CopyRectGroup = {

@@ -114,11 +114,11 @@ static void t_complement(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {"solid", t_solid},
-    {"pattern", t_pattern},
-    {"jam2", t_jam2},
-    {"inversvid", t_inversvid},
-    {"complement", t_complement},
+    {"solid", t_solid, 0},
+    {"pattern", t_pattern, 0},
+    {"jam2", t_jam2, 0},
+    {"inversvid", t_inversvid, 0},
+    {"complement", t_complement, 0},
 };
 
 const struct P96TestGroup DrawLineGroup = {
