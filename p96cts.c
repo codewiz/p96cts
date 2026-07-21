@@ -513,11 +513,6 @@ int main(void) {
     make_path(o.dir);
 
     for (g = 0; g < NGROUPS; g++) {
-        if (p96cts_truecolor && GROUPS[g]->clut_only) {
-            printf("skip %s: its scenes pick colors by pen number\n",
-                   GROUPS[g]->name);
-            continue;
-        }
         for (i = 0; i < GROUPS[g]->count; i++) {
             const struct P96Test *t = &GROUPS[g]->tests[i];
             char full[64];
@@ -525,8 +520,8 @@ int main(void) {
             if (!selected((STRPTR *)args[0], full))
                 continue;
             if (p96cts_truecolor && t->clut_only) {
-                printf("skip %s: the scene picks colors by pen number\n",
-                       full);
+                printf("skip %s: palette-only, it tests something truecolor "
+                       "has no equivalent of\n", full);
                 continue;
             }
             failures += run_test(t, full, rp, &o);

@@ -157,14 +157,15 @@ static void t_invert(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    /* The drawmode grid stays palette-only: JAM2 and INVERSVID take their
-     * second color from BPen, and rp->Mask selects bitplanes -- neither
-     * concept exists on a truecolor screen. */
+    /* The drawmode grid stays palette-only, and permanently: it sweeps every
+     * mode across rp->Mask, which selects bitplanes and has no truecolor
+     * counterpart. The pens themselves are fine -- BPen resolves through the
+     * screen's palette at any depth. */
     {"drawmodes", t_drawmodes, 1},
     {"edges", t_edges, 0},
     {"invert", t_invert, 0},
 };
 
 const struct P96TestGroup FillRectGroup = {
-    "fillrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0]), 0 /* any depth */
+    "fillrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
 };

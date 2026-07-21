@@ -104,10 +104,6 @@ static void pentagram(struct RastPort *rp, SHORT w, SHORT h) {
 #define COMPLEMENT_BG_LEFT 0x35
 #define COMPLEMENT_BG_RIGHT 0xA6
 
-/* Pens throughout, no p96cts_color: every pen has a defined color, so the one
- * sequence of calls means the same thing on both kinds of screen. That is also
- * what makes the scene worth running on truecolor -- it is the driver's
- * InvertRect being checked, against backdrops it cannot predict. */
 static void t_complement(struct RastPort *rp, SHORT w, SHORT h) {
     /* Two background tones, so the same COMPLEMENT produces two different
      * results in one scene and a driver that ignores the destination cannot
@@ -132,5 +128,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup DrawLineGroup = {
-    "drawline", TESTS, (int)(sizeof TESTS / sizeof TESTS[0]), 0 /* any depth */
+    "drawline", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
 };

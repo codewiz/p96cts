@@ -20,17 +20,16 @@ struct RastPort;
 struct P96Test {
     const char *name;
     void (*fn)(struct RastPort *rp, SHORT w, SHORT h);
-    int clut_only; /* as for the group flag, but for one scene */
+    /* The scene tests something a truecolor screen has no equivalent of, so it
+     * runs at depth 8 only. Pens are not a reason -- every pen has a defined
+     * color on both kinds of screen; rp->Mask, which selects bitplanes, is. */
+    int clut_only;
 };
 
 struct P96TestGroup {
     const char *name;
     const struct P96Test *tests;
     int count;
-    /* The group's scenes pick colors with SetAPen/SetBPen, which sets a pen
-     * number: meaningful on a palette screen, undefined on a truecolor one.
-     * Such a group only runs at depth 8 until it learns p96EncodeColor. */
-    int clut_only;
 };
 
 /* The groups the harness walks. Each is defined by its own file in tests/. */
