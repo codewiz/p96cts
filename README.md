@@ -141,6 +141,12 @@ One scene is palette-only, and permanently: `fillrect-drawmodes` sweeps its
 grid across `rp->Mask`, which selects bitplanes and has no truecolor
 counterpart. Everything else runs at both depths.
 
+A palette run also works on native AGA screens, whose bitmaps are planar rather
+than chunky, which puts graphics.library's own rendering up against the same
+reference:
+
+    p96cts MONITOR=PAL MODE=320x256x8
+
 15/16-bit modes are the deliberate gap: their reference would have to be
 rendered at the same 5-6-5 precision, not just converted to it.
 
