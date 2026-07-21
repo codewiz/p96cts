@@ -48,8 +48,9 @@ void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
 #define P96CTS_INVALID_MODE ((ULONG)~0UL)
 
 /* Find a display id of the given size/depth, or P96CTS_INVALID_MODE. `monitor`
- * selects by mode-name prefix ("PAL", "Z3660", ...); NULL matches any. When
- * name_out is given, the matched mode's name is copied into it. */
+ * selects by mode-name prefix ("PAL", "Z3660", ...); NULL matches any. A width
+ * of 0 matches any size, for when only the depth matters. When name_out is
+ * given, the matched mode's name is copied into it. */
 ULONG p96cts_find_mode(int w, int h, int depth, const char *monitor,
                        char *name_out, int name_len);
 

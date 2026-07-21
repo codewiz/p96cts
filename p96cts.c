@@ -110,6 +110,11 @@ static int validate_tests(STRPTR *names) {
 
 #define MAX_REPORTED_DIFFS 8
 
+/* Wider than any P96 board will accept a bitmap, which is how the reference
+ * allocation is forced into fast memory. P96Tests uses 4100 for the same
+ * reason. */
+#define REFERENCE_WIDTH 4100
+
 struct RunOpts {
     const char *dir, *golden_dir;
     SHORT w, h;  /* scene: the region rendered and compared */
@@ -374,6 +379,16 @@ int main(void) {
         goto out;
     }
 
+    /* A screen is opened either way. The driver run renders into it, since
+     * that is the thing under test. The reference run only borrows it: a pen
+     * number is not a color on its own, and the mapping that turns it into one
+     * comes from the screen, reaching the reference bitmap through the friend
+     * argument below.
+     *
+     * The driver run needs the exact mode named. The reference run needs only
+     * some screen of the right depth, and the scene size it renders at is
+     * often not a real mode at all -- P96 publishes a 320x200 entry per pixel
+     * format, but they are mode prefs templates that never open. */
     if (monitor) {
         id = p96cts_find_mode(screen_w, screen_h, o.depth, monitor, NULL, 0);
         if (id == P96CTS_INVALID_MODE) {
@@ -382,33 +397,57 @@ int main(void) {
             failures = 1;
             goto out;
         }
-        scr = OpenScreenTags(NULL, SA_DisplayID, id, SA_Width, screen_w, SA_Height,
-                             screen_h, SA_Depth, o.depth, SA_Quiet, TRUE,
-                             SA_ShowTitle, FALSE, TAG_DONE);
-        if (!scr) {
-            printf("OpenScreen failed\n");
+    } else {
+        id = p96cts_find_mode(0, 0, o.depth, NULL, NULL, 0);
+        if (id == P96CTS_INVALID_MODE) {
+            printf("no %d-bit mode in the display database\n", o.depth);
             failures = 1;
             goto out;
         }
-        SetRGB32(&scr->ViewPort, 0, 0, 0, 0);
-        SetRGB32(&scr->ViewPort, 1, ~0UL, ~0UL, ~0UL);
-        SetRGB32(&scr->ViewPort, 2, ~0UL, 0, 0);
+    }
+    scr = monitor ? OpenScreenTags(NULL, SA_DisplayID, id, SA_Width, screen_w,
+                                   SA_Height, screen_h, SA_Depth, o.depth,
+                                   SA_Quiet, TRUE, SA_ShowTitle, FALSE, TAG_DONE)
+                  : OpenScreenTags(NULL, SA_DisplayID, id, SA_Depth, o.depth,
+                                   SA_Quiet, TRUE, SA_ShowTitle, FALSE, TAG_DONE);
+    if (!scr) {
+        printf("OpenScreen failed\n");
+        failures = 1;
+        goto out;
+    }
+    SetRGB32(&scr->ViewPort, 0, 0, 0, 0);
+    SetRGB32(&scr->ViewPort, 1, ~0UL, ~0UL, ~0UL);
+    SetRGB32(&scr->ViewPort, 2, ~0UL, 0, 0);
+
+    if (monitor) {
         rp = &scr->RastPort;
     } else {
-        /* BMF_USERPRIVATE is documented as fast-memory and never touched by
-         * board hardware, so rtg.library rasterizes this itself. That is the
-         * reference: P96's own software implementation of the same
-         * primitives, independent of any card driver and of the blitter. */
-        bm = p96AllocBitMap(screen_w, screen_h, o.depth,
-                            BMF_CLEAR | BMF_USERPRIVATE, NULL,
+        /* Friended to the screen's bitmap, so pens resolve through the
+         * screen's colors -- but wider than any board can hold, which is what
+         * keeps it in fast memory anyway. BMF_USERPRIVATE alone does not: with
+         * a friend and a width the board can take, P96 puts it on the card and
+         * the run is no longer an independent reference. The trick, and the
+         * width, are from P96Tests/DrawLine.c.
+         *
+         * Off the board, rtg.library rasterizes this itself: P96's own
+         * software implementation of the same primitives, independent of any
+         * card driver and of the blitter. Only the leftmost part is drawn on
+         * and read back; the rest is there to make the allocation refuse the
+         * card. */
+        bm = p96AllocBitMap(REFERENCE_WIDTH, screen_h, o.depth,
+                            BMF_CLEAR | BMF_USERPRIVATE, scr->RastPort.BitMap,
                             o.depth > 8 ? RGBFB_R8G8B8 : RGBFB_CLUT);
         if (!bm) {
-            printf("p96AllocBitMap %dx%dx%d failed\n", screen_w, screen_h,
-                   o.depth);
+            printf("p96AllocBitMap %dx%dx%d failed\n", REFERENCE_WIDTH,
+                   screen_h, o.depth);
             failures = 1;
-            goto out;
+            goto cleanup;
         }
-        InitRastPort(&rp_off);
+        /* Copied, not InitRastPort'd, for the same reason as the friend
+         * bitmap: this RastPort belongs to the screen. Only the layer and the
+         * bitmap are replaced, so drawing lands offscreen and unclipped. */
+        rp_off = scr->RastPort;
+        rp_off.Layer = NULL;
         rp_off.BitMap = bm;
         rp = &rp_off;
     }
@@ -485,10 +524,11 @@ int main(void) {
     }
 
 cleanup:
-    if (scr)
-        CloseScreen(scr);
+    /* The bitmap goes first: it was allocated with the screen's as friend. */
     if (bm)
         p96FreeBitMap(bm);
+    if (scr)
+        CloseScreen(scr);
 out:
     if (P96Base)
         CloseLibrary(P96Base);

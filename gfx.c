@@ -100,7 +100,7 @@ ULONG p96cts_find_mode(int w, int h, int depth, const char *monitor,
         if (GetDisplayInfoData(NULL, (UBYTE *)&dim, sizeof dim, DTAG_DIMS, id)) {
             int mw = dim.Nominal.MaxX - dim.Nominal.MinX + 1;
             int mh = dim.Nominal.MaxY - dim.Nominal.MinY + 1;
-            if (mw == w && mh == h && dim.MaxDepth >= depth) {
+            if ((w <= 0 || (mw == w && mh == h)) && dim.MaxDepth >= depth) {
                 if (name_out) {
                     strncpy(name_out, (const char *)ni.Name, name_len - 1);
                     name_out[name_len - 1] = 0;
