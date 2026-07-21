@@ -2,13 +2,15 @@
 # make the editor see the same world the cross-compiler does: AmigaOS headers,
 # no host glibc, and 32-bit pointers.
 #
-# Paths are absolute because clangd expands neither ~ nor $HOME. Adjust them if
-# your toolchain and P96Develop live elsewhere.
+# Paths are absolute because clangd expands neither ~ nor $HOME, and because a
+# relative -I would resolve against each file's own directory, leaving
+# tests/*.c unable to find p96cts.h. Adjust them if your toolchain and
+# P96Develop live elsewhere.
 CompileFlags:
   Compiler: clang
   Add:
-    # 32-bit pointers and 16-bit int-vs-pointer rules. Without this, LONG is
-    # narrower than a pointer on the host and every ReadArgs cast warns.
+    # 32-bit pointers, so the ReadArgs casts in p96cts.c do not warn. LLVM does
+    # not know the "amigaos" OS field and ignores it; only the arch matters.
     - --target=m68k-unknown-amigaos
     # -nostdinc plus -isystem, not -I: the host's /usr/include must not be
     # searched at all. glibc's sys/select.h defines struct timeval, and so does
@@ -18,10 +20,10 @@ CompileFlags:
     - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/m68k-amigaos/sys-include
     - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/m68k-amigaos/include
     - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/lib/gcc/m68k-amigaos/6.5.0b/include
-    - -I.
+    - -I/home/bernie/emu/amiga/src/p96cts
     - -I/home/bernie/emu/amiga/devel/Picasso96Develop/Include
-    - -Ithird_party/libpng/include
-    - -Ithird_party/zlib/include
+    - -I/home/bernie/emu/amiga/src/p96cts/third_party/libpng/include
+    - -I/home/bernie/emu/amiga/src/p96cts/third_party/zlib/include
     # proto/Picasso96.h picks its inline glue on __GNUC__ alone, with no
     # _NO_INLINE escape hatch like the NDK's headers have, and that glue is
     # m68k register asm clang cannot parse. Pre-defining the inline header's
