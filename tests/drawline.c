@@ -96,16 +96,25 @@ static void pentagram(struct RastPort *rp, SHORT w, SHORT h) {
  * pen 0 gives 255, which a driver that just writes all-ones would get right by
  * accident, and neither pen exercises more than one bit. These two spread
  * their bits across the byte and invert to 0xCA and 0x59, so all eight bit
- * positions are checked in both directions. */
+ * positions are checked in both directions.
+ *
+ * On truecolor what gets inverted is the pixel value these pens resolve to,
+ * not the pen number, so the two depths invert different things and keep
+ * separate goldens. Either way the property under test is the same one. */
 #define COMPLEMENT_BG_LEFT 0x35
 #define COMPLEMENT_BG_RIGHT 0xA6
 
+/* Pens throughout, no p96cts_color: every pen has a defined color, so the one
+ * sequence of calls means the same thing on both kinds of screen. That is also
+ * what makes the scene worth running on truecolor -- it is the driver's
+ * InvertRect being checked, against backdrops it cannot predict. */
 static void t_complement(struct RastPort *rp, SHORT w, SHORT h) {
     /* Two background tones, so the same COMPLEMENT produces two different
      * results in one scene and a driver that ignores the destination cannot
      * pass by writing a constant. */
-    p96cts_clear(rp, w, h, COMPLEMENT_BG_LEFT);
     SetDrMd(rp, JAM1);
+    SetAPen(rp, COMPLEMENT_BG_LEFT);
+    RectFill(rp, 0, 0, w - 1, h - 1);
     SetAPen(rp, COMPLEMENT_BG_RIGHT);
     RectFill(rp, w / 2, 0, w - 1, h - 1);
 
@@ -119,12 +128,7 @@ static const struct P96Test TESTS[] = {
     {"pattern", t_pattern, 0},
     {"jam2", t_jam2, 0},
     {"inversvid", t_inversvid, 0},
-    /* Palette-only, unlike the star scenes above: its backdrops are pens 0x35
-     * and 0xA6, and only pens 0-2 are given colors. On truecolor the rest come
-     * from the screen's default palette, which is Preferences-derived and so
-     * differs between machines -- a golden captured from it would not be
-     * reproducible. */
-    {"complement", t_complement, 1},
+    {"complement", t_complement, 0},
 };
 
 const struct P96TestGroup DrawLineGroup = {
