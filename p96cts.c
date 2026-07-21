@@ -421,6 +421,11 @@ int main(void) {
                              SA_Height, monitor ? screen_h : STDSCREENHEIGHT,
                              SA_Depth, o.depth, SA_Pens, (ULONG)no_pens,
                              SA_Colors32, (ULONG)colors, SA_Quiet, TRUE,
+                             /* The reference run renders into its own bitmap
+                              * and only borrows this screen, so there is
+                              * nothing to see on it. Opening it in front would
+                              * just black out the display for the whole run. */
+                             SA_Behind, monitor ? FALSE : TRUE,
                              SA_ShowTitle, FALSE, TAG_DONE);
     }
     if (!scr) {
