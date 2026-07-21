@@ -38,7 +38,7 @@ PNGLIB   = third_party/libpng/lib/libpng16.a third_party/zlib/lib/libz.a
 WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
            -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
 
-CFLAGS  ?= -O2 $(WARNINGS)
+CFLAGS  ?= -O3 -fomit-frame-pointer -m68020 $(WARNINGS)
 
 # Kept apart from CFLAGS: a command-line CFLAGS= replaces the variable
 # entirely, and dropping -noixemul or the include path breaks the link.
