@@ -119,9 +119,14 @@ static const struct P96Test TESTS[] = {
     {"pattern", t_pattern, 0},
     {"jam2", t_jam2, 0},
     {"inversvid", t_inversvid, 0},
-    {"complement", t_complement, 0},
+    /* Palette-only, unlike the star scenes above: its backdrops are pens 0x35
+     * and 0xA6, and only pens 0-2 are given colors. On truecolor the rest come
+     * from the screen's default palette, which is Preferences-derived and so
+     * differs between machines -- a golden captured from it would not be
+     * reproducible. */
+    {"complement", t_complement, 1},
 };
 
 const struct P96TestGroup DrawLineGroup = {
-    "drawline", TESTS, (int)(sizeof TESTS / sizeof TESTS[0]), 1 /* clut_only */
+    "drawline", TESTS, (int)(sizeof TESTS / sizeof TESTS[0]), 0 /* any depth */
 };
