@@ -42,7 +42,7 @@ against it:
 
 Output looks like:
 
-    p96cts 0.2 (20.7.2026)
+    p96cts 0.3 (21.7.2026)
     testing Z3660 640x400x8 clut, scene 320x200
     PASS drawline-solid
     PASS drawline-pattern
