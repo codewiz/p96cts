@@ -38,7 +38,7 @@ Capture the reference from P96's software rasterizer, then compare a board
 against it:
 
     p96cts CAPTURE
-    p96cts MONITOR=Z3660 MODE=640x400x8 DIFF
+    p96cts MONITOR=Z3660 MODE=640x400x8
 
 Output looks like:
 
@@ -52,13 +52,18 @@ Output looks like:
 Testcases are named `<group>-<test>`, after the group that renders them, and
 their images on disk carry the same name.
 
-Reference images live in `golden/<scene>x<depth>/`, a run's own images in
-`output/<monitor>/<scene>x<depth>/` -- the same leaf name, so a run can be
-diffed against its reference directly. `DIFF` additionally writes
-`<test>.diff.png` marking the differing pixels in red. Images are PNGs, 8-bit
-palette for a palette run and RGB for a truecolor one, which compresses these
-flat synthetic scenes to a few kilobytes at most and can be viewed anywhere, so
-the references are committed rather than regenerated.
+Reference images live in `golden/<scene>x<depth>/`. A scene that matches writes
+nothing -- the file would be a copy of the golden, and encoding every scene
+costs more than rendering it. A scene that fails writes two images to
+`output/<monitor>/<scene>x<depth>/`: `<test>.fail.png`, what the run actually
+rendered, and `<test>.diff.png`, the differing pixels in red over the golden
+dimmed to gray.
+
+Images are PNGs, 8-bit palette for a palette run and RGB for a truecolor one,
+which compresses these flat synthetic scenes to a few kilobytes at most and can
+be viewed anywhere, so the references are committed rather than regenerated. A
+palette image carries the same palette the screen was opened with, so it looks
+like what was rendered.
 
 
 ### Arguments
@@ -73,7 +78,6 @@ the references are committed rather than regenerated.
 | `GOLDEN/K` | Reference directory (default `golden/<scene>x<depth>`) |
 | `DIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
 | `THRESHOLD/K/N` | Tolerate up to this many differing pixels |
-| `DIFF/S` | Write a diff image on mismatch |
 | `LISTMODES/S` | Dump the display database and exit |
 
 `MODE` and `SCENE` are separate because a board need not offer a mode as small
@@ -135,7 +139,7 @@ screen and a 32-bit BGRA one produce identical buffers and share one golden
 set:
 
     p96cts CAPTURE MODE=640x480x24 SCENE=320x200
-    p96cts MONITOR=Z3660 MODE=640x480x24 SCENE=320x200 DIFF
+    p96cts MONITOR=Z3660 MODE=640x480x24 SCENE=320x200
 
 One scene is palette-only, and permanently: `fillrect-drawmodes` sweeps its
 grid across `rp->Mask`, which selects bitplanes and has no truecolor

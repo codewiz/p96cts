@@ -42,11 +42,10 @@ static const struct P96TestGroup *const GROUPS[] = {
  * Components that already exist fail harmlessly with ERROR_OBJECT_EXISTS. */
 static void make_path(const char *path) {
     char buf[256];
-    int i;
 
     strncpy(buf, path, sizeof buf - 1);
     buf[sizeof buf - 1] = 0;
-    for (i = 0; buf[i]; i++) {
+    for (int i = 0; buf[i]; i++) {
         BPTR lock;
         if (buf[i] != '/')
             continue;
@@ -122,7 +121,7 @@ struct RunOpts {
     int depth;
     int bpp; /* bytes per compared pixel: 1 (pen) or 3 (R8G8B8) */
     ULONG threshold;
-    int capture, want_diff;
+    int capture;
 };
 
 static int parse_scene(const char *s, SHORT *w, SHORT *h) {
@@ -151,6 +150,51 @@ static int parse_mode(const char *s, SHORT *w, SHORT *h, int *depth) {
     return 1;
 }
 
+/* Keep what a failing scene rendered, and a picture of where it went wrong:
+ * <test>.fail.png is the render itself, <test>.diff.png marks the differing
+ * pixels in red over the golden dimmed to gray -- at full intensity the scene
+ * buries a few single-pixel diffs. Returns 1 if an image could not be written.
+ */
+static int write_failure_images(const char *name, const UBYTE *idx,
+                                const UBYTE *gold, const struct RunOpts *o) {
+    int failed = 0, bpp = o->bpp;
+    char path[256];
+    UBYTE *d;
+
+    snprintf(path, sizeof path, "%s/%s.fail.png", o->dir, name);
+    if (p96cts_write_png(path, idx, o->w, o->h, bpp))
+        failed = 1;
+    else
+        printf("       captured %s\n", path);
+
+    d = AllocVec((ULONG)o->w * o->h * bpp, MEMF_CLEAR);
+    if (!d) {
+        printf("WARNING: failed to allocate diff buffer for %s\n", name);
+        return failed;
+    }
+    for (SHORT y = 0; y < o->h; y++)
+        for (SHORT x = 0; x < o->w; x++) {
+            ULONG p = ((ULONG)y * o->w + x) * bpp;
+            if (bpp != 3) {
+                d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
+            } else if (memcmp(idx + p, gold + p, 3)) {
+                d[p] = 255;
+                d[p + 1] = d[p + 2] = 0;
+            } else {
+                UBYTE gray = (UBYTE)((gold[p] + gold[p + 1] + gold[p + 2]) / 6);
+                d[p] = d[p + 1] = d[p + 2] = gray;
+            }
+        }
+
+    snprintf(path, sizeof path, "%s/%s.diff.png", o->dir, name);
+    if (p96cts_write_png(path, d, o->w, o->h, bpp))
+        failed = 1;
+    else
+        printf("       wrote difference to %s\n", path);
+    FreeVec(d);
+    return failed;
+}
+
 /* Render one testcase and capture or compare it. Returns 1 on failure. */
 /* `name` is the testcase's full "<group>-<test>" name: the group qualifies it,
  * so two groups can both have an "edges" scene and their images cannot
@@ -169,9 +213,8 @@ static int run_test(const struct P96Test *t, const char *name,
         printf("FAIL %-24s memory allocation failed\n", name);
         return 1;
     }
-    snprintf(path, sizeof path, "%s/%s.png", o->dir, name);
-
     if (o->capture) {
+        snprintf(path, sizeof path, "%s/%s.png", o->dir, name);
         if (p96cts_write_png(path, idx, o->w, o->h, bpp))
             failed = 1;
         else
@@ -180,10 +223,6 @@ static int run_test(const struct P96Test *t, const char *name,
         return failed;
     }
 
-    if (p96cts_write_png(path, idx, o->w, o->h, bpp)) {
-        FreeVec(idx);
-        return 1;
-    }
     snprintf(path, sizeof path, "%s/%s.png", o->golden_dir, name);
     UBYTE *gold = p96cts_read_png(path, &gw, &gh, bpp);
     if (!gold) {
@@ -236,36 +275,8 @@ static int run_test(const struct P96Test *t, const char *name,
             if (bad > (ULONG)shown)
                 printf("       ... and %lu more\n", (unsigned long)(bad - shown));
         }
-        if (o->want_diff && bad) {
-            /* Differing pixels in red over the golden scene dimmed to gray:
-             * at full intensity the scene buries a few single-pixel diffs. */
-            UBYTE *d = AllocVec(pixels * bpp, MEMF_CLEAR);
-            if (!d) {
-                printf("WARNING: failed to allocate diff buffer for %s\n", name);
-            } else {
-                for (y = 0; y < o->h; y++)
-                    for (x = 0; x < o->w; x++) {
-                        ULONG p = ((ULONG)y * o->w + x) * bpp;
-                        if (bpp == 3) {
-                            if (memcmp(idx + p, gold + p, 3)) {
-                                d[p] = 255;
-                                d[p + 1] = d[p + 2] = 0;
-                            } else {
-                                /* The golden pixel, dimmed to a gray. */
-                                UBYTE gray = (UBYTE)((gold[p] + gold[p + 1] +
-                                                      gold[p + 2]) / 6);
-                                d[p] = d[p + 1] = d[p + 2] = gray;
-                            }
-                        } else {
-                            d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
-                        }
-                    }
-                snprintf(path, sizeof path, "%s/%s.diff.png", o->dir, name);
-                if (p96cts_write_png(path, d, o->w, o->h, bpp))
-                    failed = 1;
-                FreeVec(d);
-            }
-        }
+        if (bad)
+            failed |= write_failure_images(name, idx, gold, o);
     }
     FreeVec(gold);
     FreeVec(idx);
@@ -275,8 +286,8 @@ static int run_test(const struct P96Test *t, const char *name,
 int main(void) {
     static const char *TEMPLATE =
         "TEST/M,CAPTURE/S,MONITOR/K,DIR/K,GOLDEN/K,MODE/K,SCENE/K,"
-        "THRESHOLD/K/N,DIFF/S,LISTMODES/S";
-    LONG args[10];
+        "THRESHOLD/K/N,LISTMODES/S";
+    LONG args[9];
     struct RDArgs *rda;
     struct RunOpts o;
     const char *monitor;
@@ -342,7 +353,6 @@ int main(void) {
         }
         o.threshold = (ULONG)threshold;
     }
-    o.want_diff = args[8] != 0;
 
     /* 8 compares pen values; 24 compares R8G8B8, which any truecolor screen
      * canonicalizes to on readback. 15/16-bit modes are the deliberate gap:
@@ -375,7 +385,7 @@ int main(void) {
         goto out;
     }
 
-    if (args[9]) {
+    if (args[8]) {
         p96cts_list_modes();
         goto out;
     }
