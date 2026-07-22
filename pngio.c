@@ -57,7 +57,9 @@ int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
                      int bpp) {
     png_structp png = NULL;
     png_infop info = NULL;
-    png_color pal[P96CTS_PALETTE_ENTRIES];
+    /* static, not automatic: 768 bytes is a sixth of the 4K stack a Shell
+     * gives a command by default, and this is called from inside run_test. */
+    static png_color pal[P96CTS_PALETTE_ENTRIES];
 
     BPTR f = Open((STRPTR)path, MODE_NEWFILE);
     if (!f) {
