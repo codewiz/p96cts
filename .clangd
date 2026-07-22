@@ -31,6 +31,9 @@ CompileFlags:
     # for navigation and diagnostics.
     - -D_INLINE_PICASSO96API_H
     - -D_NO_INLINE
+    # asprintf sits behind __GNU_VISIBLE in newlib's stdio.h, which the
+    # cross-gcc turns on by default and clang does not.
+    - -D_GNU_SOURCE
     # bebbo's calling-convention attributes, which clang does not know.
     - -D__stdargs=
     - -D__regargs=

@@ -38,13 +38,26 @@ static const struct P96TestGroup *const GROUPS[] = {
 };
 #define NGROUPS ((int)(sizeof GROUPS / sizeof GROUPS[0]))
 
+/* "<dir>/<name><suffix>", freshly allocated, or NULL. On the heap rather than
+ * in a buffer on the stack: a Shell gives a command 4K of stack by default,
+ * and paths get composed underneath libpng, which wants the rest of it. */
+static char *image_path(const char *dir, const char *name, const char *suffix) {
+    char *path = NULL;
+
+    if (asprintf(&path, "%s/%s%s", dir, name, suffix) < 0) {
+        printf("out of memory composing a path for %s\n", name);
+        return NULL;
+    }
+    return path;
+}
+
 /* CreateDir() makes one level, so walk the path creating each component.
  * Components that already exist fail harmlessly with ERROR_OBJECT_EXISTS. */
 static void make_path(const char *path) {
-    char buf[256];
+    char *buf = strdup(path);
 
-    strncpy(buf, path, sizeof buf - 1);
-    buf[sizeof buf - 1] = 0;
+    if (!buf)
+        return;
     for (int i = 0; buf[i]; i++) {
         BPTR lock;
         if (buf[i] != '/')
@@ -59,6 +72,7 @@ static void make_path(const char *path) {
         if (lock)
             UnLock(lock);
     }
+    free(buf);
 }
 
 /* --- run ------------------------------------------------------------------ */
@@ -158,14 +172,15 @@ static int parse_mode(const char *s, SHORT *w, SHORT *h, int *depth) {
 static int write_failure_images(const char *name, const UBYTE *idx,
                                 const UBYTE *gold, const struct RunOpts *o) {
     int failed = 0, bpp = o->bpp;
-    char path[256];
+    char *path;
     UBYTE *d;
 
-    snprintf(path, sizeof path, "%s/%s.fail.png", o->dir, name);
-    if (p96cts_write_png(path, idx, o->w, o->h, bpp))
+    path = image_path(o->dir, name, ".fail.png");
+    if (!path || p96cts_write_png(path, idx, o->w, o->h, bpp))
         failed = 1;
     else
         printf("       captured %s\n", path);
+    free(path);
 
     d = AllocVec((ULONG)o->w * o->h * bpp, MEMF_CLEAR);
     if (!d) {
@@ -186,11 +201,12 @@ static int write_failure_images(const char *name, const UBYTE *idx,
             }
         }
 
-    snprintf(path, sizeof path, "%s/%s.diff.png", o->dir, name);
-    if (p96cts_write_png(path, d, o->w, o->h, bpp))
+    path = image_path(o->dir, name, ".diff.png");
+    if (!path || p96cts_write_png(path, d, o->w, o->h, bpp))
         failed = 1;
     else
         printf("       wrote difference to %s\n", path);
+    free(path);
     FreeVec(d);
     return failed;
 }
@@ -204,7 +220,6 @@ static int run_test(const struct P96Test *t, const char *name,
     SHORT gw, gh, x, y;
     int failed = 0, bpp = o->bpp;
     ULONG pixels = (ULONG)o->w * o->h, bad = 0;
-    char path[256];
 
     t->fn(rp, o->w, o->h);
     UBYTE *idx = bpp == 3 ? p96cts_read_rgb(rp, o->w, o->h)
@@ -214,21 +229,28 @@ static int run_test(const struct P96Test *t, const char *name,
         return 1;
     }
     if (o->capture) {
-        snprintf(path, sizeof path, "%s/%s.png", o->dir, name);
-        if (p96cts_write_png(path, idx, o->w, o->h, bpp))
+        char *path = image_path(o->dir, name, ".png");
+        if (!path || p96cts_write_png(path, idx, o->w, o->h, bpp))
             failed = 1;
         else
             printf("captured %s\n", path);
+        free(path);
         FreeVec(idx);
         return failed;
     }
 
-    snprintf(path, sizeof path, "%s/%s.png", o->golden_dir, name);
-    UBYTE *gold = p96cts_read_png(path, &gw, &gh, bpp);
-    if (!gold) {
-        printf("FAIL %-24s no golden at %s\n", name, path);
-        FreeVec(idx);
-        return 1;
+    UBYTE *gold = NULL;
+    {
+        char *path = image_path(o->golden_dir, name, ".png");
+        if (path)
+            gold = p96cts_read_png(path, &gw, &gh, bpp);
+        if (!gold) {
+            printf("FAIL %-24s no golden at %s\n", name, path ? path : "?");
+            free(path);
+            FreeVec(idx);
+            return 1;
+        }
+        free(path);
     }
 
     if (gw != o->w || gh != o->h) {
@@ -297,7 +319,7 @@ int main(void) {
     struct Screen *scr = NULL;
     struct BitMap *bm = NULL;
     struct RastPort rp_off, *rp;
-    char golden_buf[64], output_buf[64];
+    char *golden_buf = NULL, *output_buf = NULL;
 
     memset(args, 0, sizeof args);
     rda = ReadArgs((STRPTR)TEMPLATE, args, NULL);
@@ -513,9 +535,13 @@ int main(void) {
          *
          * Run output is per monitor, so several boards can be compared
          * against the one reference set. */
-        snprintf(golden_buf, sizeof golden_buf, "golden/%dx%dx%d", o.w, o.h, o.depth);
-        snprintf(output_buf, sizeof output_buf, "output/%s/%dx%dx%d",
-                 monitor ? monitor : "softrast", o.w, o.h, o.depth);
+        if (asprintf(&golden_buf, "golden/%dx%dx%d", o.w, o.h, o.depth) < 0 ||
+            asprintf(&output_buf, "output/%s/%dx%dx%d",
+                     monitor ? monitor : "softrast", o.w, o.h, o.depth) < 0) {
+            printf("out of memory\n");
+            failures = 1;
+            goto cleanup;
+        }
         o.golden_dir = args[4] ? (const char *)args[4] : golden_buf;
         o.dir = args[3] ? (const char *)args[3]
                         : (o.capture ? o.golden_dir : output_buf);
@@ -550,6 +576,8 @@ int main(void) {
     }
 
 cleanup:
+    free(golden_buf);
+    free(output_buf);
     /* The bitmap goes first: it was allocated with the screen's as friend. */
     if (bm)
         p96FreeBitMap(bm);
