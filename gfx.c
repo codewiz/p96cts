@@ -51,52 +51,6 @@ void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
     p96cts_fill(rp, 0, 0, w - 1, h - 1, color);
 }
 
-/* --- palette -------------------------------------------------------------- */
-
-/* Every pen is given a color, because on a truecolor screen a golden records
- * the colors a scene's pens resolved to. Intuition only initializes pens 0-3
- * and 17-19, from the user's Preferences, and leaves the rest to
- * graphics.library's own defaults, so anything not set here would make a
- * capture depend on the machine it was taken on.
- *
- * No color is a gray and every one has three different components, so a driver
- * that swaps red and blue, or renders BGRA data as RGBA, lands on a color that
- * is nowhere in the palette rather than on another pen's. */
-#define PALETTE_ENTRIES 256
-
-/* The low pens, which scenes name directly: picked to be told apart by eye as
- * well as by value. Pen 0 is black to match p96cts_clear(rp, w, h, 0), which
- * paints RGB 0 on truecolor. */
-static const ULONG BASE_PENS[16] = {
-    0x000000, 0xFF7A18, 0x18A0FF, 0x7ACC22, 0xC8309A, 0x22B39A, 0xD8C42A,
-    0x5A46D2, 0xE05A6E, 0x3E8C4A, 0x9B6BE0, 0xB8862C, 0x2CA0B8, 0xE0409B,
-    0x6EA02C, 0x8C5A3E,
-};
-
-/* The palette as a LoadRGB32 table, for SA_Colors32 at OpenScreen. */
-const ULONG *p96cts_palette(void) {
-    static ULONG table[2 + PALETTE_ENTRIES * 3];
-    ULONG *e = table;
-    int p;
-
-    *e++ = ((ULONG)PALETTE_ENTRIES << 16) | 0;
-    for (p = 0; p < PALETTE_ENTRIES; p++) {
-        /* Above the named pens, each component is the pen number plus a
-         * different constant. Distinct offsets keep the three components from
-         * ever coinciding, and the pen is recoverable from any one of them. */
-        ULONG rgb = p < 16 ? BASE_PENS[p]
-                           : ((ULONG)((p + 0x10) & 0xFF) << 16) |
-                             ((ULONG)((p + 0x40) & 0xFF) << 8) |
-                             (ULONG)((p + 0x80) & 0xFF);
-        /* LoadRGB32 takes 32 bits per gun, so each byte is replicated. */
-        *e++ = 0x01010101UL * ((rgb >> 16) & 0xFF);
-        *e++ = 0x01010101UL * ((rgb >> 8) & 0xFF);
-        *e++ = 0x01010101UL * (rgb & 0xFF);
-    }
-    *e = 0;
-    return table;
-}
-
 /* --- display database ----------------------------------------------------- */
 
 #define INVALID P96CTS_INVALID_MODE

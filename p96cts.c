@@ -20,6 +20,7 @@
 
 #include "p96cts.h"
 #include "gfx.h"
+#include "palette.h"
 #include "pngio.h"
 
 /* Standard AmigaOS version tag, readable with the Version command. */

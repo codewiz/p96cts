@@ -30,10 +30,6 @@ void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color);
 void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                  ULONG color);
 
-/* --- palette -------------------------------------------------------------- */
-
-const ULONG *p96cts_palette(void);
-
 /* --- modes and readback --------------------------------------------------- */
 
 /* No display id matched. graphics/modeid.h defines INVALID_ID as ~0, an int,

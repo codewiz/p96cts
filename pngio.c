@@ -16,30 +16,21 @@
 #include <limits.h>
 #include <stdio.h>
 
+#include "palette.h"
 #include "pngio.h"
 
-/* --- palette --------------------------------------------------------------
- *
- * Pens 0-4 are named colors and pen 5 is a dim gray, with the rest a 3-3-2
- * RGB cube. A gray ramp would be useless: COMPLEMENT turns pen 1 into pen 254
- * and pen 0 into pen 255, which as grays are indistinguishable from the white
- * they inverted, making the scene look blank. Under 3-3-2 they come out as
- * clearly different colors.
- */
+/* The PNG carries the palette the screen was opened with, taken straight from
+ * the LoadRGB32 table: a header word pair, then three 32-bit guns per pen, of
+ * which the high byte is the value. */
 static void build_palette(png_color *pal) {
+    const ULONG *table = p96cts_palette() + 1;
     int i;
 
-    for (i = 0; i < 256; i++) {
-        pal[i].red = (png_byte)((i & 7) * 36);
-        pal[i].green = (png_byte)(((i >> 3) & 7) * 36);
-        pal[i].blue = (png_byte)(((i >> 6) & 3) * 85);
+    for (i = 0; i < P96CTS_PALETTE_ENTRIES; i++) {
+        pal[i].red = (png_byte)(table[i * 3] >> 24);
+        pal[i].green = (png_byte)(table[i * 3 + 1] >> 24);
+        pal[i].blue = (png_byte)(table[i * 3 + 2] >> 24);
     }
-    pal[0].red = pal[0].green = pal[0].blue = 0;       /* black */
-    pal[1].red = pal[1].green = pal[1].blue = 255;     /* white */
-    pal[2].red = 255; pal[2].green = 0;   pal[2].blue = 0;   /* red   */
-    pal[3].red = 0;   pal[3].green = 255; pal[3].blue = 0;   /* green */
-    pal[4].red = 0;   pal[4].green = 0;   pal[4].blue = 255; /* blue  */
-    pal[5].red = pal[5].green = pal[5].blue = 64;      /* diff context */
 }
 
 /* --- dos.library I/O for libpng ------------------------------------------- */
@@ -66,7 +57,7 @@ int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
                      int bpp) {
     png_structp png = NULL;
     png_infop info = NULL;
-    png_color pal[256];
+    png_color pal[P96CTS_PALETTE_ENTRIES];
 
     BPTR f = Open((STRPTR)path, MODE_NEWFILE);
     if (!f) {
@@ -93,7 +84,7 @@ int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
                  PNG_FILTER_TYPE_DEFAULT);
     if (bpp != 3) {
         build_palette(pal);
-        png_set_PLTE(png, info, pal, 256);
+        png_set_PLTE(png, info, pal, P96CTS_PALETTE_ENTRIES);
     }
     png_write_info(png, info);
     for (int y = 0; y < h; y++)
