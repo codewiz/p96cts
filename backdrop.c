@@ -82,7 +82,11 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
     int horizon = h * 3 / 5;
     int sun_x = w * 7 / 10, sun_y = h * 7 / 25, sun_r = h / 7;
     int boat_x = w / 4, boat_y = horizon + h / 5;
-    int boat_w = w / 12, boat_h = h / 25;
+    // Big enough that the mast and sail cross the edges of a half-quadrant
+    // rectangle, so a copy that takes part of the boat and leaves the rest
+    // breaks it at a high-contrast edge. A boat sitting wholly inside the
+    // rectangle would just translate intact and show nothing.
+    int boat_w = w / 6, boat_h = h / 12;
     int bpp = p96cts_truecolor ? 3 : 1;
 
     UBYTE *px = AllocVec((ULONG)w * h * bpp, MEMF_ANY);

@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h> // strcasecmp: POSIX rather than ISO C, but newlib has it
 
 #include "p96cts.h"
 #include "gfx.h"
@@ -33,8 +34,8 @@ struct Library *P96Base;
 
 static const struct P96TestGroup *const GROUPS[] = {
     &DrawLineGroup,
-    &FillRectGroup,
-    &CopyRectGroup,
+    &RectFillGroup,
+    &ClipBlitGroup,
 };
 #define NGROUPS ((int)(sizeof GROUPS / sizeof GROUPS[0]))
 
@@ -75,8 +76,10 @@ static void make_path(const char *path) {
 
 // --- run --------------------------------------------------------------------
 
+// Case-insensitively, so a testcase can be typed as it reads rather than as
+// the API capitalizes it: "drawline-solid" finds "DrawLine-solid".
 static bool selected(const char *want, const char *name) {
-    return !want || !strcmp(want, name); // no TEST given: run all
+    return !want || !strcasecmp(want, name); // no TEST given: run all
 }
 
 // Compose a testcase's full name. Testcases are named for what they do
@@ -92,7 +95,7 @@ static bool known_test(const char *name) {
         for (int i = 0; i < GROUPS[g]->count; i++) {
             char full[64];
             test_name(full, sizeof full, GROUPS[g], &GROUPS[g]->tests[i]);
-            if (!strcmp(name, full))
+            if (!strcasecmp(name, full))
                 return true;
         }
     return false;

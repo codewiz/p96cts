@@ -146,7 +146,7 @@ set:
     p96cts softrast 640x480x24 SCENE=320x200 CAPTURE
     p96cts Z3660 640x480x24 SCENE=320x200
 
-One scene is palette only, and permanently: `fillrect-drawmodes` sweeps its
+One scene is palette only, and permanently: `rectfill-drawmodes` sweeps its
 grid across `rp->Mask`, which selects bitplanes and has no truecolor
 counterpart. Everything else runs at both depths.
 

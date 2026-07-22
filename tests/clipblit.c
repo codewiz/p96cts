@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: 0BSD
 //
-// Rectangle copy testcases (ClipBlit within one RastPort).
+// ClipBlit() testcases, copying within one RastPort.
 //
 // A copy whose source and destination overlap is the case drivers get wrong:
 // the copy must behave as if the source were read in full before any of the
@@ -26,46 +26,45 @@ static void selfblit(struct RastPort *rp, SHORT sx, SHORT sy, SHORT dx,
     ClipBlit(rp, sx, sy, rp, dx, dy, w, h, 0xC0);
 }
 
-// Shift the middle of the scene by a few rows, which overlaps the source by
-// all but those rows. Down and up separately: a driver typically gets one
-// direction right and smears the other.
-static void t_overlap_down(struct RastPort *rp, SHORT w, SHORT h) {
-    SHORT bw = w / 2, bh = h / 2;
+// Copy a rectangle from the middle of one quadrant to a spot (dx, dy) away,
+// overlapping its source everywhere but the shifted edge. The rectangle is
+// half the quadrant in each axis and centered, so undisturbed backdrop is left
+// on all four sides to read the displacement against.
+//
+// The bounds check is not paranoia: these RastPorts have no Layer, so a blit
+// reaching past the bitmap corrupts memory instead of being clipped, and the
+// quadrant shrinks with SCENE.
+static void shift_quadrant(struct RastPort *rp, SHORT qx, SHORT qy, SHORT qw,
+                           SHORT qh, SHORT dx, SHORT dy) {
+    SHORT bw = qw / 2, bh = qh / 2;
+    SHORT sx = qx + (qw - bw) / 2, sy = qy + (qh - bh) / 2;
 
-    p96cts_clear(rp, w, h, 0);
-    SetDrMd(rp, JAM1);
-    p96cts_backdrop(rp, w, h);
-    selfblit(rp, w / 4, h / 8, w / 4, h / 8 + 5, bw, bh);
+    if (sx + dx < qx || sx + dx + bw > qx + qw ||
+        sy + dy < qy || sy + dy + bh > qy + qh)
+        return;
+    selfblit(rp, sx, sy, sx + dx, sy + dy, bw, bh);
 }
 
-static void t_overlap_up(struct RastPort *rp, SHORT w, SHORT h) {
-    SHORT bw = w / 2, bh = h / 2;
+// All four directions at once, a quadrant each. Down and up are separate
+// because a driver typically gets one right and smears the other; left and
+// right are separate again because one that decides its walk direction from y
+// alone passes the vertical pair and fails the horizontal one.
+//
+// The shifts are odd and unequal so that no two quadrants can agree by
+// accident, and odd matters on its own: the backdrop is dithered on a 4x4
+// cell, so a shift by a multiple of 4 would leave the pattern unchanged and
+// hide a smear inside what looks like flat color.
+static void t_overlap(struct RastPort *rp, SHORT w, SHORT h) {
+    SHORT qw = w / 2, qh = h / 2;
 
     p96cts_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
     p96cts_backdrop(rp, w, h);
-    selfblit(rp, w / 4, h / 8 + 5, w / 4, h / 8, bw, bh);
-}
 
-// The same overlap along x, where the smear is a horizontal streak. A driver
-// that decides its walk direction from y alone passes the two scenes above
-// and fails these.
-static void t_overlap_left(struct RastPort *rp, SHORT w, SHORT h) {
-    SHORT bw = w / 2, bh = h / 2;
-
-    p96cts_clear(rp, w, h, 0);
-    SetDrMd(rp, JAM1);
-    p96cts_backdrop(rp, w, h);
-    selfblit(rp, w / 4 + 3, h / 4, w / 4, h / 4, bw, bh);
-}
-
-static void t_overlap_right(struct RastPort *rp, SHORT w, SHORT h) {
-    SHORT bw = w / 2, bh = h / 2;
-
-    p96cts_clear(rp, w, h, 0);
-    SetDrMd(rp, JAM1);
-    p96cts_backdrop(rp, w, h);
-    selfblit(rp, w / 4, h / 4, w / 4 + 3, h / 4, bw, bh);
+    shift_quadrant(rp, 0, 0, qw, qh, 0, 17);   // down
+    shift_quadrant(rp, qw, 0, qw, qh, 0, -21); // up
+    shift_quadrant(rp, 0, qh, qw, qh, 7, 0);   // right
+    shift_quadrant(rp, qw, qh, qw, qh, -9, 0); // left
 }
 
 // Copies that do not overlap at all, plus the degenerate sizes. These must
@@ -88,13 +87,10 @@ static void t_disjoint(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {"overlap-down", t_overlap_down, false},
-    {"overlap-up", t_overlap_up, false},
-    {"overlap-left", t_overlap_left, false},
-    {"overlap-right", t_overlap_right, false},
+    {"overlap", t_overlap, false},
     {"disjoint", t_disjoint, false},
 };
 
-const struct P96TestGroup CopyRectGroup = {
-    "copyrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+const struct P96TestGroup ClipBlitGroup = {
+    "ClipBlit", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
 };

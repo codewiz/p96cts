@@ -165,6 +165,6 @@ static const struct P96Test TESTS[] = {
     {"invert", t_invert, false},
 };
 
-const struct P96TestGroup FillRectGroup = {
-    "fillrect", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+const struct P96TestGroup RectFillGroup = {
+    "RectFill", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
 };

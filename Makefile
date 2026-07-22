@@ -25,7 +25,7 @@ TARGET   = p96cts
 # Testcase scenes live in tests/, one translation unit per group; the harness,
 # the graphics layer and the PNG codec stay at the top level.
 OBJS     = p96cts.o gfx.o palette.o pngio.o backdrop.o \
-           tests/drawline.o tests/fillrect.o tests/copyrect.o
+           tests/drawline.o tests/rectfill.o tests/clipblit.o
 
 # zlib and libpng, built for this target and committed. See
 # third_party/README.md for provenance and how to rebuild them.

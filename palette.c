@@ -17,7 +17,7 @@
 // Two things a scene must not be built on. Pens 4 and 192 are both pure blue,
 // so they cannot tell each other apart. And the grays -- pen 1 among them --
 // have r == b, so a driver that swaps red and blue renders exactly the color
-// expected of them; the fillrect and copyrect pens are not grays and do catch
+// expected of them; the rectfill and clipblit pens are not grays and do catch
 // that. Either trap is silent, since the scene simply compares equal.
 static ULONG pen_rgb(int pen) {
     switch (pen) {

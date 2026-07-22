@@ -35,7 +35,7 @@ struct P96TestGroup {
 
 // The groups the harness walks. Each is defined by its own file in tests/.
 extern const struct P96TestGroup DrawLineGroup;
-extern const struct P96TestGroup FillRectGroup;
-extern const struct P96TestGroup CopyRectGroup;
+extern const struct P96TestGroup RectFillGroup;
+extern const struct P96TestGroup ClipBlitGroup;
 
 #endif
