@@ -78,7 +78,7 @@ invocation is `p96cts <monitor> <WxHxD>`.
 | `TEST/M` | Testcases to run; all of them by default |
 | `CAPTURE/S` | Write the reference instead of comparing against it |
 | `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
-| `GOLDEN/K` | Reference directory (default `golden/<scene>x<depth>`) |
+| `GOLDENDIR/K` | Reference directory (default `golden/<scene>x<depth>`) |
 | `OUTDIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
 | `THRESHOLD/K/N` | Tolerate up to this many differing pixels |
 | `LISTMODES/S` | Dump the display database and exit |

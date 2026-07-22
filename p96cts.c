@@ -172,7 +172,7 @@ static void usage(void) {
         "  TEST/M         testcases to run as <group>-<test>; all of them by default\n"
         "  CAPTURE/S      write the reference instead of comparing against it\n"
         "  OUTDIR/K       output directory (default output/<monitor>/<scene>x<depth>)\n"
-        "  GOLDEN/K       reference directory (default golden/<scene>x<depth>)\n"
+        "  GOLDENDIR/K    reference directory (default golden/<scene>x<depth>)\n"
         "  SCENE/K        region rendered and compared, as WxH (default 320x200)\n"
         "  THRESHOLD/K/N  tolerate up to this many differing pixels\n"
         "  LISTMODES/S    dump the display database and exit\n"
@@ -215,8 +215,16 @@ static bool parse_mode(const char *s, SHORT *w, SHORT *h, int *depth) {
 // which validate_tests() then rejects by name.
 static int parse_args(struct RunOpts *o) {
     static const char *TEMPLATE =
-        "MONITOR,MODE,TEST/M,CAPTURE/S,OUTDIR/K,GOLDEN/K,SCENE/K,"
-        "THRESHOLD/K/N,LISTMODES/S,HELP=--help=-h/S";
+        /* [0] = */ "MONITOR,"
+        /* [1] = */ "MODE,"
+        /* [2] = */ "TEST/M,"
+        /* [3] = */ "CAPTURE/S,"
+        /* [4] = */ "OUTDIR/K,"
+        /* [5] = */ "GOLDENDIR/K,"
+        /* [6] = */ "SCENE/K,"
+        /* [7] = */ "THRESHOLD/K/N,"
+        /* [8] = */ "LISTMODES/S,"
+        /* [9] = */ "HELP=--help=-h/S";
     LONG args[10];
 
     memset(o, 0, sizeof *o);
