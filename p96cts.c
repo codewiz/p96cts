@@ -26,7 +26,7 @@
 #include "pngio.h"
 
 // Standard AmigaOS version tag, readable with the Version command.
-static const char VERSTAG[] = "$VER: p96cts 0.4 (22.7.2026)";
+static const char VERSTAG[] = "$VER: p96cts 0.5 (22.7.2026) by Bernie Innocenti";
 #define VERSION_LINE (VERSTAG + 6)
 
 struct IntuitionBase *IntuitionBase;

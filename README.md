@@ -42,12 +42,16 @@ against it:
 
 Output looks like:
 
-    p96cts 0.4 (22.7.2026)
+    p96cts 0.5 (22.7.2026) by Bernie Innocenti
     testing Z3660 640x400x8 clut, scene 320x200
-    PASS drawline-solid
-    PASS drawline-pattern
-    FAIL drawline-complement      4 of 64000 pixels differ
+    PASS DrawLine-solid
+    PASS DrawLine-pattern
+    FAIL DrawLine-complement      4 of 64000 pixels differ
            at 247, 72 golden  89, got 166
+           at  73,128 golden 202, got  53
+           ... and 2 more
+           captured output/Z3660/320x200x8/DrawLine-complement.fail.png
+           wrote difference to output/Z3660/320x200x8/DrawLine-complement.diff.png
 
 Testcases are named `<group>-<test>`, after the group that renders them, and
 their images on disk carry the same name.
@@ -122,8 +126,10 @@ checksums, and why both are built `-noixemul`.
 
 A test group is one translation unit in `tests/` exporting a `P96TestGroup`;
 see `tests/drawline.c`. Add the file to `OBJS` in the Makefile and the group to
-`GROUPS` in `p96cts.c`. Testcases are named for what they do (`solid`,
-`overlap-down`); the group supplies the rest of the name.
+`GROUPS` in `p96cts.c`. A group is named after the function it exercises
+(`DrawLine`, `RectFill`, `ClipBlit`) and a testcase for what it does (`solid`,
+`overlap`); the full name a user types is `<group>-<test>`, matched
+case-insensitively. `LISTTESTS` prints them all.
 
 A testcase renders a complete scene, clearing it first, and must keep all
 drawing inside the bitmap: the RastPort has no Layer, so graphics.library does
@@ -146,7 +152,7 @@ set:
     p96cts softrast 640x480x24 SCENE=320x200 CAPTURE
     p96cts Z3660 640x480x24 SCENE=320x200
 
-One scene is palette only, and permanently: `rectfill-drawmodes` sweeps its
+One scene is palette only, and permanently: `RectFill-drawmodes` sweeps its
 grid across `rp->Mask`, which selects bitplanes and has no truecolor
 counterpart. Everything else runs at both depths.
 
