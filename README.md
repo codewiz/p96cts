@@ -75,7 +75,7 @@ invocation is `p96cts <monitor> <WxHxD>`.
 |---|---|
 | `MONITOR` | Board to render on; `softrast` for the software rasterizer |
 | `MODE` | Screen mode as `WxHxD` |
-| `TEST/M` | Testcases to run; all of them by default |
+| `TEST/K` | One testcase as `<group>-<test>`; all of them by default |
 | `CAPTURE/S` | Write the reference instead of comparing against it |
 | `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
 | `GOLDENDIR/K` | Reference directory (default `golden/<scene>x<depth>`) |

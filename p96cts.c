@@ -75,13 +75,8 @@ static void make_path(const char *path) {
 
 // --- run --------------------------------------------------------------------
 
-static bool selected(STRPTR *names, const char *name) {
-    if (!names || !names[0])
-        return true; // no TEST given: run all
-    for (int i = 0; names[i]; i++)
-        if (!strcmp((const char *)names[i], name))
-            return true;
-    return false;
+static bool selected(const char *want, const char *name) {
+    return !want || !strcmp(want, name); // no TEST given: run all
 }
 
 // Compose a testcase's full name. Testcases are named for what they do
@@ -103,27 +98,11 @@ static bool known_test(const char *name) {
     return false;
 }
 
-// TEST is /M, which collects every word that did not match another option, so
-// a mistyped keyword lands here rather than being rejected as one.
-//
-// Marking it /K/M ought to fix that and does not, at least on AmigaOS: when
-// ReadArgs looks for a slot to put an unrecognized word in, it tests that slot
-// for /M before it tests it for /K, so the word is taken before the check that
-// would have skipped it runs. Measured on dos 47.38, and both orderings of the
-// modifiers behave the same. AROS checks /K first and so does reject the word
-// -- worth knowing, but not something to rely on here.
-//
-// Hence the error below names both things the word could have been.
-static bool validate_tests(STRPTR *names) {
-    if (!names || !names[0])
+static bool validate_test(const char *name) {
+    if (!name || known_test(name))
         return true;
-    for (int i = 0; names[i]; i++)
-        if (!known_test((const char *)names[i])) {
-            printf("no such testcase \"%s\" -- a mistyped keyword ends up "
-                   "here too; try -h\n", names[i]);
-            return false;
-        }
-    return true;
+    printf("no such testcase \"%s\"; try -h\n", name);
+    return false;
 }
 
 #define MAX_REPORTED_DIFFS 8
@@ -136,7 +115,7 @@ static bool validate_tests(STRPTR *names) {
 // Everything the command line settles, so the run loop never looks at argv
 // again. parse_args() fills it; free_args() releases what it owns.
 struct RunOpts {
-    STRPTR *tests;          // testcases to run, or NULL for all of them
+    const char *test;       // the one testcase to run, or NULL for all of them
     const char *monitor;    // mode-name prefix, or NULL for the reference
     const char *dir;        // where this run's own images go
     const char *golden_dir; // where the references it compares against live
@@ -169,7 +148,7 @@ static void usage(void) {
         "  MONITOR        board to render on, e.g. Z3660 or PAL; softrast for\n"
         "                 P96's own software rasterizer, which is the reference\n"
         "  MODE           screen mode as WxHxD (default: the scene size at depth 8)\n"
-        "  TEST/M         testcases to run as <group>-<test>; all of them by default\n"
+        "  TEST/K         one testcase as <group>-<test>; all of them by default\n"
         "  CAPTURE/S      write the reference instead of comparing against it\n"
         "  OUTDIR/K       output directory (default output/<monitor>/<scene>x<depth>)\n"
         "  GOLDENDIR/K    reference directory (default golden/<scene>x<depth>)\n"
@@ -208,16 +187,11 @@ static bool parse_mode(const char *s, SHORT *w, SHORT *h, int *depth) {
 // Settle everything the command line has to say. Returns RETURN_OK, or the
 // code main should exit with having printed why. The caller free_args() either
 // way once it is done with the strings, which point into what this allocates.
-//
-// TEST is plain /M. Marking it /K/M parses, but changes nothing: /M collects
-// "any arguments not considered to be part of another option" whether or not
-// the keyword is given, so a mistyped keyword still becomes a test name --
-// which validate_tests() then rejects by name.
 static int parse_args(struct RunOpts *o) {
     static const char *TEMPLATE =
         /* [0] = */ "MONITOR,"
         /* [1] = */ "MODE,"
-        /* [2] = */ "TEST/M,"
+        /* [2] = */ "TEST/K,"
         /* [3] = */ "CAPTURE/S,"
         /* [4] = */ "OUTDIR/K,"
         /* [5] = */ "GOLDENDIR/K,"
@@ -249,7 +223,7 @@ static int parse_args(struct RunOpts *o) {
     o->w = 320;
     o->h = 200;
     o->depth = 8;
-    o->tests = (STRPTR *)args[2];
+    o->test = args[2] ? (const char *)args[2] : NULL;
     o->capture = args[3] != 0;
     o->list_modes = args[8] != 0;
 
@@ -320,7 +294,7 @@ static int parse_args(struct RunOpts *o) {
         printf("width %d must be a multiple of 16\n", o->w);
         return RETURN_ERROR;
     }
-    if (!validate_tests(o->tests))
+    if (!validate_test(o->test))
         return RETURN_ERROR;
 
     // Goldens are named for what they contain -- the scene, at a depth -- so a
@@ -651,7 +625,7 @@ int main(void) {
             const struct P96Test *t = &GROUPS[g]->tests[i];
             char full[64];
             test_name(full, sizeof full, GROUPS[g], t);
-            if (!selected(o.tests, full))
+            if (!selected(o.test, full))
                 continue;
             if (p96cts_truecolor && t->clut_only) {
                 printf("skip %s: palette-only, it tests something truecolor "
