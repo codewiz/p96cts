@@ -20,6 +20,7 @@
 #include <strings.h> // strcasecmp: POSIX rather than ISO C, but newlib has it
 
 #include "p96cts.h"
+#include "backdrop.h"
 #include "gfx.h"
 #include "palette.h"
 #include "pngio.h"
@@ -664,6 +665,7 @@ int main(void) {
     }
 
 cleanup:
+    p96cts_backdrop_free();
     // The bitmap goes first: it was allocated with the screen's as friend.
     if (bm)
         p96FreeBitMap(bm);

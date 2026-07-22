@@ -78,6 +78,20 @@ static UBYTE pen_of(int r, int g, int b) {
     return (UBYTE)(pen < 6 ? pen | 0x40 : pen);
 }
 
+// The last scene synthesized, kept because building one costs a dozen 32-bit
+// divides per pixel and 68k division is slow -- measurably around two seconds
+// for 320x200 under emulation. Scenes that share a size then pay for it once.
+static UBYTE *cached;
+static SHORT cached_w, cached_h;
+static int cached_bpp;
+
+void p96cts_backdrop_free(void) {
+    if (cached)
+        FreeVec(cached);
+    cached = NULL;
+    cached_w = cached_h = 0;
+}
+
 void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
     int horizon = h * 3 / 5;
     int sun_x = w * 7 / 10, sun_y = h * 7 / 25, sun_r = h / 7;
@@ -88,10 +102,21 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
     // rectangle would just translate intact and show nothing.
     int boat_w = w / 6, boat_h = h / 12;
     int bpp = p96cts_truecolor ? 3 : 1;
+    UBYTE *px;
 
-    UBYTE *px = AllocVec((ULONG)w * h * bpp, MEMF_ANY);
+    if (cached && cached_w == w && cached_h == h && cached_bpp == bpp) {
+        px = cached;
+        goto blit;
+    }
+
+    p96cts_backdrop_free();
+    px = AllocVec((ULONG)w * h * bpp, MEMF_ANY);
     if (!px)
         return;
+    cached = px;
+    cached_w = w;
+    cached_h = h;
+    cached_bpp = bpp;
 
     for (SHORT y = 0; y < h; y++) {
         for (SHORT x = 0; x < w; x++) {
@@ -174,6 +199,7 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
         }
     }
 
+blit:
     if (p96cts_truecolor) {
         // The buffer is already R8G8B8; p96WritePixelArray converts to
         // whatever the screen's format is.
@@ -194,5 +220,4 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
             FreeBitMap(temprp.BitMap);
         }
     }
-    FreeVec(px);
 }

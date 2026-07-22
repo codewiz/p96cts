@@ -70,19 +70,27 @@ static void t_overlap(struct RastPort *rp, SHORT w, SHORT h) {
 // Copies that do not overlap at all, plus the degenerate sizes. These must
 // come out identical whichever direction the driver walks, so a failure here
 // is a plain addressing bug rather than a direction bug.
+//
+// Everything lands on backdrop rather than on a cleared background, so a copy
+// that falls short or lands askew shows as a seam in a picture instead of a
+// smudge on black -- and the degenerate copies are taken from rows crossing
+// the ridges and the boat, where a one-pixel error changes the color.
 static void t_disjoint(struct RastPort *rp, SHORT w, SHORT h) {
-    p96cts_clear(rp, w, h, 0);
-    SetDrMd(rp, JAM1);
-    p96cts_backdrop(rp, w / 2, h);
+    // The backdrop's horizon, where sky meets water: the ridges sit just above
+    // it and the ripples just below, so a row through it and columns crossing
+    // it are the highest-contrast material the scene has.
+    SHORT horizon = h * 3 / 5;
 
-    selfblit(rp, 0, 0, w / 2, 0, w / 2, h / 3);
+    p96cts_backdrop(rp, w, h);
+
+    selfblit(rp, 0, 0, w / 2, h / 3, w / 2, h / 3);
 
     // Single-pixel, single-row and single-column copies: the same off-by-one
     // that RectFill can have, on the blit path.
     for (SHORT i = 0; i < 16; i++) {
-        selfblit(rp, i * 4, h / 2, w / 2 + i * 4, h / 2, 1, 1);
-        selfblit(rp, 0, h / 2 + 4 + i, w / 2, h / 2 + 4 + i, i + 1, 1);
-        selfblit(rp, i * 4, h - h / 4, w / 2 + i * 4, h - h / 4, 1, i + 1);
+        selfblit(rp, i * 4, horizon - 12, w / 2 + i * 4, horizon - 10, 1, 1);
+        selfblit(rp, 0, horizon + 4 + i, w / 2, horizon + 4 + i, i + 1, 1);
+        selfblit(rp, i * 4, horizon - 8, w / 2 + i * 4, horizon + 24, 1, i + 1);
     }
 }
 
