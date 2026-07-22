@@ -156,7 +156,7 @@ static void t_invert(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    // The drawmode grid stays palette-only, and permanently: it sweeps every
+    // The drawmode grid stays palette only, and permanently: it sweeps every
     // mode across rp->Mask, which selects bitplanes and has no truecolor
     // counterpart. The pens themselves are fine -- BPen resolves through the
     // screen's palette at any depth.

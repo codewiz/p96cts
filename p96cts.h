@@ -21,9 +21,10 @@ struct P96Test {
     const char *name;
     void (*fn)(struct RastPort *rp, SHORT w, SHORT h);
     // The scene tests something a truecolor screen has no equivalent of, so it
-    // runs at depth 8 only. Pens are not a reason -- every pen has a defined
-    // color on both kinds of screen; rp->Mask, which selects bitplanes, is.
-    bool clut_only;
+    // runs on palette screens only. Pens are not a reason -- every pen has a
+    // defined color on both kinds of screen; rp->Mask, which selects
+    // bitplanes, is.
+    bool palette_only;
 };
 
 struct P96TestGroup {

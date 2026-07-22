@@ -98,6 +98,20 @@ static bool known_test(const char *name) {
     return false;
 }
 
+// Every name TEST accepts, since it takes one at a time.
+static void list_tests(void) {
+    for (int g = 0; g < NGROUPS; g++)
+        for (int i = 0; i < GROUPS[g]->count; i++) {
+            const struct P96Test *t = &GROUPS[g]->tests[i];
+            char full[64];
+            test_name(full, sizeof full, GROUPS[g], t);
+            if (t->palette_only)
+                printf("%-24s palette only\n", full);
+            else
+                printf("%s\n", full);
+        }
+}
+
 static bool validate_test(const char *name) {
     if (!name || known_test(name))
         return true;
@@ -126,6 +140,7 @@ struct RunOpts {
     ULONG threshold;
     bool capture;
     bool list_modes;
+    bool list_tests;
 
     // Owned. The dir strings above may point into either of these, or into
     // rda's own storage, so all three outlive the run.
@@ -155,6 +170,7 @@ static void usage(void) {
         "  SCENE/K        region rendered and compared, as WxH (default 320x200)\n"
         "  THRESHOLD/K/N  tolerate up to this many differing pixels\n"
         "  LISTMODES/S    dump the display database and exit\n"
+        "  LISTTESTS/S    list the testcase names TEST accepts and exit\n"
         "  HELP/S         this text; -h and --help work too\n");
 }
 
@@ -198,8 +214,9 @@ static int parse_args(struct RunOpts *o) {
         /* [6] = */ "SCENE/K,"
         /* [7] = */ "THRESHOLD/K/N,"
         /* [8] = */ "LISTMODES/S,"
-        /* [9] = */ "HELP=--help=-h/S";
-    LONG args[10];
+        /* [9] = */ "LISTTESTS/S,"
+        /* [10] = */ "HELP=--help=-h/S";
+    LONG args[11];
 
     memset(o, 0, sizeof *o);
     memset(args, 0, sizeof args);
@@ -213,7 +230,7 @@ static int parse_args(struct RunOpts *o) {
 
     printf("%s\n", VERSION_LINE);
 
-    if (args[9]) {
+    if (args[10]) {
         usage();
         return RETURN_WARN;
     }
@@ -226,6 +243,7 @@ static int parse_args(struct RunOpts *o) {
     o->test = args[2] ? (const char *)args[2] : NULL;
     o->capture = args[3] != 0;
     o->list_modes = args[8] != 0;
+    o->list_tests = args[9] != 0;
 
     // The reference run is the absence of a board, which as a positional
     // argument needs a name of its own. Internally it stays NULL, which is
@@ -238,7 +256,7 @@ static int parse_args(struct RunOpts *o) {
     // before anything else, which would make even -h and LISTMODES demand a
     // mode. So it is required here instead, where those have already been
     // dealt with.
-    if (!o->list_modes && !args[1]) {
+    if (!o->list_modes && !o->list_tests && !args[1]) {
         printf("MONITOR and MODE are required, "
                "as in \"p96cts softrast 320x200x8\"\n");
         usage();
@@ -303,9 +321,9 @@ static int parse_args(struct RunOpts *o) {
     // corner of a larger screen must compare equal to it on a screen its own
     // size, which is why the two are separate.
     //
-    // Depth is enough while clut is the only supported format. It stops being
-    // enough at 16-bit, where r5g6b5 and r5g5b5 differ, so a wider comparison
-    // path wants the format in the name too.
+    // Depth is enough while palette is the only pen-addressed format. It stops
+    // being enough at 16-bit, where r5g6b5 and r5g5b5 differ, so a wider
+    // comparison path wants the format in the name too.
     //
     // Run output is per monitor, so several boards can be compared against the
     // one reference set.
@@ -479,6 +497,12 @@ int main(void) {
     }
     p96cts_truecolor = o.depth > 8;
 
+    // Before the libraries, since it needs none of them.
+    if (o.list_tests) {
+        list_tests();
+        goto out;
+    }
+
     IntuitionBase = (struct IntuitionBase *)OpenLibrary((STRPTR)"intuition.library", 39);
     GfxBase = (struct GfxBase *)OpenLibrary((STRPTR)"graphics.library", 39);
     P96Base = OpenLibrary((STRPTR)"Picasso96API.library", 2);
@@ -627,8 +651,8 @@ int main(void) {
             test_name(full, sizeof full, GROUPS[g], t);
             if (!selected(o.test, full))
                 continue;
-            if (p96cts_truecolor && t->clut_only) {
-                printf("skip %s: palette-only, it tests something truecolor "
+            if (p96cts_truecolor && t->palette_only) {
+                printf("skip %s: palette only, it tests something truecolor "
                        "has no equivalent of\n", full);
                 continue;
             }

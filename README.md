@@ -82,6 +82,7 @@ invocation is `p96cts <monitor> <WxHxD>`.
 | `OUTDIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
 | `THRESHOLD/K/N` | Tolerate up to this many differing pixels |
 | `LISTMODES/S` | Dump the display database and exit |
+| `LISTTESTS/S` | List the testcase names `TEST` accepts and exit |
 | `HELP/S` | Print this table and exit; `-h` and `--help` work too |
 
 `MODE` and `SCENE` are separate because a board need not offer a mode as small
@@ -145,7 +146,7 @@ set:
     p96cts softrast 640x480x24 SCENE=320x200 CAPTURE
     p96cts Z3660 640x480x24 SCENE=320x200
 
-One scene is palette-only, and permanently: `fillrect-drawmodes` sweeps its
+One scene is palette only, and permanently: `fillrect-drawmodes` sweeps its
 grid across `rp->Mask`, which selects bitplanes and has no truecolor
 counterpart. Everything else runs at both depths.
 
