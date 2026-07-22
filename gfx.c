@@ -24,6 +24,14 @@
 
 int p96cts_truecolor;
 
+/* JAM1-fill a rectangle in the given color: a pen number on a palette screen,
+ * 0x00RRGGBB on truecolor. On a palette screen the corners go to RectFill as
+ * given, including deliberately swapped ones; the truecolor path sorts them
+ * first, since p96RectFill's contract requires min <= max.
+ *
+ * Deliberately not inline: the body is two library calls, which dwarf the call
+ * overhead, and inlining it would drag proto/graphics.h and proto/Picasso96.h
+ * into every file that includes gfx.h. */
 void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                  ULONG color) {
     if (p96cts_truecolor) {
@@ -38,6 +46,7 @@ void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
     RectFill(rp, x1, y1, x2, y2);
 }
 
+/* Fill the whole scene with one color, as above. 0 is black either way. */
 void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
     p96cts_fill(rp, 0, 0, w - 1, h - 1, color);
 }
@@ -64,7 +73,7 @@ static const ULONG BASE_PENS[16] = {
     0x6EA02C, 0x8C5A3E,
 };
 
-/* A LoadRGB32 table for the whole palette, for SA_Colors32 at OpenScreen. */
+/* The palette as a LoadRGB32 table, for SA_Colors32 at OpenScreen. */
 const ULONG *p96cts_palette(void) {
     static ULONG table[2 + PALETTE_ENTRIES * 3];
     ULONG *e = table;
@@ -114,9 +123,14 @@ static const char *unavailable_reason(UWORD na) {
     return " unavailable";
 }
 
-/* Selecting by mode-name prefix is the only unambiguous discriminator: plain
- * OCS modes set neither DIPF_IS_ECS nor DIPF_IS_AA, so the property flags
- * cannot separate native from RTG. */
+/* Find a display id of the given size/depth, or P96CTS_INVALID_MODE. A width
+ * of 0 matches any size, for when only the depth matters. When name_out is
+ * given, the matched mode's name is copied into it.
+ *
+ * `monitor` selects by mode-name prefix ("PAL", "Z3660", ...) and NULL matches
+ * any. That prefix is the only unambiguous discriminator: plain OCS modes set
+ * neither DIPF_IS_ECS nor DIPF_IS_AA, so the property flags cannot separate
+ * native from RTG. */
 ULONG p96cts_find_mode(int w, int h, int depth, const char *monitor,
                        char *name_out, int name_len) {
     ULONG id = INVALID;
@@ -158,6 +172,7 @@ ULONG p96cts_find_mode(int w, int h, int depth, const char *monitor,
     return INVALID;
 }
 
+/* Dump the display database to stdout so a usable mode can be picked. */
 void p96cts_list_modes(void) {
     ULONG id = INVALID;
 
@@ -206,7 +221,10 @@ const char *p96cts_format_name(ULONG fmt) {
     return NAMES[fmt];
 }
 
-/* ReadPixelArray8 works in 16-pixel granules, so w must be a multiple of 16;
+/* Read the scene back as one pen per pixel, into a freshly AllocVec'd buffer
+ * the caller FreeVec's, or NULL. Needs a bitmap addressed by pen.
+ *
+ * ReadPixelArray8 works in 16-pixel granules, so w must be a multiple of 16;
  * that is where the screen-width constraint on a run comes from. */
 UBYTE *p96cts_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
     struct RastPort temprp = *rp;
@@ -228,7 +246,9 @@ UBYTE *p96cts_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
     return idx;
 }
 
-/* Read the scene back as R8G8B8, whatever the screen's own format:
+/* The same, three bytes per pixel: the scene read back as R8G8B8 whatever the
+ * screen's own format is.
+ *
  * p96ReadPixelArray converts into the RenderInfo's format, so a BGRA screen
  * and an RGB one produce identical buffers and share one golden set. */
 UBYTE *p96cts_read_rgb(struct RastPort *rp, SHORT w, SHORT h) {

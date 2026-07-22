@@ -26,26 +26,12 @@ static inline ULONG p96cts_color(ULONG pen, ULONG rgb) {
     return p96cts_truecolor ? rgb : pen;
 }
 
-/* Fill the whole scene with one color, in JAM1: a pen number on a palette
- * screen, 0x00RRGGBB on truecolor. 0 is black either way. */
 void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color);
-
-/* JAM1-fill a rectangle in the given color (pen or 0x00RRGGBB as above).
- * On a palette screen the corners go to RectFill as given, including
- * deliberately swapped ones; the truecolor path sorts them first, since
- * p96RectFill's contract requires min <= max.
- *
- * Deliberately not inline: the body is two library calls, which dwarf the
- * call overhead, and inlining it would drag proto/graphics.h and
- * proto/Picasso96.h into every file that includes this header. */
 void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                  ULONG color);
 
 /* --- palette -------------------------------------------------------------- */
 
-/* The screen's palette, as a LoadRGB32 table to hand to SA_Colors32. Every pen
- * is defined, so that a truecolor golden records this palette rather than the
- * capturing machine's Preferences. */
 const ULONG *p96cts_palette(void);
 
 /* --- modes and readback --------------------------------------------------- */
@@ -54,22 +40,10 @@ const ULONG *p96cts_palette(void);
  * so comparing it against a ULONG display id is a signedness mismatch. */
 #define P96CTS_INVALID_MODE ((ULONG)~0UL)
 
-/* Find a display id of the given size/depth, or P96CTS_INVALID_MODE. `monitor`
- * selects by mode-name prefix ("PAL", "Z3660", ...); NULL matches any. A width
- * of 0 matches any size, for when only the depth matters. When name_out is
- * given, the matched mode's name is copied into it. */
 ULONG p96cts_find_mode(int w, int h, int depth, const char *monitor,
                        char *name_out, int name_len);
-
-/* Dump the display database to stdout so a usable mode can be picked. */
 void p96cts_list_modes(void);
-
-/* Name an RGBFormat value, for reporting what a run actually rendered on. */
 const char *p96cts_format_name(ULONG fmt);
-
-/* Read the scene back into a freshly AllocVec'd buffer, or NULL. The caller
- * FreeVec's it. Pens gives one byte per pixel and needs a palette bitmap; rgb
- * gives three, converted from whatever the screen's own format is. */
 UBYTE *p96cts_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth);
 UBYTE *p96cts_read_rgb(struct RastPort *rp, SHORT w, SHORT h);
 
