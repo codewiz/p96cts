@@ -1,12 +1,11 @@
-/* SPDX-License-Identifier: 0BSD */
-
-/* PNG reading and writing.
- *
- * Palette runs use 8-bit palette PNGs so pen values survive the round trip
- * untouched; truecolor runs use 8-bit RGB. Either way the file holds exactly
- * the compared bytes. libpng is driven through dos.library handles rather
- * than stdio, matching the rest of p96cts.
- */
+// SPDX-License-Identifier: 0BSD
+//
+// PNG reading and writing.
+//
+// Palette runs use 8-bit palette PNGs so pen values survive the round trip
+// untouched; truecolor runs use 8-bit RGB. Either way the file holds exactly
+// the compared bytes. libpng is driven through dos.library handles rather
+// than stdio, matching the rest of p96cts.
 
 #include <exec/memory.h>
 #include <proto/dos.h>
@@ -19,21 +18,20 @@
 #include "palette.h"
 #include "pngio.h"
 
-/* The PNG carries the palette the screen was opened with, taken straight from
- * the LoadRGB32 table: a header word pair, then three 32-bit guns per pen, of
- * which the high byte is the value. */
+// The PNG carries the palette the screen was opened with, taken straight from
+// the LoadRGB32 table: a header word pair, then three 32-bit guns per pen, of
+// which the high byte is the value.
 static void build_palette(png_color *pal) {
     const ULONG *table = p96cts_palette() + 1;
-    int i;
 
-    for (i = 0; i < P96CTS_PALETTE_ENTRIES; i++) {
+    for (int i = 0; i < P96CTS_PALETTE_ENTRIES; i++) {
         pal[i].red = (png_byte)(table[i * 3] >> 24);
         pal[i].green = (png_byte)(table[i * 3 + 1] >> 24);
         pal[i].blue = (png_byte)(table[i * 3 + 2] >> 24);
     }
 }
 
-/* --- dos.library I/O for libpng ------------------------------------------- */
+// --- dos.library I/O for libpng ---------------------------------------------
 
 static void dos_write(png_structp png, png_bytep data, size_t length) {
     BPTR f = (BPTR)png_get_io_ptr(png);
@@ -51,14 +49,14 @@ static void dos_read(png_structp png, png_bytep data, size_t length) {
         png_error(png, "short read");
 }
 
-/* --- write ---------------------------------------------------------------- */
+// --- write ------------------------------------------------------------------
 
 int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
                      int bpp) {
     png_structp png = NULL;
     png_infop info = NULL;
-    /* static, not automatic: 768 bytes is a sixth of the 4K stack a Shell
-     * gives a command by default, and this is called from inside run_test. */
+    // static, not automatic: 768 bytes is a sixth of the 4K stack a Shell
+    // gives a command by default, and this is called from inside run_test.
     static png_color pal[P96CTS_PALETTE_ENTRIES];
 
     BPTR f = Open((STRPTR)path, MODE_NEWFILE);
@@ -70,7 +68,7 @@ int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
     png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (png)
         info = png_create_info_struct(png);
-    /* libpng reports errors by longjmp-ing back here. */
+    // libpng reports errors by longjmp-ing back here.
     if (!png || !info || setjmp(png_jmpbuf(png))) {
         printf("cannot encode %s\n", path);
         if (png)
@@ -97,16 +95,14 @@ int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
     return 0;
 }
 
-/* --- read ----------------------------------------------------------------- */
+// --- read -------------------------------------------------------------------
 
 UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
     png_structp png = NULL;
     png_infop info = NULL;
-    /* volatile: written after setjmp and freed on the error path, so a
-     * longjmp must not leave it holding a stale register copy. */
+    // volatile: written after setjmp and freed on the error path, so a
+    // longjmp must not leave it holding a stale register copy.
     UBYTE *volatile idx = NULL;
-    png_uint_32 pw, ph;
-    int depth, color;
 
     BPTR f = Open((STRPTR)path, MODE_OLDFILE);
     if (!f)
@@ -127,13 +123,13 @@ UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
 
     png_set_read_fn(png, (png_voidp)f, dos_read);
     png_read_info(png, info);
-    pw = png_get_image_width(png, info);
-    ph = png_get_image_height(png, info);
-    depth = png_get_bit_depth(png, info);
-    color = png_get_color_type(png, info);
+    png_uint_32 pw = png_get_image_width(png, info);
+    png_uint_32 ph = png_get_image_height(png, info);
+    int depth = png_get_bit_depth(png, info);
+    int color = png_get_color_type(png, info);
 
-    /* Anything else would have to be converted, and a converted reference is
-     * no longer a reference: the comparison is on the stored bytes. */
+    // Anything else would have to be converted, and a converted reference is
+    // no longer a reference: the comparison is on the stored bytes.
     if (depth != 8 ||
         color != (bpp == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_PALETTE)) {
         printf("%s is not an 8-bit %s PNG\n", path,
