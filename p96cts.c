@@ -103,12 +103,24 @@ static bool known_test(const char *name) {
     return false;
 }
 
+// TEST is /M, which collects every word that did not match another option, so
+// a mistyped keyword lands here rather than being rejected as one.
+//
+// Marking it /K/M ought to fix that and does not, at least on AmigaOS: when
+// ReadArgs looks for a slot to put an unrecognized word in, it tests that slot
+// for /M before it tests it for /K, so the word is taken before the check that
+// would have skipped it runs. Measured on dos 47.38, and both orderings of the
+// modifiers behave the same. AROS checks /K first and so does reject the word
+// -- worth knowing, but not something to rely on here.
+//
+// Hence the error below names both things the word could have been.
 static bool validate_tests(STRPTR *names) {
     if (!names || !names[0])
         return true;
     for (int i = 0; names[i]; i++)
         if (!known_test((const char *)names[i])) {
-            printf("unknown test: %s\n", names[i]);
+            printf("no such testcase \"%s\" -- a mistyped keyword ends up "
+                   "here too; try -h\n", names[i]);
             return false;
         }
     return true;
@@ -121,14 +133,51 @@ static bool validate_tests(STRPTR *names) {
 // reason.
 #define REFERENCE_WIDTH 4100
 
+// Everything the command line settles, so the run loop never looks at argv
+// again. parse_args() fills it; free_args() releases what it owns.
 struct RunOpts {
-    const char *dir, *golden_dir;
-    SHORT w, h; // scene: the region rendered and compared
+    STRPTR *tests;          // testcases to run, or NULL for all of them
+    const char *monitor;    // mode-name prefix, or NULL for the reference
+    const char *dir;        // where this run's own images go
+    const char *golden_dir; // where the references it compares against live
+    SHORT w, h;             // scene: the region rendered and compared
+    SHORT screen_w, screen_h;
     int depth;
     int bpp; // bytes per compared pixel: 1 (pen) or 3 (R8G8B8)
     ULONG threshold;
     bool capture;
+    bool list_modes;
+
+    // Owned. The dir strings above may point into either of these, or into
+    // rda's own storage, so all three outlive the run.
+    struct RDArgs *rda;
+    char *golden_buf, *output_buf;
 };
+
+static void free_args(struct RunOpts *o) {
+    free(o->golden_buf);
+    free(o->output_buf);
+    if (o->rda)
+        FreeArgs(o->rda);
+}
+
+// AmigaDOS answers "?" from the template alone, which gives the argument names
+// but not what they mean. This is the rest of it.
+static void usage(void) {
+    printf(
+        "\n"
+        "  MONITOR        board to render on, e.g. Z3660 or PAL; softrast for\n"
+        "                 P96's own software rasterizer, which is the reference\n"
+        "  MODE           screen mode as WxHxD (default: the scene size at depth 8)\n"
+        "  TEST/M         testcases to run as <group>-<test>; all of them by default\n"
+        "  CAPTURE/S      write the reference instead of comparing against it\n"
+        "  OUTDIR/K       output directory (default output/<monitor>/<scene>x<depth>)\n"
+        "  GOLDEN/K       reference directory (default golden/<scene>x<depth>)\n"
+        "  SCENE/K        region rendered and compared, as WxH (default 320x200)\n"
+        "  THRESHOLD/K/N  tolerate up to this many differing pixels\n"
+        "  LISTMODES/S    dump the display database and exit\n"
+        "  HELP/S         this text; -h and --help work too\n");
+}
 
 static bool parse_scene(const char *s, SHORT *w, SHORT *h) {
     int n, parsed_w, parsed_h;
@@ -154,6 +203,141 @@ static bool parse_mode(const char *s, SHORT *w, SHORT *h, int *depth) {
     *h = (SHORT)parsed_h;
     *depth = parsed_depth;
     return true;
+}
+
+// Settle everything the command line has to say. Returns RETURN_OK, or the
+// code main should exit with having printed why. The caller free_args() either
+// way once it is done with the strings, which point into what this allocates.
+//
+// TEST is plain /M. Marking it /K/M parses, but changes nothing: /M collects
+// "any arguments not considered to be part of another option" whether or not
+// the keyword is given, so a mistyped keyword still becomes a test name --
+// which validate_tests() then rejects by name.
+static int parse_args(struct RunOpts *o) {
+    static const char *TEMPLATE =
+        "MONITOR,MODE,TEST/M,CAPTURE/S,OUTDIR/K,GOLDEN/K,SCENE/K,"
+        "THRESHOLD/K/N,LISTMODES/S,HELP=--help=-h/S";
+    LONG args[10];
+
+    memset(o, 0, sizeof *o);
+    memset(args, 0, sizeof args);
+
+    o->rda = ReadArgs((STRPTR)TEMPLATE, args, NULL);
+    if (!o->rda) {
+        PrintFault(IoErr(), (STRPTR)"p96cts");
+        usage();
+        return RETURN_FAIL;
+    }
+
+    printf("%s\n", VERSION_LINE);
+
+    if (args[9]) {
+        usage();
+        return RETURN_WARN;
+    }
+
+    // Amiga low-res NTSC. Every primitive is testable at this size, and it
+    // keeps the committed goldens small.
+    o->w = 320;
+    o->h = 200;
+    o->depth = 8;
+    o->tests = (STRPTR *)args[2];
+    o->capture = args[3] != 0;
+    o->list_modes = args[8] != 0;
+
+    // The reference run is the absence of a board, which as a positional
+    // argument needs a name of its own. Internally it stays NULL, which is
+    // also what names the output directory.
+    o->monitor = args[0] ? (const char *)args[0] : NULL;
+    if (o->monitor && !strcmp(o->monitor, "softrast"))
+        o->monitor = NULL;
+
+    // MODE is not /A, though a run has to have one: /A is checked by ReadArgs
+    // before anything else, which would make even -h and LISTMODES demand a
+    // mode. So it is required here instead, where those have already been
+    // dealt with.
+    if (!o->list_modes && !args[1]) {
+        printf("MONITOR and MODE are required, "
+               "as in \"p96cts softrast 320x200x8\"\n");
+        usage();
+        return RETURN_ERROR;
+    }
+
+    if (args[6] && !parse_scene((const char *)args[6], &o->w, &o->h)) {
+        printf("SCENE must be WxH\n");
+        return RETURN_ERROR;
+    }
+
+    // MODE sizes the screen, SCENE the region actually rendered and compared.
+    // They differ because a board need not offer a mode as small as the scene:
+    // the smallest Z3660 mode is 640x400, so a 320x200 scene is drawn into the
+    // corner of a larger screen and only that corner is compared. Goldens stay
+    // small and portable across boards with different mode lists.
+    if (args[1] && !parse_mode((const char *)args[1], &o->screen_w,
+                               &o->screen_h, &o->depth)) {
+        printf("MODE must be WxHxD with dimensions up to 32767 "
+               "and depth 1 through 32\n");
+        return RETURN_ERROR;
+    }
+    if (!o->screen_w)
+        o->screen_w = o->w;
+    if (!o->screen_h)
+        o->screen_h = o->h;
+    if (o->screen_w < o->w || o->screen_h < o->h) {
+        printf("mode %dx%d is smaller than the %dx%d scene\n", o->screen_w,
+               o->screen_h, o->w, o->h);
+        return RETURN_ERROR;
+    }
+
+    if (args[7]) {
+        LONG threshold = *(LONG *)args[7];
+        if (threshold < 0) {
+            printf("THRESHOLD must not be negative\n");
+            return RETURN_ERROR;
+        }
+        o->threshold = (ULONG)threshold;
+    }
+
+    // 8 compares pen values; 24 compares R8G8B8, which any truecolor screen
+    // canonicalizes to on readback. 15/16-bit modes are the deliberate gap:
+    // their reference would have to be rendered in the same 5-6-5 precision,
+    // not just converted to it, so they need their own path.
+    if (o->depth != 8 && o->depth != 24) {
+        printf("depth %d is not supported (8 or 24)\n", o->depth);
+        return RETURN_ERROR;
+    }
+    o->bpp = o->depth > 8 ? 3 : 1;
+
+    if (o->w & 15) {
+        printf("width %d must be a multiple of 16\n", o->w);
+        return RETURN_ERROR;
+    }
+    if (!validate_tests(o->tests))
+        return RETURN_ERROR;
+
+    // Goldens are named for what they contain -- the scene, at a depth -- so a
+    // differently sized scene cannot overwrite an existing set, and a deeper
+    // one can sit beside it later. Not the MODE: the same scene drawn into the
+    // corner of a larger screen must compare equal to it on a screen its own
+    // size, which is why the two are separate.
+    //
+    // Depth is enough while clut is the only supported format. It stops being
+    // enough at 16-bit, where r5g6b5 and r5g5b5 differ, so a wider comparison
+    // path wants the format in the name too.
+    //
+    // Run output is per monitor, so several boards can be compared against the
+    // one reference set.
+    if (asprintf(&o->golden_buf, "golden/%dx%dx%d", o->w, o->h, o->depth) < 0 ||
+        asprintf(&o->output_buf, "output/%s/%dx%dx%d",
+                 o->monitor ? o->monitor : "softrast",
+                 o->w, o->h, o->depth) < 0) {
+        printf("out of memory\n");
+        return RETURN_FAIL;
+    }
+    o->golden_dir = args[5] ? (const char *)args[5] : o->golden_buf;
+    o->dir = args[4] ? (const char *)args[4]
+                     : (o->capture ? o->golden_dir : o->output_buf);
+    return RETURN_OK;
 }
 
 // Keep what a failing scene rendered, and a picture of where it went wrong:
@@ -299,95 +483,19 @@ static bool run_test(const struct P96Test *t, const char *name,
 }
 
 int main(void) {
-    static const char *TEMPLATE =
-        "TEST/M,CAPTURE/S,MONITOR/K,DIR/K,GOLDEN/K,MODE/K,SCENE/K,"
-        "THRESHOLD/K/N,LISTMODES/S";
-    LONG args[9];
     struct RunOpts o;
     int failures = 0, rc = 0;
-    SHORT screen_w = 0, screen_h = 0;
     ULONG id;
     struct Screen *scr = NULL;
     struct BitMap *bm = NULL;
     struct RastPort rp_off, *rp;
-    char *golden_buf = NULL, *output_buf = NULL;
 
-    memset(args, 0, sizeof args);
-    struct RDArgs *rda = ReadArgs((STRPTR)TEMPLATE, args, NULL);
-    if (!rda) {
-        PrintFault(IoErr(), (STRPTR)"p96cts");
-        return 20;
+    rc = parse_args(&o);
+    if (rc != RETURN_OK) {
+        free_args(&o);
+        return rc;
     }
-
-    printf("%s\n", VERSION_LINE);
-
-    memset(&o, 0, sizeof o);
-    // Amiga low-res NTSC. Every primitive is testable at this size, and it
-    // keeps the committed goldens small.
-    o.w = 320;
-    o.h = 200;
-    o.depth = 8;
-    o.capture = args[1] != 0;
-    const char *monitor = args[2] ? (const char *)args[2] : NULL;
-    if (args[6] && !parse_scene((const char *)args[6], &o.w, &o.h)) {
-        printf("SCENE must be WxH\n");
-        FreeArgs(rda);
-        return 5;
-    }
-
-    // MODE sizes the screen, SCENE the region actually rendered and compared.
-    // They differ because a board need not offer a mode as small as the scene:
-    // the smallest Z3660 mode is 640x400, so a 320x200 scene is drawn into the
-    // corner of a larger screen and only that corner is compared. Goldens stay
-    // small and portable across boards with different mode lists.
-    if (args[5] && !parse_mode((const char *)args[5], &screen_w, &screen_h,
-                               &o.depth)) {
-        printf("MODE must be WxHxD with dimensions up to 32767 and depth 1 through 32\n");
-        FreeArgs(rda);
-        return 5;
-    }
-    if (!screen_w)
-        screen_w = o.w;
-    if (!screen_h)
-        screen_h = o.h;
-    if (screen_w < o.w || screen_h < o.h) {
-        printf("mode %dx%d is smaller than the %dx%d scene\n", screen_w, screen_h,
-               o.w, o.h);
-        FreeArgs(rda);
-        return 5;
-    }
-
-    if (args[7]) {
-        LONG threshold = *(LONG *)args[7];
-        if (threshold < 0) {
-            printf("THRESHOLD must not be negative\n");
-            FreeArgs(rda);
-            return 5;
-        }
-        o.threshold = (ULONG)threshold;
-    }
-
-    // 8 compares pen values; 24 compares R8G8B8, which any truecolor screen
-    // canonicalizes to on readback. 15/16-bit modes are the deliberate gap:
-    // their reference would have to be rendered in the same 5-6-5 precision,
-    // not just converted to it, so they need their own path.
-    if (o.depth != 8 && o.depth != 24) {
-        printf("depth %d is not supported (8 or 24)\n", o.depth);
-        FreeArgs(rda);
-        return 5;
-    }
-    o.bpp = o.depth > 8 ? 3 : 1;
     p96cts_truecolor = o.depth > 8;
-
-    if (o.w & 15) {
-        printf("width %d must be a multiple of 16\n", o.w);
-        FreeArgs(rda);
-        return 5;
-    }
-    if (!validate_tests((STRPTR *)args[0])) {
-        FreeArgs(rda);
-        return 5;
-    }
 
     IntuitionBase = (struct IntuitionBase *)OpenLibrary((STRPTR)"intuition.library", 39);
     GfxBase = (struct GfxBase *)OpenLibrary((STRPTR)"graphics.library", 39);
@@ -398,7 +506,7 @@ int main(void) {
         goto out;
     }
 
-    if (args[8]) {
+    if (o.list_modes) {
         p96cts_list_modes();
         goto out;
     }
@@ -413,11 +521,12 @@ int main(void) {
     // some screen of the right depth, and the scene size it renders at is
     // often not a real mode at all -- P96 publishes a 320x200 entry per pixel
     // format, but they are mode prefs templates that never open.
-    if (monitor) {
-        id = p96cts_find_mode(screen_w, screen_h, o.depth, monitor, NULL, 0);
+    if (o.monitor) {
+        id = p96cts_find_mode(o.screen_w, o.screen_h, o.depth, o.monitor,
+                              NULL, 0);
         if (id == P96CTS_INVALID_MODE) {
-            printf("no %s mode %dx%dx%d in the display database\n", monitor,
-                   screen_w, screen_h, o.depth);
+            printf("no %s mode %dx%dx%d in the display database\n", o.monitor,
+                   o.screen_w, o.screen_h, o.depth);
             failures = 1;
             goto out;
         }
@@ -445,11 +554,11 @@ int main(void) {
         // only borrows this screen, so there is nothing to see on it. Opening
         // it in front would just black out the display for the whole run.
         scr = OpenScreenTags(NULL, SA_DisplayID, id,
-                             SA_Width, monitor ? screen_w : STDSCREENWIDTH,
-                             SA_Height, monitor ? screen_h : STDSCREENHEIGHT,
+                             SA_Width, o.monitor ? o.screen_w : STDSCREENWIDTH,
+                             SA_Height, o.monitor ? o.screen_h : STDSCREENHEIGHT,
                              SA_Depth, o.depth, SA_Pens, (ULONG)no_pens,
                              SA_Colors32, (ULONG)colors, SA_Quiet, TRUE,
-                             SA_Behind, monitor ? FALSE : TRUE,
+                             SA_Behind, o.monitor ? FALSE : TRUE,
                              SA_ShowTitle, FALSE, TAG_DONE);
     }
     if (!scr) {
@@ -458,7 +567,7 @@ int main(void) {
         goto out;
     }
 
-    if (monitor) {
+    if (o.monitor) {
         rp = &scr->RastPort;
     } else {
         // Friended to the screen's bitmap, so pens resolve through the
@@ -473,12 +582,12 @@ int main(void) {
         // card driver and of the blitter. Only the leftmost part is drawn on
         // and read back; the rest is there to make the allocation refuse the
         // card.
-        bm = p96AllocBitMap(REFERENCE_WIDTH, screen_h, o.depth,
+        bm = p96AllocBitMap(REFERENCE_WIDTH, o.screen_h, o.depth,
                             BMF_CLEAR | BMF_USERPRIVATE, scr->RastPort.BitMap,
                             o.depth > 8 ? RGBFB_R8G8B8 : RGBFB_CLUT);
         if (!bm) {
             printf("p96AllocBitMap %dx%dx%d failed\n", REFERENCE_WIDTH,
-                   screen_h, o.depth);
+                   o.screen_h, o.depth);
             failures = 1;
             goto cleanup;
         }
@@ -508,38 +617,17 @@ int main(void) {
             failures = 1;
             goto cleanup;
         }
-        if (!monitor && p96GetBitMapAttr(rp->BitMap, P96BMA_ISONBOARD)) {
+        if (!o.monitor && p96GetBitMapAttr(rp->BitMap, P96BMA_ISONBOARD)) {
             printf("reference bitmap landed on the board; it would not be "
                    "an independent reference\n");
             failures = 1;
             goto cleanup;
         }
-        // Goldens are named for what they contain -- the scene, at a depth --
-        // so a differently sized scene cannot overwrite an existing set, and
-        // a deeper one can sit beside it later. Not the MODE: the same scene
-        // drawn into the corner of a larger screen must compare equal to it
-        // on a screen its own size, which is why the two are separate.
-        //
-        // Depth is enough while clut is the only supported format. It stops
-        // being enough at 16-bit, where r5g6b5 and r5g5b5 differ, so a wider
-        // comparison path wants the format in the name too.
-        //
-        // Run output is per monitor, so several boards can be compared
-        // against the one reference set.
-        if (asprintf(&golden_buf, "golden/%dx%dx%d", o.w, o.h, o.depth) < 0 ||
-            asprintf(&output_buf, "output/%s/%dx%dx%d",
-                     monitor ? monitor : "softrast", o.w, o.h, o.depth) < 0) {
-            printf("out of memory\n");
-            failures = 1;
-            goto cleanup;
-        }
-        o.golden_dir = args[4] ? (const char *)args[4] : golden_buf;
-        o.dir = args[3] ? (const char *)args[3]
-                        : (o.capture ? o.golden_dir : output_buf);
     }
 
     printf("testing %s %dx%dx%d %s, scene %dx%d",
-           monitor ? monitor : "P96 software rasterizer", screen_w, screen_h,
+           o.monitor ? o.monitor : "P96 software rasterizer",
+           o.screen_w, o.screen_h,
            o.depth, p96cts_format_name(p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT)),
            o.w, o.h);
     // Where a comparison reads from is determined by the scene, so it is not
@@ -555,7 +643,7 @@ int main(void) {
             const struct P96Test *t = &GROUPS[g]->tests[i];
             char full[64];
             test_name(full, sizeof full, GROUPS[g], t);
-            if (!selected((STRPTR *)args[0], full))
+            if (!selected(o.tests, full))
                 continue;
             if (p96cts_truecolor && t->clut_only) {
                 printf("skip %s: palette-only, it tests something truecolor "
@@ -567,8 +655,6 @@ int main(void) {
     }
 
 cleanup:
-    free(golden_buf);
-    free(output_buf);
     // The bitmap goes first: it was allocated with the screen's as friend.
     if (bm)
         p96FreeBitMap(bm);
@@ -581,6 +667,6 @@ out:
         CloseLibrary((struct Library *)GfxBase);
     if (IntuitionBase)
         CloseLibrary((struct Library *)IntuitionBase);
-    FreeArgs(rda);
+    free_args(&o);
     return rc ? rc : (failures ? 1 : 0);
 }

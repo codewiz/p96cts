@@ -37,8 +37,8 @@ change.
 Capture the reference from P96's software rasterizer, then compare a board
 against it:
 
-    p96cts CAPTURE
-    p96cts MONITOR=Z3660 MODE=640x400x8
+    p96cts softrast 320x200x8 CAPTURE
+    p96cts Z3660 640x400x8
 
 Output looks like:
 
@@ -68,17 +68,21 @@ like what was rendered.
 
 ### Arguments
 
+`MONITOR` and `MODE` are positional and both required for a run, so the usual
+invocation is `p96cts <monitor> <WxHxD>`.
+
 | Argument | Meaning |
 |---|---|
+| `MONITOR` | Board to render on; `softrast` for the software rasterizer |
+| `MODE` | Screen mode as `WxHxD` |
 | `TEST/M` | Testcases to run; all of them by default |
 | `CAPTURE/S` | Write the reference instead of comparing against it |
-| `MONITOR/K` | Render on a screen of this monitor; omit to use the software rasterizer |
-| `MODE/K` | Screen mode as `WxHxD` (default: the scene size at depth 8) |
 | `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
 | `GOLDEN/K` | Reference directory (default `golden/<scene>x<depth>`) |
-| `DIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
+| `OUTDIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
 | `THRESHOLD/K/N` | Tolerate up to this many differing pixels |
 | `LISTMODES/S` | Dump the display database and exit |
+| `HELP/S` | Print this table and exit; `-h` and `--help` work too |
 
 `MODE` and `SCENE` are separate because a board need not offer a mode as small
 as the scene -- RTG boards typically start around 640x400, and P96's 320x200
@@ -138,8 +142,8 @@ which converts from whatever the screen's actual format is -- a 24-bit packed
 screen and a 32-bit BGRA one produce identical buffers and share one golden
 set:
 
-    p96cts CAPTURE MODE=640x480x24 SCENE=320x200
-    p96cts MONITOR=Z3660 MODE=640x480x24 SCENE=320x200
+    p96cts softrast 640x480x24 SCENE=320x200 CAPTURE
+    p96cts Z3660 640x480x24 SCENE=320x200
 
 One scene is palette-only, and permanently: `fillrect-drawmodes` sweeps its
 grid across `rp->Mask`, which selects bitplanes and has no truecolor
@@ -149,7 +153,7 @@ A palette run also works on native AGA screens, whose bitmaps are planar rather
 than chunky, which puts graphics.library's own rendering up against the same
 reference:
 
-    p96cts MONITOR=PAL MODE=320x256x8
+    p96cts PAL 320x256x8
 
 15/16-bit modes are the deliberate gap: their reference would have to be
 rendered at the same 5-6-5 precision, not just converted to it.
