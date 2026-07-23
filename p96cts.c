@@ -37,6 +37,7 @@ static const struct P96TestGroup *const GROUPS[] = {
     &DrawLineGroup,
     &RectFillGroup,
     &ClipBlitGroup,
+    &BltTemplateGroup,
 };
 #define NGROUPS ((int)(sizeof GROUPS / sizeof GROUPS[0]))
 

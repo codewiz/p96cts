@@ -127,7 +127,7 @@ checksums, and why both are built `-noixemul`.
 A test group is one translation unit in `tests/` exporting a `P96TestGroup`;
 see `tests/drawline.c`. Add the file to `OBJS` in the Makefile and the group to
 `GROUPS` in `p96cts.c`. A group is named after the function it exercises
-(`DrawLine`, `RectFill`, `ClipBlit`) and a testcase for what it does (`solid`,
+(`DrawLine`, `RectFill`, `ClipBlit`, `BltTemplate`) and a testcase for what it does (`solid`,
 `overlap`); the full name a user types is `<group>-<test>`, matched
 case-insensitively. `LISTTESTS` prints them all.
 
