@@ -152,9 +152,20 @@ set:
     p96cts softrast 640x480x24 SCENE=320x200 CAPTURE
     p96cts Z3660 640x480x24 SCENE=320x200
 
-One scene is palette only, and permanently: `RectFill-drawmodes` sweeps its
-grid across `rp->Mask`, which selects bitplanes and has no truecolor
-counterpart. Everything else runs at both depths.
+Two scenes are palette only, and permanently: `RectFill-drawmodes` and
+`BltTemplate-masks` sweep their grids across `rp->Mask`, which selects
+bitplanes and has no truecolor counterpart. Everything else runs at both
+depths.
+
+One scene surfaces a discrepancy rather than hiding it. `BltTemplate` with a
+source offset of 16 or more -- past the first 16-bit word -- renders
+differently in P96's software rasterizer than in graphics.library: the z3660
+driver and native AGA agree with each other and disagree with softrast. Since
+the golden is captured from softrast, `BltTemplate-offsets` passes on softrast
+and fails elsewhere. Whether the fault is in P96 or in the chipset emulation it
+was measured on is unresolved -- this was only run under emulators, not on real
+hardware -- so the sweep keeps going into that range to keep the failure
+visible.
 
 A palette run also works on native AGA screens, whose bitmaps are planar rather
 than chunky, which puts graphics.library's own rendering up against the same

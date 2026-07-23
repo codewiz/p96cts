@@ -12,7 +12,9 @@
 // or word one, so the driver has to shift the source into place. Drivers
 // routinely handle srcX 0 and misplace everything else by a pixel or a word,
 // and just as routinely drop the trailing partial word when the width is not a
-// multiple of 16. The scenes sweep both.
+// multiple of 16. The scenes sweep both, and the offset sweep runs into the
+// second source word, which is where P96's software rasterizer and
+// graphics.library part ways (see t_offsets).
 
 #include <exec/memory.h>
 #include <graphics/gfx.h>
@@ -24,32 +26,38 @@
 #include "p96cts.h"
 #include "gfx.h"
 
-#define TPL_W 32
+// 48 wide, three source words: enough to hold the P96 wordmark below, and
+// enough for a 16-wide window to start past the first word boundary.
+#define TPL_W 48
 #define TPL_H 16
 #define TPL_MOD (TPL_W / 8) // bytes per source row, what BltTemplate calls the
                             // modulo
 
-// The source, as ASCII so that a reader can see what should end up on screen.
-// Asymmetric in both axes on purpose: an F is top-heavy and left-heavy, so a
-// driver that mirrors or flips the source cannot produce the same image, and
-// the speck at the lower right breaks the remaining symmetry of the border.
+// The source, as ASCII so that a reader can see what should end up on screen:
+// a P96 wordmark that fills the whole template, top-left pixel to bottom-right.
+// Asymmetric in both axes on purpose, so a driver that mirrors or flips the
+// source cannot produce the same image -- the three glyphs differ left to
+// right, the bowls sit high, and the 6's loop puts solid content in the lower
+// right, which is where an offset error shows first. Each glyph is a cell of
+// its own (14, 14, 15 wide) with a narrow gap between, so a column of set
+// pixels reaches both edges.
 static const char *const GLYPH[TPL_H] = {
-    "################################",
-    "#..............................#",
-    "#..########################....#",
-    "#..########################....#",
-    "#..###.........................#",
-    "#..###.........................#",
-    "#..################............#",
-    "#..################............#",
-    "#..###.........................#",
-    "#..###.........................#",
-    "#..###.........................#",
-    "#..###.........................#",
-    "#..###.........................#",
-    "#..###....................#....#",
-    "#.........................#....#",
-    "################################",
+    "#############." "..." ".############." ".." ".##############",
+    "##############" "..." "##############" ".." "###############",
+    "###.......####" "..." "###........###" ".." "###............",
+    "###........###" "..." "###........###" ".." "###............",
+    "###........###" "..." "###........###" ".." "###............",
+    "###.......####" "..." "###........###" ".." "###............",
+    "##############" "..." "###........###" ".." "##############.",
+    "#############." "..." "##############" ".." "###############",
+    "###..........." "..." ".#############" ".." "###.........###",
+    "###..........." "..." "...........###" ".." "###.........###",
+    "###..........." "..." "...........###" ".." "###.........###",
+    "###..........." "..." "...........###" ".." "###.........###",
+    "###..........." "..." "...........###" ".." "###.........###",
+    "###..........." "..." "...........###" ".." "###.........###",
+    "###..........." "..." "##############" ".." "###############",
+    "###..........." "..." "#############." ".." ".#############.",
 };
 
 // Pack the glyph for BltTemplate, most significant bit leftmost.
@@ -84,24 +92,33 @@ static void checker(struct RastPort *rp, SHORT w, SHORT h, SHORT cell) {
         }
 }
 
-// Sixteen 16-wide windows onto the glyph, one per source bit offset, over the
-// checkerboard so the mask is visible: in JAM1 the clear bits must leave the
-// background exactly as it was.
+// A 4x8 grid of 16-wide windows onto the glyph, one per source bit offset
+// 0..31, over the checkerboard so the mask is visible: in JAM1 the clear bits
+// must leave the background exactly as it was.
 //
 // Source and destination alignment are varied independently, because a driver
 // that derives its shift from the wrong one of the two passes whenever they
-// happen to agree. srcX walks 0..15 in order while the destination steps by 5,
-// which is coprime with 16 and so visits all sixteen destination alignments
-// exactly once across the sixteen tiles.
+// happen to agree. srcX walks 0..31 in order -- crossing from the first source
+// word into the second halfway through -- while the destination steps by 5,
+// which is coprime with 16 and so visits all sixteen destination alignments.
+//
+// The second-word half (srcX >= 16) is where P96's software rasterizer, the
+// reference this suite captures, disagrees with graphics.library: the z3660
+// driver and native AGA render it identically to each other and differently
+// from softrast, so softrast looks like the odd one out. The golden comes from
+// softrast, so this scene passes there and fails on the z3660 driver and on
+// AGA. Whether the fault is in P96 or in the chipset emulation this was measured
+// on is unresolved -- either way the sweep keeps going so the discrepancy shows
+// up instead of being skipped.
 static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
-    SHORT cw = w / 4, ch = h / 4;
+    SHORT cw = w / 8, ch = h / 4;
 
     p96cts_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     // The RastPort has no Layer, so nothing clips a blit that runs past the
     // bitmap; a scene too small for the grid draws nothing instead.
-    if (cw < 40 || ch < TPL_H + 2)
+    if (cw < 34 || ch < TPL_H + 2)
         return;
 
     checker(rp, w, h, 16);
@@ -111,9 +128,9 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
         return;
 
     SetAPen(rp, 1);
-    for (int i = 0; i < 16; i++) {
-        SHORT dx = (i % 4) * cw + 8 + (SHORT)((i * 5) % 16);
-        SHORT dy = (i / 4) * ch + (ch - TPL_H) / 2;
+    for (int i = 0; i < 32; i++) {
+        SHORT dx = (i % 8) * cw + 2 + (SHORT)((i * 5) % 16);
+        SHORT dy = (i / 8) * ch + (ch - TPL_H) / 2;
 
         BltTemplate(tpl, i, TPL_MOD, rp, dx, dy, 16, TPL_H);
     }
@@ -132,7 +149,9 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
-    if (step < TPL_W / 2 + 2 || band < TPL_H + 2)
+    // The widest blit here is 16, so tiles need only that much room, not the
+    // full template width.
+    if (step < 18 || band < TPL_H + 2)
         return;
 
     checker(rp, w, h, 16);
@@ -156,11 +175,13 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 // The draw modes, each over two backgrounds so that no two of them can produce
-// the same output. JAM1 leaves the clear bits alone, JAM2 paints them in
-// BgPen, INVERSVID swaps the roles of set and clear, and COMPLEMENT ignores
-// both pens and inverts the destination under the set bits.
+// the same output. JAM1 leaves the clear bits alone, JAM2 paints them in BgPen,
+// INVERSVID swaps the roles of set and clear, and COMPLEMENT ignores both pens
+// and inverts the destination -- under the set bits on its own, under the clear
+// bits when INVERSVID is added.
 static const UBYTE MODES[] = {
-    JAM1, JAM2, JAM1 | INVERSVID, JAM2 | INVERSVID, COMPLEMENT,
+    JAM1,       JAM2,       JAM1 | INVERSVID,
+    JAM2 | INVERSVID, COMPLEMENT, COMPLEMENT | INVERSVID,
 };
 #define NMODES ((SHORT)(sizeof MODES / sizeof MODES[0]))
 
@@ -200,10 +221,54 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
     FreeVec(tpl);
 }
 
+// rp->Mask restricts the write to the selected bitplanes; the unselected ones
+// keep the destination. The driver's BlitTemplate hook has its own mask path,
+// distinct from RectFill's, so a driver can get one right and the other wrong.
+// Both pens have their bits spread across the byte, and the background does too,
+// so a mask that drops some planes lands on a value distinct from FgPen, BgPen
+// and the background alike. Planar only: the mask selects bitplanes, which a
+// chunky truecolor screen has no equivalent of.
+static const UBYTE MASKS[] = {0xFF, 0x0F, 0x55, 0x81};
+#define NMASKS ((SHORT)(sizeof MASKS / sizeof MASKS[0]))
+
+static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
+    SHORT band = h / NMASKS;
+
+    // A spread-bit background, so the planes a mask protects are visible in the
+    // result rather than reading back as zero.
+    p96cts_clear(rp, w, h, 0x3C);
+
+    if (band < TPL_H + 2 || w < 2 * TPL_W)
+        return;
+
+    PLANEPTR tpl = build_template();
+    if (!tpl)
+        return;
+
+    // JAM2, so the mask is applied to the BgPen write on the clear bits too,
+    // not only the FgPen write on the set bits.
+    SetDrMd(rp, JAM2);
+    SetAPen(rp, 0x5A);
+    SetBPen(rp, 0xA5);
+    for (SHORT r = 0; r < NMASKS; r++) {
+        SHORT y = r * band + (band - TPL_H) / 2;
+
+        rp->Mask = MASKS[r];
+        for (SHORT x = 8; x + TPL_W <= w; x += TPL_W + 12)
+            BltTemplate(tpl, 0, TPL_MOD, rp, x, y, TPL_W, TPL_H);
+    }
+
+    rp->Mask = 0xFF;
+    SetDrMd(rp, JAM1);
+    SetBPen(rp, 0);
+    FreeVec(tpl);
+}
+
 static const struct P96Test TESTS[] = {
     {"offsets", t_offsets, false},
     {"sizes", t_sizes, false},
     {"drawmodes", t_drawmodes, false},
+    {"masks", t_masks, true},
 };
 
 const struct P96TestGroup BltTemplateGroup = {
