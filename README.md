@@ -144,7 +144,7 @@ rounds a vertex differently.
 the two `JAM2 | COMPLEMENT` modes, where they do not treat `COMPLEMENT` as
 ignoring the pens the way the reference does; the `JAM1 | COMPLEMENT` modes
 pass. Z3660.card is a fork of the ZZ9000 driver, so it is one bug in the shared
-lineage.
+lineage, reported as [amiberry#2217](https://github.com/BlitterStudio/amiberry/issues/2217).
 
 ## Building
 
