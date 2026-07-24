@@ -23,18 +23,12 @@
 bool p96cts_truecolor;
 
 // JAM1-fill a rectangle in the given color: a pen number on a palette screen,
-// 0x00RRGGBB on truecolor. On a palette screen the corners go to RectFill as
-// given, including deliberately swapped ones; the truecolor path sorts them
-// first, since p96RectFill's contract requires min <= max.
-//
-// Deliberately not inline: the body is two library calls, which dwarf the call
-// overhead, and inlining it would drag proto/graphics.h and proto/Picasso96.h
-// into every file that includes gfx.h.
+// 0x00RRGGBB on truecolor. Corners are inclusive and callers must pass them
+// sorted -- both RectFill() and p96RectFill() require min <= max, and neither
+// defines what a reversed rectangle does.
 void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                  ULONG color) {
     if (p96cts_truecolor) {
-        if (x1 > x2) { SHORT t = x1; x1 = x2; x2 = t; }
-        if (y1 > y2) { SHORT t = y1; y1 = y2; y2 = t; }
         p96RectFill(rp, x1, y1, x2, y2, color);
         return;
     }
@@ -52,9 +46,9 @@ void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
 
 #define INVALID P96CTS_INVALID_MODE
 
-// Why P96 marked a mode NotAvailable. From P96's boardinfo.h, which lives in
-// PrivateInclude and is not shipped with the toolchain, so the values are
-// repeated rather than included.
+// Constants from Picasso96Develop/PrivateInclude/boardinfo.h.
+//
+// Why P96 marked a mode NotAvailable.
 //
 // MONITOOL is the one worth recognizing: P96 publishes a template entry per
 // pixel format for the mode prefs editor to enumerate ("Z36600-P96Mode 8bit"

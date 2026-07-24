@@ -93,11 +93,19 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
         mode_row(rp, x, r * pitch + (pitch - tile) / 2, tile, MASKS[r]);
 }
 
-// Degenerate geometry. P96 fills the rectangle inclusive of both corners, so
-// a single pixel and a single row/column are legal fills, and a driver that
-// computes width as (x1 - x0) rather than (x1 - x0 + 1) drops them entirely.
-// Swapped corners are the other half: graphics.library normalizes them, and a
-// driver that passes them through unsorted fills nothing or runs away.
+// Degenerate geometry.
+//
+// The graphics.library's RectFill() contract requires (xmax >= xmin) and
+// (ymax >= ymin). A single pixel and a single row or column are legal fills,
+// of width and height 1.
+//
+// P96's driver hook is FillRect(x, y, width, height), so something between
+// the two has to convert, and a conversion that computes width as
+// (xmax - xmin) rather than (xmax - xmin + 1) drops those fills entirely.
+//
+// Corners the wrong way round are deliberately not tested: the autodoc makes
+// (xmax >= xmin) a precondition the caller must meet, so a P96 driver is free
+// to do anything with a reversed rectangle and there is nothing to conform to.
 static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT n = (w < h ? w : h) / 8;
     ULONG fg = p96cts_color(FG, FG_RGB);
@@ -118,13 +126,8 @@ static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
     for (SHORT i = 0; i < n; i++)
         p96cts_fill(rp, 2 + i * 4, h / 2, 2 + i * 4, h / 2 + i, bg);
 
-    // Corners given the wrong way round: graphics.library normalizes them,
-    // and a driver that passes them through unsorted fills nothing or runs
-    // away. (Only the palette path reaches RectFill with them swapped;
-    // p96cts_fill sorts them for p96RectFill, whose contract is min <= max.)
-    // Then the scene's own edges, where a fill that is off by one writes
-    // outside the bitmap entirely.
-    p96cts_fill(rp, w - 2, h - 2, w - n, h - n, fg);
+    // The scene's own edges, where a fill that is off by one writes outside
+    // the bitmap entirely.
     p96cts_fill(rp, 0, 0, w - 1, 0, fg);
     p96cts_fill(rp, 0, h - 1, w - 1, h - 1, fg);
     p96cts_fill(rp, 0, 0, 0, h - 1, fg);
