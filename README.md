@@ -167,6 +167,7 @@ Under Copperline:
 | scene | Z3660 |
 |---|---|
 | DrawLine-complement | ❌ |
+| BltPattern-drawmodes | ❌ |
 
 
 * The CyberVision (S3) line failures are tracked upstream as [amiberry#2211](https://github.com/BlitterStudio/amiberry/issues/2211).
@@ -174,3 +175,6 @@ Under Copperline:
 wrong half of the template
 * Copperline's z3660 fails `DrawLine-complement` by four pixels where
 its line rasterizer rounds a vertex differently.
+* Copperline's z3660 fails `BltPattern-drawmodes` in the two `JAM2 |
+COMPLEMENT` modes, where it does not treat `COMPLEMENT` as ignoring the pens
+the way the reference does; the `JAM1 | COMPLEMENT` modes pass.
