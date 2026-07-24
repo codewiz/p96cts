@@ -135,6 +135,8 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
         BltTemplate(tpl, i, TPL_MOD, rp, dx, dy, 16, TPL_H);
     }
 
+    // Wait for the last BltTemplate() to complete before freeing the source.
+    WaitBlit();
     FreeVec(tpl);
 }
 
@@ -171,6 +173,8 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
         BltTemplate(tpl, i, TPL_MOD, rp, x, 2 * band + band / 4, 13, TPL_H);
     }
 
+    // Wait for the last BltTemplate() to complete before freeing the source.
+    WaitBlit();
     FreeVec(tpl);
 }
 
@@ -218,6 +222,8 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
 
     SetDrMd(rp, JAM1);
     SetBPen(rp, 0);
+    // Wait for the last BltTemplate() to complete before freeing the source.
+    WaitBlit();
     FreeVec(tpl);
 }
 
@@ -261,6 +267,8 @@ static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
     rp->Mask = 0xFF;
     SetDrMd(rp, JAM1);
     SetBPen(rp, 0);
+    // Wait for the last BltTemplate() to complete before freeing the source.
+    WaitBlit();
     FreeVec(tpl);
 }
 

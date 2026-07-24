@@ -404,6 +404,8 @@ static bool run_test(const struct P96Test *t, const char *name,
     SHORT gw, gh;
 
     t->fn(rp, o->w, o->h);
+    // Wait for the blitter before reading the scene back.
+    WaitBlit();
     UBYTE *idx = bpp == 3 ? p96cts_read_rgb(rp, o->w, o->h)
                           : p96cts_read_pens(rp, o->w, o->h, o->depth);
     if (!idx) {
