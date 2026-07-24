@@ -566,7 +566,7 @@ int main(void) {
     // that is the thing under test. The reference run only borrows it: a pen
     // number is not a color on its own, and the mapping that turns it into one
     // comes from the screen, reaching the reference bitmap through the friend
-    // argument below.
+    // argument below -- unfriended, a truecolor screen reads every pen as black.
     //
     // The driver run needs the exact mode named. The reference run needs only
     // some screen of the right depth, and the scene size it renders at is
@@ -590,8 +590,11 @@ int main(void) {
         }
     }
     // SA_Pens with an empty spec so Intuition reserves none of them: every pen
-    // belongs to the scenes. SA_Colors32 rather than SetRGB32 afterwards
-    // because it takes precedence over every other way the palette gets set.
+    // belongs to the scenes. The whole palette is set explicitly, since
+    // Intuition seeds only pens 0-3 and 17-19 from Preferences and a truecolor
+    // reference would otherwise record the capture machine's colors. SA_Colors32
+    // rather than SetRGB32 afterwards, because it takes precedence over every
+    // other way the palette gets set.
     {
         static WORD no_pens[] = {~0};
         const ULONG *colors = p96cts_palette();

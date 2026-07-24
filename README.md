@@ -12,16 +12,6 @@ implementation rather than drawn by hand: they come from `rtg.library`, P96's
 own software rasterizer, so a driver is checked against what P96 produces for
 the same primitives without a board involved.
 
-Keeping that reference honest takes some care. The bitmap is allocated wider
-than any board will accept, which is what forces it into fast memory --
-`BMF_USERPRIVATE` alone does not, once the bitmap is friended to a screen's.
-Friended it must be, because a pen is not a color on its own: the mapping from
-pen number to color comes from the screen, and an unfriended offscreen bitmap
-renders every pen black on a truecolor screen. The screen's whole palette is
-set explicitly for the same reason -- Intuition initializes only pens 0-3 and
-17-19, from the user's Preferences, so a truecolor reference would otherwise
-record the colors of the machine it was captured on.
-
 Runs are non-interactive and the exit code reflects the result, so the suite
 works as an automated check -- including under an emulator with no display.
 
