@@ -150,29 +150,60 @@ reference:
 15/16-bit modes are the deliberate gap: their reference would have to be
 rendered at the same 5-6-5 precision, not just converted to it.
 
-There are no results from real Amiga hardware yet.
-Every scene passes on every driver we tested except the ones listed.
+There are no results from real Amiga hardware yet. The reference is P96's own
+software rasteriser, so every scene passes there by construction; the columns
+below are how much of it each driver reproduces.
 
 Under Amiberry:
 
 | scene | PAL | uaegfx | CyberVision |
 |---|---|---|---|
-| DrawLine-solid | ✅ | ✅ | ❌ |
-| DrawLine-jam2 | ✅ | ✅ | ❌ |
-| DrawLine-inversvid | ✅ | ✅ | ❌ |
+| DrawLine-solid | ✅ | ✅ | ✅ |
+| DrawLine-pattern | ✅ | ✅ | ✅ |
+| DrawLine-jam2 | ✅ | ✅ | ✅ |
+| DrawLine-inversvid | ✅ | ✅ | ✅ |
+| DrawLine-complement | ✅ | ✅ | ✅ |
+| RectFill-drawmodes | ✅ | ✅ | ✅ |
+| RectFill-edges | ✅ | ✅ | ✅ |
+| RectFill-invert | ✅ | ✅ | ✅ |
+| ClipBlit-overlap | ✅ | ✅ | ✅ |
+| ClipBlit-disjoint | ✅ | ✅ | ✅ |
+| BltTemplate-offsets | ✅ | ✅ | ✅ |
+| BltTemplate-sizes | ✅ | ✅ | ✅ |
 | BltTemplate-drawmodes | ✅ | ❌ | ✅ |
+| BltTemplate-masks | ✅ | ✅ | ✅ |
+| BltPattern-drawmodes | ✅ | ✅ | ✅ |
+| BltPattern-mask | ✅ | ✅ | ✅ |
+| BltPattern-phase | ✅ | ✅ | ✅ |
 
 Under Copperline:
 
 | scene | Z3660 |
 |---|---|
+| DrawLine-solid | ✅ |
+| DrawLine-pattern | ✅ |
+| DrawLine-jam2 | ✅ |
+| DrawLine-inversvid | ✅ |
 | DrawLine-complement | ❌ |
+| RectFill-drawmodes | ✅ |
+| RectFill-edges | ✅ |
+| RectFill-invert | ✅ |
+| ClipBlit-overlap | ✅ |
+| ClipBlit-disjoint | ✅ |
+| BltTemplate-offsets | ✅ |
+| BltTemplate-sizes | ✅ |
+| BltTemplate-drawmodes | ✅ |
+| BltTemplate-masks | ✅ |
 | BltPattern-drawmodes | ❌ |
+| BltPattern-mask | ✅ |
+| BltPattern-phase | ✅ |
 
 
-* The CyberVision (S3) line failures are tracked upstream as [amiberry#2211](https://github.com/BlitterStudio/amiberry/issues/2211).
+* CyberVision (S3) needs an amiberry build with the S3 line-drawing fix
+([amiberry#2211](https://github.com/BlitterStudio/amiberry/issues/2211)); without
+it the `DrawLine` scenes fail by a few pixels at the endpoints.
 * uaegfx fails `BltTemplate-drawmodes` by applying `INVERSVID` to the
-wrong half of the template
+wrong half of the template.
 * Copperline's z3660 fails `DrawLine-complement` by four pixels where
 its line rasterizer rounds a vertex differently.
 * Copperline's z3660 fails `BltPattern-drawmodes` in the two `JAM2 |
