@@ -12,9 +12,9 @@
 // or word one, so the driver has to shift the source into place. Drivers
 // routinely handle srcX 0 and misplace everything else by a pixel or a word,
 // and just as routinely drop the trailing partial word when the width is not a
-// multiple of 16. The scenes sweep both, and the offset sweep runs into the
-// second source word, which is where P96's software rasterizer and
-// graphics.library part ways (see t_offsets).
+// multiple of 16. The scenes sweep both, staying within the srcX 0..15 the
+// autodoc allows: a 16-wide window at srcX 15 still reads into the second
+// source word, so the word boundary is covered without an out-of-range offset.
 
 #include <exec/memory.h>
 #include <graphics/gfx.h>
@@ -27,7 +27,7 @@
 #include "gfx.h"
 
 // 48 wide, three source words: enough to hold the P96 wordmark below, and
-// enough for a 16-wide window to start past the first word boundary.
+// enough for a 16-wide window at srcX 15 to read across the first word boundary.
 #define TPL_W 48
 #define TPL_H 16
 #define TPL_MOD (TPL_W / 8) // bytes per source row, what BltTemplate calls the
@@ -92,26 +92,24 @@ static void checker(struct RastPort *rp, SHORT w, SHORT h, SHORT cell) {
         }
 }
 
-// A 4x8 grid of 16-wide windows onto the glyph, one per source bit offset
-// 0..31, over the checkerboard so the mask is visible: in JAM1 the clear bits
+// A 4x4 grid of 16-wide windows onto the glyph, one per source bit offset
+// 0..15, over the checkerboard so the mask is visible: in JAM1 the clear bits
 // must leave the background exactly as it was.
 //
 // Source and destination alignment are varied independently, because a driver
 // that derives its shift from the wrong one of the two passes whenever they
-// happen to agree. srcX walks 0..31 in order -- crossing from the first source
-// word into the second halfway through -- while the destination steps by 5,
-// which is coprime with 16 and so visits all sixteen destination alignments.
+// happen to agree. srcX walks 0..15 -- every sub-word bit offset the caller is
+// allowed to pass -- while the destination steps by 5, which is coprime with 16
+// and so visits all sixteen destination alignments.
 //
-// The second-word half (srcX >= 16) is where P96's software rasterizer, the
-// reference this suite captures, disagrees with graphics.library: the z3660
-// driver and native AGA render it identically to each other and differently
-// from softrast, so softrast looks like the odd one out. The golden comes from
-// softrast, so this scene passes there and fails on the z3660 driver and on
-// AGA. Whether the fault is in P96 or in the chipset emulation this was measured
-// on is unresolved -- either way the sweep keeps going so the discrepancy shows
-// up instead of being skipped.
+// The BltTemplate autodoc fixes srcX at 0..15: the source pointer names the
+// word containing the mask and srcX does the fine alignment inside it, with the
+// pointer advanced by whole words for anything beyond. srcX >= 16 is therefore
+// undefined -- drivers disagree there and none is wrong -- so the sweep stops at
+// 15. The second source word is still exercised: a 16-wide window at srcX 15
+// reads through bit 30, across the word boundary, without an out-of-range offset.
 static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
-    SHORT cw = w / 8, ch = h / 4;
+    SHORT cw = w / 4, ch = h / 4;
 
     p96cts_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
@@ -128,9 +126,9 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
         return;
 
     SetAPen(rp, 1);
-    for (int i = 0; i < 32; i++) {
-        SHORT dx = (i % 8) * cw + 2 + (SHORT)((i * 5) % 16);
-        SHORT dy = (i / 8) * ch + (ch - TPL_H) / 2;
+    for (int i = 0; i < 16; i++) {
+        SHORT dx = (i % 4) * cw + 2 + (SHORT)((i * 5) % 16);
+        SHORT dy = (i / 4) * ch + (ch - TPL_H) / 2;
 
         BltTemplate(tpl, i, TPL_MOD, rp, dx, dy, 16, TPL_H);
     }

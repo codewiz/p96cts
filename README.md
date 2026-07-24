@@ -34,15 +34,14 @@ change.
 
 ## Running
 
-Capture the reference from P96's software rasterizer, then compare a board
-against it:
+Run all tests for a particular monitor and video mode (WxHxD):
 
-    p96cts softrast 320x200x8 CAPTURE
-    p96cts Z3660 640x400x8
+    p96cts Z3660 640x480x8
+    p96cts PAL 320x256x8
 
 Output looks like:
 
-    p96cts 0.7 (24.7.2026) by Bernie Innocenti
+    p96cts 0.8 (24.7.2026) by Bernie Innocenti
     testing Z3660 640x400x8 clut, scene 320x200
     PASS DrawLine-solid
     PASS DrawLine-pattern
@@ -53,21 +52,15 @@ Output looks like:
            captured output/Z3660/320x200x8/DrawLine-complement.fail.png
            wrote difference to output/Z3660/320x200x8/DrawLine-complement.diff.png
 
-Testcases are named `<group>-<test>`, after the group that renders them, and
-their images on disk carry the same name.
 
-Reference images live in `golden/<scene>x<depth>/`. A scene that matches writes
-nothing -- the file would be a copy of the golden, and encoding every scene
-costs more than rendering it. A scene that fails writes two images to
-`output/<monitor>/<scene>x<depth>/`: `<test>.fail.png`, what the run actually
-rendered, and `<test>.diff.png`, the differing pixels in red over the golden
-dimmed to gray.
+Reference images live in `golden/WxHxD/`. A failing test writes two
+images to `output/<monitor>/WxHxD/`:
+- `<test>.fail.png`, what the run actually rendered, and
+- `<test>.diff.png`, the differing pixels in red over the golden dimmed to gray.
 
-Images are PNGs, 8-bit palette for a palette run and RGB for a truecolor one,
-which compresses these flat synthetic scenes to a few kilobytes at most and can
-be viewed anywhere, so the references are committed rather than regenerated. A
-palette image carries the same palette the screen was opened with, so it looks
-like what was rendered.
+To generate all golden images for a particular scene size and depth, run:
+
+    p96cts softrast 320x200x8 CAPTURE
 
 
 ### Arguments
@@ -89,12 +82,6 @@ invocation is `p96cts <monitor> <WxHxD>`.
 | `LISTTESTS/S` | List the testcase names `TEST` accepts and exit |
 | `HELP/S` | Print this table and exit; `-h` and `--help` work too |
 
-`MODE` and `SCENE` are separate because a board need not offer a mode as small
-as the scene -- RTG boards typically start around 640x400, and P96's 320x200
-entries are mode prefs templates that never open. A smaller scene is drawn into
-the corner of a larger screen and only that corner is compared, which keeps
-reference images small and comparable across boards with different mode
-lists.
 
 
 ## Building
@@ -147,25 +134,12 @@ Two depths are supported. 8 compares pen values, read back with
 `ReadPixelArray8`. 24 compares R8G8B8 read back through `p96ReadPixelArray`,
 which converts from whatever the screen's actual format is -- a 24-bit packed
 screen and a 32-bit BGRA one produce identical buffers and share one golden
-set:
-
-    p96cts softrast 640x480x24 SCENE=320x200 CAPTURE
-    p96cts Z3660 640x480x24 SCENE=320x200
+set.
 
 Two scenes are palette only, and permanently: `RectFill-drawmodes` and
 `BltTemplate-masks` sweep their grids across `rp->Mask`, which selects
 bitplanes and has no truecolor counterpart. Everything else runs at both
 depths.
-
-One scene surfaces a discrepancy rather than hiding it. `BltTemplate` with a
-source offset of 16 or more -- past the first 16-bit word -- renders
-differently in P96's software rasterizer than in graphics.library: the z3660
-driver and native AGA agree with each other and disagree with softrast. Since
-the golden is captured from softrast, `BltTemplate-offsets` passes on softrast
-and fails elsewhere. Whether the fault is in P96 or in the chipset emulation it
-was measured on is unresolved -- this was only run under emulators, not on real
-hardware -- so the sweep keeps going into that range to keep the failure
-visible.
 
 A palette run also works on native AGA screens, whose bitmaps are planar rather
 than chunky, which puts graphics.library's own rendering up against the same
@@ -176,9 +150,27 @@ reference:
 15/16-bit modes are the deliberate gap: their reference would have to be
 rendered at the same 5-6-5 precision, not just converted to it.
 
+There are no results from real Amiga hardware yet.
+Every scene passes on every driver we tested except the ones listed.
 
-## License
+Under Amiberry:
 
-0BSD, the same terms iComp chose for P96Tests, so testcases can move freely
-between the two and either can be absorbed into a driver tree regardless of
-its own license. See `LICENSE`.
+| scene | PAL | uaegfx | CyberVision |
+|---|---|---|---|
+| DrawLine-solid | ✅ | ✅ | ❌ |
+| DrawLine-jam2 | ✅ | ✅ | ❌ |
+| DrawLine-inversvid | ✅ | ✅ | ❌ |
+| BltTemplate-drawmodes | ✅ | ❌ | ✅ |
+
+Under Copperline:
+
+| scene | Z3660 |
+|---|---|
+| DrawLine-complement | ❌ |
+
+
+* The CyberVision (S3) line failures are tracked upstream as [amiberry#2211](https://github.com/BlitterStudio/amiberry/issues/2211).
+* uaegfx fails `BltTemplate-drawmodes` by applying `INVERSVID` to the
+wrong half of the template
+* Copperline's z3660 fails `DrawLine-complement` by four pixels where
+its line rasterizer rounds a vertex differently.
