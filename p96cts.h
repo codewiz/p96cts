@@ -38,5 +38,6 @@ extern const struct P96TestGroup DrawLineGroup;
 extern const struct P96TestGroup RectFillGroup;
 extern const struct P96TestGroup ClipBlitGroup;
 extern const struct P96TestGroup BltTemplateGroup;
+extern const struct P96TestGroup BltPatternGroup;
 
 #endif

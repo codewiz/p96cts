@@ -114,7 +114,7 @@ checksums, and why both are built `-noixemul`.
 A test group is one translation unit in `tests/` exporting a `P96TestGroup`;
 see `tests/drawline.c`. Add the file to `OBJS` in the Makefile and the group to
 `GROUPS` in `p96cts.c`. A group is named after the function it exercises
-(`DrawLine`, `RectFill`, `ClipBlit`, `BltTemplate`) and a testcase for what it does (`solid`,
+(`DrawLine`, `RectFill`, `ClipBlit`, `BltTemplate`, `BltPattern`) and a testcase for what it does (`solid`,
 `overlap`); the full name a user types is `<group>-<test>`, matched
 case-insensitively. `LISTTESTS` prints them all.
 
@@ -136,10 +136,10 @@ which converts from whatever the screen's actual format is -- a 24-bit packed
 screen and a 32-bit BGRA one produce identical buffers and share one golden
 set.
 
-Two scenes are palette only, and permanently: `RectFill-drawmodes` and
-`BltTemplate-masks` sweep their grids across `rp->Mask`, which selects
-bitplanes and has no truecolor counterpart. Everything else runs at both
-depths.
+Three scenes are palette only, and permanently: `RectFill-drawmodes`,
+`BltTemplate-masks` and `BltPattern-drawmodes` sweep their grids across
+`rp->Mask`, which selects bitplanes and has no truecolor counterpart.
+Everything else runs at both depths.
 
 A palette run also works on native AGA screens, whose bitmaps are planar rather
 than chunky, which puts graphics.library's own rendering up against the same
