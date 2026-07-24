@@ -11,6 +11,7 @@
 #include <proto/graphics.h>
 #include <proto/Picasso96.h>
 #include <intuition/screens.h>
+#include <graphics/gfxmacros.h>
 #include <graphics/rastport.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -391,6 +392,41 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
     return failed;
 }
 
+// Prepare the shared RastPort for a testcase: lay a loud checkerboard into the
+// scene, then reset the render state to a known default.
+//
+// The poison catches a test that fails to paint every pixel it compares -- it
+// shows the leftover and fails against its golden, instead of passing on
+// whatever the previous test left there. The state reset (draw mode, pens,
+// write mask, line pattern) keeps a test from inheriting anything from whatever
+// ran before it, so results cannot depend on the order tests run in.
+static void reset_scene(struct RastPort *rp, const struct RunOpts *o) {
+    const SHORT cell = 16;
+    ULONG color[2] = {
+        p96cts_color(0xAA, 0xFF00FFUL),
+        p96cts_color(0x55, 0xFFFF00UL),
+    };
+    int row = 0;
+
+    rp->Mask = 0xFF; // so the fill reaches every plane
+    for (SHORT y = 0; y < o->h; y += cell) {
+        SHORT y2 = y + cell - 1 < o->h ? y + cell - 1 : o->h - 1;
+        int i = row;
+
+        for (SHORT x = 0; x < o->w; x += cell) {
+            SHORT x2 = x + cell - 1 < o->w ? x + cell - 1 : o->w - 1;
+
+            p96cts_fill(rp, x, y, x2, y2, color[i]);
+            i ^= 1;
+        }
+        row ^= 1;
+    }
+
+    SetABPenDrMd(rp, 1, 0, JAM1);
+    SetDrPt(rp, 0xFFFF);
+    rp->Mask = 0xFF;
+}
+
 // Render one testcase and capture or compare it. Returns true on failure.
 //
 // `name` is the testcase's full "<group>-<test>" name: the group qualifies it,
@@ -403,6 +439,7 @@ static bool run_test(const struct P96Test *t, const char *name,
     ULONG pixels = (ULONG)o->w * o->h, bad = 0;
     SHORT gw, gh;
 
+    reset_scene(rp, o);
     t->fn(rp, o->w, o->h);
     // Wait for the blitter before reading the scene back.
     WaitBlit();

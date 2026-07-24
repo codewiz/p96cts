@@ -74,10 +74,6 @@ static void mode_row(struct RastPort *rp, SHORT x, SHORT y, SHORT tile,
         SetDrMd(rp, MODES[c]);
         RectFill(rp, x + c * tile, y, x + (c + 1) * tile - 1, y + tile - 1);
     }
-
-    rp->Mask = 0xFF;
-    SetDrMd(rp, JAM1);
-    SetBPen(rp, 0);
 }
 
 static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
@@ -155,7 +151,6 @@ static void t_invert(struct RastPort *rp, SHORT w, SHORT h) {
     RectFill(rp, w / 8, h - h / 3, w - w / 8 - 1, h - h / 6);
     RectFill(rp, w / 8, h - h / 3, w - w / 8 - 1, h - h / 6);
     RectFill(rp, w / 2, h * 3 / 4, w / 2, h * 3 / 4);
-    SetDrMd(rp, JAM1);
 }
 
 static const struct P96Test TESTS[] = {

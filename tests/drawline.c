@@ -35,7 +35,6 @@ static void star(struct RastPort *rp, SHORT w, SHORT h, UWORD pattern) {
         Move(rp, cx, cy);
         Draw(rp, cx + DIRS[k][0] * r / 1024, cy + DIRS[k][1] * r / 1024);
     }
-    SetDrPt(rp, 0xFFFF);
 }
 
 static void t_solid(struct RastPort *rp, SHORT w, SHORT h) {
@@ -58,7 +57,6 @@ static void t_jam2(struct RastPort *rp, SHORT w, SHORT h) {
     SetAPen(rp, 1);
     SetBPen(rp, 2); // pattern gaps get the background pen
     star(rp, w, h, 0xF0F0);
-    SetBPen(rp, 0);
 }
 
 static void t_inversvid(struct RastPort *rp, SHORT w, SHORT h) {

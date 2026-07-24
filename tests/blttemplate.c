@@ -220,8 +220,6 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
                     TPL_H);
     }
 
-    SetDrMd(rp, JAM1);
-    SetBPen(rp, 0);
     // Wait for the last BltTemplate() to complete before freeing the source.
     WaitBlit();
     FreeVec(tpl);
@@ -264,9 +262,6 @@ static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
             BltTemplate(tpl, 0, TPL_MOD, rp, x, y, TPL_W, TPL_H);
     }
 
-    rp->Mask = 0xFF;
-    SetDrMd(rp, JAM1);
-    SetBPen(rp, 0);
     // Wait for the last BltTemplate() to complete before freeing the source.
     WaitBlit();
     FreeVec(tpl);
