@@ -27,12 +27,11 @@ change.
 Run all tests for a particular monitor and video mode (WxHxD):
 
     p96cts Z3660 640x480x8
-    p96cts PAL 320x256x8
 
 Output looks like:
 
     p96cts 0.8 (24.7.2026) by Bernie Innocenti
-    testing Z3660 640x400x8 clut, scene 320x200
+    testing Z3660 640x480x8 clut, scene 320x200
     PASS DrawLine-solid
     PASS DrawLine-pattern
     FAIL DrawLine-complement      4 of 64000 pixels differ
@@ -41,6 +40,12 @@ Output looks like:
            ... and 2 more
            captured output/Z3660/320x200x8/DrawLine-complement.fail.png
            wrote difference to output/Z3660/320x200x8/DrawLine-complement.diff.png
+
+A palette run also works on native AGA screens, whose bitmaps are planar rather
+than chunky, which puts graphics.library's own rendering up against the same
+reference:
+
+    p96cts PAL 320x256x8
 
 
 Reference images live in `golden/WxHxD/`. A failing test writes two
@@ -73,6 +78,73 @@ invocation is `p96cts <monitor> <WxHxD>`.
 | `HELP/S` | Print this table and exit; `-h` and `--help` work too |
 
 
+## Test Results
+
+There are no results from physical hardware yet. If you have access to
+an Amiga with an RTG board, please run the suite and open an issue to share
+your results.
+
+### Amiberry
+
+| scene | PAL | uaegfx | CyberVision | ZZ9000 |
+|---|---|---|---|---|
+| DrawLine-solid | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-pattern | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-jam2 | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-inversvid | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-complement | ✅ | ✅ | ✅ | ✅ |
+| RectFill-drawmodes | ✅ | ✅ | ✅ | ✅ |
+| RectFill-edges | ✅ | ✅ | ✅ | ✅ |
+| RectFill-invert | ✅ | ✅ | ✅ | ✅ |
+| ClipBlit-overlap | ✅ | ✅ | ✅ | ✅ |
+| ClipBlit-disjoint | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-offsets | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-sizes | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-drawmodes | ✅ | ❌ | ✅ | ✅ |
+| BltTemplate-masks | ✅ | ✅ | ✅ | ✅ |
+| BltPattern-drawmodes | ✅ | ✅ | ✅ | ❌ |
+| BltPattern-mask | ✅ | ✅ | ✅ | ✅ |
+| BltPattern-phase | ✅ | ✅ | ✅ | ✅ |
+
+
+Notes:
+* CyberVision (S3) needs an amiberry build with the S3 line-drawing fix
+([amiberry#2211](https://github.com/BlitterStudio/amiberry/issues/2211)); without
+it the `DrawLine` scenes fail by a few pixels at the endpoints.
+* uaegfx fails `BltTemplate-drawmodes` by applying `INVERSVID` to the
+wrong half of the template.
+
+
+### Copperline
+
+| scene | Z3660 |
+|---|---|
+| DrawLine-solid | ✅ |
+| DrawLine-pattern | ✅ |
+| DrawLine-jam2 | ✅ |
+| DrawLine-inversvid | ✅ |
+| DrawLine-complement | ❌ |
+| RectFill-drawmodes | ✅ |
+| RectFill-edges | ✅ |
+| RectFill-invert | ✅ |
+| ClipBlit-overlap | ✅ |
+| ClipBlit-disjoint | ✅ |
+| BltTemplate-offsets | ✅ |
+| BltTemplate-sizes | ✅ |
+| BltTemplate-drawmodes | ✅ |
+| BltTemplate-masks | ✅ |
+| BltPattern-drawmodes | ❌ |
+| BltPattern-mask | ✅ |
+| BltPattern-phase | ✅ |
+
+Notes:
+* Z3660 fails `DrawLine-complement` by four pixels where its line rasterizer
+rounds a vertex differently.
+* Z3660 (Copperline) and ZZ9000 (Amiberry) both fail `BltPattern-drawmodes` in
+the two `JAM2 | COMPLEMENT` modes, where they do not treat `COMPLEMENT` as
+ignoring the pens the way the reference does; the `JAM1 | COMPLEMENT` modes
+pass. Z3660.card is a fork of the ZZ9000 driver, so it is one bug in the shared
+lineage.
 
 ## Building
 
@@ -117,88 +189,3 @@ solid lines in one pen, for instance, cannot detect a pixel written twice --
 it takes a mode like `COMPLEMENT`, where writing twice is not the same as
 writing once, and a figure whose lines actually cross.
 
-
-## Status
-
-Two depths are supported. 8 compares pen values, read back with
-`ReadPixelArray8`. 24 compares R8G8B8 read back through `p96ReadPixelArray`,
-which converts from whatever the screen's actual format is -- a 24-bit packed
-screen and a 32-bit BGRA one produce identical buffers and share one golden
-set.
-
-Three scenes are palette only, and permanently: `RectFill-drawmodes`,
-`BltTemplate-masks` and `BltPattern-drawmodes` sweep their grids across
-`rp->Mask`, which selects bitplanes and has no truecolor counterpart.
-Everything else runs at both depths.
-
-A palette run also works on native AGA screens, whose bitmaps are planar rather
-than chunky, which puts graphics.library's own rendering up against the same
-reference:
-
-    p96cts PAL 320x256x8
-
-15/16-bit modes are the deliberate gap: their reference would have to be
-rendered at the same 5-6-5 precision, not just converted to it.
-
-There are no results from real Amiga hardware yet. The reference is P96's own
-software rasteriser, so every scene passes there by construction; the columns
-below are how much of it each driver reproduces.
-
-Under Amiberry:
-
-| scene | PAL | uaegfx | CyberVision | ZZ9000 |
-|---|---|---|---|---|
-| DrawLine-solid | ✅ | ✅ | ✅ | ✅ |
-| DrawLine-pattern | ✅ | ✅ | ✅ | ✅ |
-| DrawLine-jam2 | ✅ | ✅ | ✅ | ✅ |
-| DrawLine-inversvid | ✅ | ✅ | ✅ | ✅ |
-| DrawLine-complement | ✅ | ✅ | ✅ | ✅ |
-| RectFill-drawmodes | ✅ | ✅ | ✅ | ✅ |
-| RectFill-edges | ✅ | ✅ | ✅ | ✅ |
-| RectFill-invert | ✅ | ✅ | ✅ | ✅ |
-| ClipBlit-overlap | ✅ | ✅ | ✅ | ✅ |
-| ClipBlit-disjoint | ✅ | ✅ | ✅ | ✅ |
-| BltTemplate-offsets | ✅ | ✅ | ✅ | ✅ |
-| BltTemplate-sizes | ✅ | ✅ | ✅ | ✅ |
-| BltTemplate-drawmodes | ✅ | ❌ | ✅ | ✅ |
-| BltTemplate-masks | ✅ | ✅ | ✅ | ✅ |
-| BltPattern-drawmodes | ✅ | ✅ | ✅ | ❌ |
-| BltPattern-mask | ✅ | ✅ | ✅ | ✅ |
-| BltPattern-phase | ✅ | ✅ | ✅ | ✅ |
-
-Under Copperline:
-
-| scene | Z3660 |
-|---|---|
-| DrawLine-solid | ✅ |
-| DrawLine-pattern | ✅ |
-| DrawLine-jam2 | ✅ |
-| DrawLine-inversvid | ✅ |
-| DrawLine-complement | ❌ |
-| RectFill-drawmodes | ✅ |
-| RectFill-edges | ✅ |
-| RectFill-invert | ✅ |
-| ClipBlit-overlap | ✅ |
-| ClipBlit-disjoint | ✅ |
-| BltTemplate-offsets | ✅ |
-| BltTemplate-sizes | ✅ |
-| BltTemplate-drawmodes | ✅ |
-| BltTemplate-masks | ✅ |
-| BltPattern-drawmodes | ❌ |
-| BltPattern-mask | ✅ |
-| BltPattern-phase | ✅ |
-
-
-* CyberVision (S3) needs an amiberry build with the S3 line-drawing fix
-([amiberry#2211](https://github.com/BlitterStudio/amiberry/issues/2211)); without
-it the `DrawLine` scenes fail by a few pixels at the endpoints.
-* uaegfx fails `BltTemplate-drawmodes` by applying `INVERSVID` to the
-wrong half of the template.
-* Copperline's z3660 fails `DrawLine-complement` by four pixels where
-its line rasterizer rounds a vertex differently.
-* z3660 (Copperline) and ZZ9000 (Amiberry) both fail `BltPattern-drawmodes` in
-the two `JAM2 | COMPLEMENT` modes, where they do not treat `COMPLEMENT` as
-ignoring the pens the way the reference does; the `JAM1 | COMPLEMENT` modes
-pass. Z3660.card is a fork of the ZZ9000 driver, so it is one bug in the shared
-lineage; the other four drivers agree with the reference, so the mode is
-well-defined.
