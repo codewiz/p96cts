@@ -30,7 +30,7 @@ Run all tests for a particular monitor and video mode (WxHxD):
 
 Output looks like:
 
-    p96cts 0.8 (24.7.2026) by Bernie Innocenti
+    p96cts 0.9 (24.7.2026) by Bernie Innocenti
     testing Z3660 640x480x8 clut, scene 320x200
     PASS DrawLine-solid
     PASS DrawLine-pattern
