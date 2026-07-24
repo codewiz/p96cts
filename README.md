@@ -146,25 +146,25 @@ below are how much of it each driver reproduces.
 
 Under Amiberry:
 
-| scene | PAL | uaegfx | CyberVision |
-|---|---|---|---|
-| DrawLine-solid | ✅ | ✅ | ✅ |
-| DrawLine-pattern | ✅ | ✅ | ✅ |
-| DrawLine-jam2 | ✅ | ✅ | ✅ |
-| DrawLine-inversvid | ✅ | ✅ | ✅ |
-| DrawLine-complement | ✅ | ✅ | ✅ |
-| RectFill-drawmodes | ✅ | ✅ | ✅ |
-| RectFill-edges | ✅ | ✅ | ✅ |
-| RectFill-invert | ✅ | ✅ | ✅ |
-| ClipBlit-overlap | ✅ | ✅ | ✅ |
-| ClipBlit-disjoint | ✅ | ✅ | ✅ |
-| BltTemplate-offsets | ✅ | ✅ | ✅ |
-| BltTemplate-sizes | ✅ | ✅ | ✅ |
-| BltTemplate-drawmodes | ✅ | ❌ | ✅ |
-| BltTemplate-masks | ✅ | ✅ | ✅ |
-| BltPattern-drawmodes | ✅ | ✅ | ✅ |
-| BltPattern-mask | ✅ | ✅ | ✅ |
-| BltPattern-phase | ✅ | ✅ | ✅ |
+| scene | PAL | uaegfx | CyberVision | ZZ9000 |
+|---|---|---|---|---|
+| DrawLine-solid | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-pattern | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-jam2 | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-inversvid | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-complement | ✅ | ✅ | ✅ | ✅ |
+| RectFill-drawmodes | ✅ | ✅ | ✅ | ✅ |
+| RectFill-edges | ✅ | ✅ | ✅ | ✅ |
+| RectFill-invert | ✅ | ✅ | ✅ | ✅ |
+| ClipBlit-overlap | ✅ | ✅ | ✅ | ✅ |
+| ClipBlit-disjoint | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-offsets | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-sizes | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-drawmodes | ✅ | ❌ | ✅ | ✅ |
+| BltTemplate-masks | ✅ | ✅ | ✅ | ✅ |
+| BltPattern-drawmodes | ✅ | ✅ | ✅ | ❌ |
+| BltPattern-mask | ✅ | ✅ | ✅ | ✅ |
+| BltPattern-phase | ✅ | ✅ | ✅ | ✅ |
 
 Under Copperline:
 
@@ -196,6 +196,9 @@ it the `DrawLine` scenes fail by a few pixels at the endpoints.
 wrong half of the template.
 * Copperline's z3660 fails `DrawLine-complement` by four pixels where
 its line rasterizer rounds a vertex differently.
-* Copperline's z3660 fails `BltPattern-drawmodes` in the two `JAM2 |
-COMPLEMENT` modes, where it does not treat `COMPLEMENT` as ignoring the pens
-the way the reference does; the `JAM1 | COMPLEMENT` modes pass.
+* z3660 (Copperline) and ZZ9000 (Amiberry) both fail `BltPattern-drawmodes` in
+the two `JAM2 | COMPLEMENT` modes, where they do not treat `COMPLEMENT` as
+ignoring the pens the way the reference does; the `JAM1 | COMPLEMENT` modes
+pass. Z3660.card is a fork of the ZZ9000 driver, so it is one bug in the shared
+lineage; the other four drivers agree with the reference, so the mode is
+well-defined.
