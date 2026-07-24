@@ -34,6 +34,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
+          VER=${TAG#v}
           PREV_TAG=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
           if [ -n "$PREV_TAG" ]; then
             RANGE="$PREV_TAG..$TAG"
@@ -55,5 +56,5 @@ jobs:
             echo
             git log --pretty=format:"- %h: %s" "$RANGE"
           } > notes.md
-          gh release create "$TAG" "p96cts-${TAG#v}.lha" \
-            --title "Release $TAG" --notes-file notes.md
+          gh release create "$TAG" "p96cts-$VER.lha" \
+            --title "Release $VER" --notes-file notes.md
