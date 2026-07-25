@@ -16,68 +16,21 @@
 // autodoc allows: a 16-wide window at srcX 15 still reads into the second
 // source word, so the word boundary is covered without an out-of-range offset.
 
-#include <exec/memory.h>
 #include <graphics/gfx.h>
 #include <graphics/gfxmacros.h>
 #include <graphics/rastport.h>
-#include <proto/exec.h>
 #include <proto/graphics.h>
 
 #include "p96cts.h"
 #include "gfx.h"
+#include "glyph.h"
 
-// 48 wide, three source words: enough to hold the P96 wordmark below, and
-// enough for a 16-wide window at srcX 15 to read across the first word boundary.
-#define TPL_W 48
-#define TPL_H 16
-#define TPL_MOD (TPL_W / 8) // bytes per source row, what BltTemplate calls the
-                            // modulo
-
-// The source, as ASCII so that a reader can see what should end up on screen:
-// a P96 wordmark that fills the whole template, top-left pixel to bottom-right.
-// Asymmetric in both axes on purpose, so a driver that mirrors or flips the
-// source cannot produce the same image -- the three glyphs differ left to
-// right, the bowls sit high, and the 6's loop puts solid content in the lower
-// right, which is where an offset error shows first. Each glyph is a cell of
-// its own (14, 14, 15 wide) with a narrow gap between, so a column of set
-// pixels reaches both edges.
-static const char *const GLYPH[TPL_H] = {
-    "#############." "..." ".############." ".." ".##############",
-    "##############" "..." "##############" ".." "###############",
-    "###.......####" "..." "###........###" ".." "###............",
-    "###........###" "..." "###........###" ".." "###............",
-    "###........###" "..." "###........###" ".." "###............",
-    "###.......####" "..." "###........###" ".." "###............",
-    "##############" "..." "###........###" ".." "##############.",
-    "#############." "..." "##############" ".." "###############",
-    "###..........." "..." ".#############" ".." "###.........###",
-    "###..........." "..." "...........###" ".." "###.........###",
-    "###..........." "..." "...........###" ".." "###.........###",
-    "###..........." "..." "...........###" ".." "###.........###",
-    "###..........." "..." "...........###" ".." "###.........###",
-    "###..........." "..." "...........###" ".." "###.........###",
-    "###..........." "..." "##############" ".." "###############",
-    "###..........." "..." "#############." ".." ".#############.",
-};
-
-// Pack the glyph for BltTemplate, most significant bit leftmost.
-//
-// Chip memory, because on a native planar screen graphics.library runs this
-// through the blitter, which cannot see fast RAM -- a template in fast memory
-// renders as garbage there while working fine on every RTG board.
-static PLANEPTR build_template(void) {
-    UBYTE *tpl = AllocVec(TPL_H * TPL_MOD, MEMF_CHIP | MEMF_CLEAR);
-
-    if (!tpl)
-        return NULL;
-
-    for (int y = 0; y < TPL_H; y++)
-        for (int x = 0; x < TPL_W; x++)
-            if (GLYPH[y][x] == '#')
-                tpl[y * TPL_MOD + x / 8] |= (UBYTE)(0x80 >> (x % 8));
-
-    return (PLANEPTR)tpl;
-}
+// The shared glyph: 48 wide, three source words, which is also enough for a
+// 16-wide window at srcX 15 to read across the first word boundary. TPL_MOD is
+// what BltTemplate calls the modulo.
+#define TPL_W P96CTS_GLYPH_W
+#define TPL_H P96CTS_GLYPH_H
+#define TPL_MOD P96CTS_GLYPH_MOD
 
 // A two-tone checkerboard on the same 16-pixel period as the word alignment
 // the driver is shifting against, so a blit that lands a word or a pixel off
@@ -121,7 +74,7 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
 
     checker(rp, w, h, 16);
 
-    PLANEPTR tpl = build_template();
+    PLANEPTR tpl = p96cts_glyph_template();
     if (!tpl)
         return;
 
@@ -133,9 +86,7 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
         BltTemplate(tpl, i, TPL_MOD, rp, dx, dy, 16, TPL_H);
     }
 
-    // Wait for the last BltTemplate() to complete before freeing the source.
-    WaitBlit();
-    FreeVec(tpl);
+    p96cts_glyph_free_template(tpl);
 }
 
 // Every width and height from 1 up, and a width that is neither a multiple of
@@ -156,7 +107,7 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
 
     checker(rp, w, h, 16);
 
-    PLANEPTR tpl = build_template();
+    PLANEPTR tpl = p96cts_glyph_template();
     if (!tpl)
         return;
 
@@ -171,9 +122,7 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
         BltTemplate(tpl, i, TPL_MOD, rp, x, 2 * band + band / 4, 13, TPL_H);
     }
 
-    // Wait for the last BltTemplate() to complete before freeing the source.
-    WaitBlit();
-    FreeVec(tpl);
+    p96cts_glyph_free_template(tpl);
 }
 
 // The draw modes, each over two backgrounds so that no two of them can produce
@@ -203,7 +152,7 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
     SetAPen(rp, 3);
     RectFill(rp, 0, h / 2, w - 1, h - 1);
 
-    PLANEPTR tpl = build_template();
+    PLANEPTR tpl = p96cts_glyph_template();
     if (!tpl)
         return;
 
@@ -218,9 +167,7 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
                     TPL_H);
     }
 
-    // Wait for the last BltTemplate() to complete before freeing the source.
-    WaitBlit();
-    FreeVec(tpl);
+    p96cts_glyph_free_template(tpl);
 }
 
 // rp->Mask restricts the write to the selected bitplanes; the unselected ones
@@ -243,7 +190,7 @@ static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
     if (band < TPL_H + 2 || w < 2 * TPL_W)
         return;
 
-    PLANEPTR tpl = build_template();
+    PLANEPTR tpl = p96cts_glyph_template();
     if (!tpl)
         return;
 
@@ -260,9 +207,7 @@ static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
             BltTemplate(tpl, 0, TPL_MOD, rp, x, y, TPL_W, TPL_H);
     }
 
-    // Wait for the last BltTemplate() to complete before freeing the source.
-    WaitBlit();
-    FreeVec(tpl);
+    p96cts_glyph_free_template(tpl);
 }
 
 static const struct P96Test TESTS[] = {
