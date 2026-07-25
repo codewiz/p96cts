@@ -176,9 +176,9 @@ checksums, and why both are built `-noixemul`.
 A test group is one translation unit in `tests/` exporting a `P96TestGroup`;
 see `tests/drawline.c`. Add the file to `OBJS` in the Makefile and the group to
 `GROUPS` in `p96cts.c`. A group is named after the function it exercises
-(`DrawLine`, `RectFill`, `ClipBlit`, `BltTemplate`, `BltPattern`) and a testcase for what it does (`solid`,
-`overlap`); the full name a user types is `<group>-<test>`, matched
-case-insensitively. `LISTTESTS` prints them all.
+(`DrawLine`, `RectFill`, `ClipBlit`, `BltTemplate`, `BltPattern`, `BltBitMap`)
+and a testcase for what it does (`solid`, `overlap`); the full name a user types
+is `<group>-<test>`, matched case-insensitively. `LISTTESTS` prints them all.
 
 A testcase renders a complete scene, clearing it first, and must keep all
 drawing inside the bitmap: the RastPort has no Layer, so graphics.library does

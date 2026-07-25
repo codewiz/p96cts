@@ -9,6 +9,8 @@
 #include <exec/types.h>
 #include <stdbool.h>
 
+#include "palette.h"
+
 struct RastPort;
 
 // --- colors -----------------------------------------------------------------
@@ -24,6 +26,14 @@ extern bool p96cts_truecolor;
 // it compiles to a load and a select.
 static inline ULONG p96cts_color(ULONG pen, ULONG rgb) {
     return p96cts_truecolor ? rgb : pen;
+}
+
+// One pen, named the way the current run needs it: the number on a palette
+// screen, the color that number stands for on truecolor. For scenes that draw
+// alongside pen-indexed data a driver resolves through the same palette, where
+// p96cts_color() cannot help because there is only one color to name.
+static inline ULONG p96cts_pen(int pen) {
+    return p96cts_truecolor ? p96cts_pen_rgb(pen) : (ULONG)pen;
 }
 
 void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color);

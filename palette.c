@@ -19,7 +19,12 @@
 // have r == b, so a driver that swaps red and blue renders exactly the color
 // expected of them; the rectfill and clipblit pens are not grays and do catch
 // that. Either trap is silent, since the scene simply compares equal.
-static ULONG pen_rgb(int pen) {
+//
+// Exported because scenes whose source data is pen-indexed need it: blitted to
+// a truecolor screen those pens come out as these colors, so anything drawn to
+// compare against them has to name the same color rather than the same number.
+// p96cts_pen() in gfx.h is the wrapper scenes actually call.
+ULONG p96cts_pen_rgb(int pen) {
     switch (pen) {
     case 0: return 0x000000; // black, and the scene background
     case 1: return 0xFFFFFF; // white
@@ -42,7 +47,7 @@ const ULONG *p96cts_palette(void) {
 
     *e++ = ((ULONG)P96CTS_PALETTE_ENTRIES << 16) | 0;
     for (int p = 0; p < P96CTS_PALETTE_ENTRIES; p++) {
-        ULONG rgb = pen_rgb(p);
+        ULONG rgb = p96cts_pen_rgb(p);
         // LoadRGB32 takes 32 bits per gun, so each byte is replicated.
         *e++ = 0x01010101UL * ((rgb >> 16) & 0xFF);
         *e++ = 0x01010101UL * ((rgb >> 8) & 0xFF);
