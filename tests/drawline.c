@@ -39,30 +39,25 @@ static void star(struct RastPort *rp, SHORT w, SHORT h, UWORD pattern) {
 
 static void t_solid(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_clear(rp, w, h, 0);
-    SetDrMd(rp, JAM1);
-    SetAPen(rp, 1);
+    SetABPenDrMd(rp, 1, 0, JAM1);
     star(rp, w, h, 0xFFFF);
 }
 
 static void t_pattern(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_clear(rp, w, h, 0);
-    SetDrMd(rp, JAM1);
-    SetAPen(rp, 1);
+    SetABPenDrMd(rp, 1, 0, JAM1);
     star(rp, w, h, 0xF0F0);
 }
 
 static void t_jam2(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_clear(rp, w, h, 0);
-    SetDrMd(rp, JAM2);
-    SetAPen(rp, 1);
-    SetBPen(rp, 2); // pattern gaps get the background pen
+    SetABPenDrMd(rp, 1, 2, JAM2); // pattern gaps get the background pen
     star(rp, w, h, 0xF0F0);
 }
 
 static void t_inversvid(struct RastPort *rp, SHORT w, SHORT h) {
     p96cts_clear(rp, w, h, 0);
-    SetDrMd(rp, JAM1 | INVERSVID); // the pattern is inverted
-    SetAPen(rp, 1);
+    SetABPenDrMd(rp, 1, 0, JAM1 | INVERSVID); // the pattern is inverted
     star(rp, w, h, 0xF0F0);
 }
 
@@ -104,14 +99,12 @@ static void t_complement(struct RastPort *rp, SHORT w, SHORT h) {
     // Two background tones, so the same COMPLEMENT produces two different
     // results in one scene and a driver that ignores the destination cannot
     // pass by writing a constant.
-    SetDrMd(rp, JAM1);
-    SetAPen(rp, COMPLEMENT_BG_LEFT);
+    SetABPenDrMd(rp, COMPLEMENT_BG_LEFT, 0, JAM1);
     RectFill(rp, 0, 0, w - 1, h - 1);
     SetAPen(rp, COMPLEMENT_BG_RIGHT);
     RectFill(rp, w / 2, 0, w - 1, h - 1);
 
-    SetDrMd(rp, COMPLEMENT);
-    SetAPen(rp, 1);
+    SetABPenDrMd(rp, 1, 0, COMPLEMENT);
     pentagram(rp, w, h);
 }
 

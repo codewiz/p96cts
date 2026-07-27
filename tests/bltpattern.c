@@ -110,22 +110,21 @@ static const UBYTE MASKS[] = {0xFF, 0x0F, 0x55, 0x81};
 // a second tone. The band is what makes COMPLEMENT and the JAM2 background pen
 // visible -- against a single flat backdrop several of these modes collapse
 // onto the same output. The pattern is already set in rp->AreaPtrn, and the
-// SetDrMd on every tile is also what keeps the NULL-mask fill re-arming.
+// pen/drawmode call before every tile is also what keeps the NULL-mask fill
+// re-arming: rp->Mask is assigned directly and selects bitplanes, so it plays
+// no part in that.
 static void mode_row(struct RastPort *rp, SHORT x, SHORT y, SHORT tile,
                      SHORT mask) {
     SHORT inset = tile / 4;
 
     rp->Mask = 0xFF;
-    SetDrMd(rp, JAM1);
-    SetAPen(rp, BAND_BG);
+    SetABPenDrMd(rp, BAND_BG, BG, JAM1);
     RectFill(rp, x, y + inset, x + COLS * tile - 1, y + tile - inset - 1);
 
-    SetAPen(rp, FG);
-    SetBPen(rp, BG);
     rp->Mask = (UBYTE)mask;
 
     for (SHORT c = 0; c < COLS; c++) {
-        SetDrMd(rp, MODES[c]);
+        SetABPenDrMd(rp, FG, BG, MODES[c]);
         BltPattern(rp, NULL, x + c * tile, y, x + (c + 1) * tile - 1,
                    y + tile - 1, 0);
     }
@@ -211,9 +210,7 @@ static void t_mask(struct RastPort *rp, SHORT w, SHORT h) {
         return;
     }
     SetAfPt(rp, pat, PAT_SIZE);
-    SetDrMd(rp, JAM2);
-    SetAPen(rp, 1);
-    SetBPen(rp, 2);
+    SetABPenDrMd(rp, 1, 2, JAM2);
 
     BltPattern(rp, tri, x0, y0, x0 + mw - 1, y0 + mh - 1, bytecnt);
     BltPattern(rp, full, x1, y0, x1 + mw - 1, y0 + mh - 1, bytecnt);
@@ -255,8 +252,7 @@ static void t_phase(struct RastPort *rp, SHORT w, SHORT h) {
         return;
     }
     SetAfPt(rp, pat, PAT_SIZE);
-    SetDrMd(rp, JAM1);
-    SetAPen(rp, 1);
+    SetABPenDrMd(rp, 1, 0, JAM1);
 
     for (SHORT r = 0; r < rows; r++)
         for (SHORT c = 0; c < cols; c++) {

@@ -156,12 +156,10 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
     if (!tpl)
         return;
 
-    SetAPen(rp, 1);
-    SetBPen(rp, 2);
     for (SHORT i = 0; i < NMODES; i++) {
         SHORT x = i * cw + (cw - TPL_W) / 2;
 
-        SetDrMd(rp, MODES[i]);
+        SetABPenDrMd(rp, 1, 2, MODES[i]);
         BltTemplate(tpl, 0, TPL_MOD, rp, x, h / 4 - TPL_H / 2, TPL_W, TPL_H);
         BltTemplate(tpl, 0, TPL_MOD, rp, x, 3 * h / 4 - TPL_H / 2, TPL_W,
                     TPL_H);
@@ -196,9 +194,7 @@ static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
 
     // JAM2, so the mask is applied to the BgPen write on the clear bits too,
     // not only the FgPen write on the set bits.
-    SetDrMd(rp, JAM2);
-    SetAPen(rp, 0x5A);
-    SetBPen(rp, 0xA5);
+    SetABPenDrMd(rp, 0x5A, 0xA5, JAM2);
     for (SHORT r = 0; r < NMASKS; r++) {
         SHORT y = r * band + (band - TPL_H) / 2;
 

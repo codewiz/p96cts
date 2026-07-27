@@ -62,16 +62,13 @@ static void mode_row(struct RastPort *rp, SHORT x, SHORT y, SHORT tile,
     SHORT inset = tile / 4;
 
     rp->Mask = 0xFF;
-    SetDrMd(rp, JAM1);
-    SetAPen(rp, BAND_BG);
+    SetABPenDrMd(rp, BAND_BG, BG, JAM1);
     RectFill(rp, x, y + inset, x + COLS * tile - 1, y + tile - inset - 1);
 
-    SetAPen(rp, FG);
-    SetBPen(rp, BG);
     rp->Mask = (UBYTE)mask;
 
     for (SHORT c = 0; c < COLS; c++) {
-        SetDrMd(rp, MODES[c]);
+        SetABPenDrMd(rp, FG, BG, MODES[c]);
         RectFill(rp, x + c * tile, y, x + (c + 1) * tile - 1, y + tile - 1);
     }
 }

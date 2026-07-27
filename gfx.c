@@ -32,8 +32,9 @@ void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
         p96RectFill(rp, x1, y1, x2, y2, color);
         return;
     }
-    SetDrMd(rp, JAM1);
-    SetAPen(rp, color);
+    // BgPen is passed back unchanged: JAM1 ignores it, and a fill has no
+    // business disturbing the pen a caller set for its own drawing.
+    SetABPenDrMd(rp, color, rp->BgPen, JAM1);
     RectFill(rp, x1, y1, x2, y2);
 }
 
