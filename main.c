@@ -34,6 +34,18 @@ static const char VERSTAG[] = "$VER: p96cts 0.10 (26.7.2026) by Bernie Innocenti
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 
+// Disarm libnix's Ctrl-C check, which every printf runs:
+// it exits orphaning the screen and its bitmap.
+void __chkabort(void) {}
+
+// The check the run loop makes instead, between testcases.
+static bool user_break(void) {
+    if (!(SetSignal(0, SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C))
+        return false;
+    printf("***Break\n");
+    return true;
+}
+
 static const struct P96TestGroup *const GROUPS[] = {
     &DrawLineGroup,
     &RectFillGroup,
@@ -675,6 +687,12 @@ int main(void) {
         for (int i = 0; i < GROUPS[g]->count; i++) {
             const struct P96Test *t = &GROUPS[g]->tests[i];
             char full[64];
+
+            if (user_break()) {
+                rc = RETURN_WARN;
+                goto cleanup;
+            }
+
             test_name(full, sizeof full, GROUPS[g], t);
             if (!selected(o.test, full))
                 continue;
