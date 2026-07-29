@@ -23,6 +23,7 @@
 #include "p96cts.h"
 #include "backdrop.h"
 #include "gfx.h"
+#include "modes.h"
 #include "palette.h"
 #include "pngio.h"
 #include "rtg.h"
@@ -574,7 +575,7 @@ int main(void) {
     }
 
     if (o.list_modes) {
-        p96cts_list_modes();
+        list_modes();
         goto out;
     }
 
@@ -589,17 +590,16 @@ int main(void) {
     // often not a real mode at all -- P96 publishes a 320x200 entry per pixel
     // format, but they are mode prefs templates that never open.
     if (o.monitor) {
-        id = p96cts_find_mode(o.screen_w, o.screen_h, o.depth, o.monitor,
-                              NULL, 0);
-        if (id == P96CTS_INVALID_MODE) {
+        id = find_mode(o.screen_w, o.screen_h, o.depth, o.monitor, NULL, 0);
+        if (id == INVALID_MODE) {
             printf("no %s mode %dx%dx%d in the display database\n", o.monitor,
                    o.screen_w, o.screen_h, o.depth);
             failures = 1;
             goto out;
         }
     } else {
-        id = p96cts_find_mode(0, 0, o.depth, NULL, NULL, 0);
-        if (id == P96CTS_INVALID_MODE) {
+        id = find_mode(0, 0, o.depth, NULL, NULL, 0);
+        if (id == INVALID_MODE) {
             printf("no %d-bit mode in the display database\n", o.depth);
             failures = 1;
             goto out;
