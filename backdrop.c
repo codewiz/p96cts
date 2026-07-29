@@ -11,10 +11,10 @@
 #include <graphics/rastport.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
-#include <proto/Picasso96.h>
 
 #include "backdrop.h"
 #include "gfx.h"
+#include "rtg.h"
 
 // The backdrop is a landscape: an off-center sun over two irregular ridges,
 // with rippled water below and a boat well off to one side.
@@ -201,14 +201,9 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
 
 blit:
     if (p96cts_truecolor) {
-        // The buffer is already R8G8B8; p96WritePixelArray converts to
-        // whatever the screen's format is.
-        struct RenderInfo ri;
-        ri.Memory = px;
-        ri.BytesPerRow = w * 3;
-        ri.pad = 0;
-        ri.RGBFormat = RGBFB_R8G8B8;
-        p96WritePixelArray(&ri, 0, 0, rp, 0, 0, w, h);
+        // The buffer is already R8G8B8, which is what rtg_write_rgb() wants;
+        // it converts to whatever the screen's format is.
+        rtg_write_rgb(rp, px, w, h);
     } else {
         // WritePixelArray8 needs a single-row scratch RastPort, like the
         // readback in gfx.c.

@@ -24,7 +24,7 @@ DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src stefan
 TARGET   = p96cts
 # Testcase scenes live in tests/, one translation unit per group; the harness,
 # the graphics layer and the PNG codec stay at the top level.
-OBJS     = p96cts.o gfx.o palette.o pngio.o backdrop.o glyph.o \
+OBJS     = p96cts.o gfx.o rtg.o palette.o pngio.o backdrop.o glyph.o \
            tests/drawline.o tests/rectfill.o tests/clipblit.o \
            tests/blttemplate.o tests/bltpattern.o tests/bltbitmap.o
 
@@ -52,7 +52,7 @@ all: $(TARGET)
 $(TARGET): $(OBJS) $(PNGLIB)
 	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNGLIB) -lm
 
-HEADERS  = p96cts.h gfx.h palette.h pngio.h backdrop.h
+HEADERS  = p96cts.h gfx.h rtg.h palette.h pngio.h backdrop.h
 
 %.o: %.c $(HEADERS)
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<

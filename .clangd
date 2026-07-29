@@ -22,6 +22,9 @@ CompileFlags:
     - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/lib/gcc/m68k-amigaos/6.5.0b/include
     - -I/home/bernie/emu/amiga/src/p96cts
     - -I/home/bernie/emu/amiga/devel/Picasso96Develop/Include
+    # bebbo's ndk-include has no cybergraphx/, unlike amiga-gcc's, so point at
+    # an unpacked CGraphX-DevKit (aminet dev/misc/CGraphX-DevKit) for it.
+    - -I/home/bernie/emu/amiga/devel/CGraphX/C/Include
     - -I/home/bernie/emu/amiga/src/p96cts/third_party/libpng/include
     - -I/home/bernie/emu/amiga/src/p96cts/third_party/zlib/include
     # proto/Picasso96.h picks its inline glue on __GNUC__ alone, with no

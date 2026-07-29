@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: 0BSD
 //
 // Everything gfx.c offers: the color helpers scenes draw through, and the
-// display-database lookup and scene readback the harness drives.
+// display-database lookup and scene readback the harness drives. What needs an
+// RTG library rather than graphics.library is in rtg.h.
 
 #ifndef P96CTS_GFX_H
 #define P96CTS_GFX_H
@@ -49,8 +50,6 @@ void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
 ULONG p96cts_find_mode(int w, int h, int depth, const char *monitor,
                        char *name_out, int name_len);
 void p96cts_list_modes(void);
-const char *p96cts_format_name(ULONG fmt);
 UBYTE *p96cts_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth);
-UBYTE *p96cts_read_rgb(struct RastPort *rp, SHORT w, SHORT h);
 
 #endif

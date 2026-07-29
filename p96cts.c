@@ -3,13 +3,13 @@
 // p96cts -- P96 driver conformance test suite.
 //
 // This file is the harness: arguments, the run loop, and the comparison.
-// Scenes live in tests/, the graphics.library and P96 calls in gfx.c.
+// Scenes live in tests/, the graphics.library calls in gfx.c, and everything
+// that needs an RTG library in rtg.c.
 
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
-#include <proto/Picasso96.h>
 #include <intuition/screens.h>
 #include <graphics/gfxmacros.h>
 #include <graphics/rastport.h>
@@ -25,6 +25,7 @@
 #include "gfx.h"
 #include "palette.h"
 #include "pngio.h"
+#include "rtg.h"
 
 // Standard AmigaOS version tag, readable with the Version command.
 static const char VERSTAG[] = "$VER: p96cts 0.10 (26.7.2026) by Bernie Innocenti";
@@ -32,7 +33,6 @@ static const char VERSTAG[] = "$VER: p96cts 0.10 (26.7.2026) by Bernie Innocenti
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
-struct Library *P96Base;
 
 static const struct P96TestGroup *const GROUPS[] = {
     &DrawLineGroup,
@@ -128,11 +128,6 @@ static bool validate_test(const char *name) {
 }
 
 #define MAX_REPORTED_DIFFS 8
-
-// Wider than any P96 board will accept a bitmap, which is how the reference
-// allocation is forced into fast memory. P96Tests uses 4100 for the same
-// reason.
-#define REFERENCE_WIDTH 4100
 
 // Everything the command line settles, so the run loop never looks at argv
 // again. parse_args() fills it; free_args() releases what it owns.
@@ -445,7 +440,7 @@ static bool run_test(const struct P96Test *t, const char *name,
     t->fn(rp, o->w, o->h);
     // Wait for the blitter before reading the scene back.
     WaitBlit();
-    UBYTE *idx = bpp == 3 ? p96cts_read_rgb(rp, o->w, o->h)
+    UBYTE *idx = bpp == 3 ? rtg_read_rgb(rp, o->w, o->h)
                           : p96cts_read_pens(rp, o->w, o->h, o->depth);
     if (!idx) {
         printf("FAIL %-24s memory allocation failed\n", name);
@@ -550,10 +545,18 @@ int main(void) {
     }
 
     IntuitionBase = (struct IntuitionBase *)OpenLibrary((STRPTR)"intuition.library", 39);
+    if (!IntuitionBase) {
+        printf("failed to open intuition.library 39\n");
+        rc = 20;
+        goto out;
+    }
     GfxBase = (struct GfxBase *)OpenLibrary((STRPTR)"graphics.library", 39);
-    P96Base = OpenLibrary((STRPTR)"Picasso96API.library", 2);
-    if (!IntuitionBase || !GfxBase || !P96Base) {
-        printf("failed to open libraries\n");
+    if (!GfxBase) {
+        printf("failed to open graphics.library 39\n");
+        rc = 20;
+        goto out;
+    }
+    if (!rtg_open()) {
         rc = 20;
         goto out;
     }
@@ -625,24 +628,8 @@ int main(void) {
     if (o.monitor) {
         rp = &scr->RastPort;
     } else {
-        // Friended to the screen's bitmap, so pens resolve through the
-        // screen's colors -- but wider than any board can hold, which is what
-        // keeps it in fast memory anyway. BMF_USERPRIVATE alone does not: with
-        // a friend and a width the board can take, P96 puts it on the card and
-        // the run is no longer an independent reference. The trick, and the
-        // width, are from P96Tests/DrawLine.c.
-        //
-        // Off the board, rtg.library rasterizes this itself: P96's own
-        // software implementation of the same primitives, independent of any
-        // card driver and of the blitter. Only the leftmost part is drawn on
-        // and read back; the rest is there to make the allocation refuse the
-        // card.
-        bm = p96AllocBitMap(REFERENCE_WIDTH, o.screen_h, o.depth,
-                            BMF_CLEAR | BMF_USERPRIVATE, scr->RastPort.BitMap,
-                            o.depth > 8 ? RGBFB_R8G8B8 : RGBFB_CLUT);
+        bm = rtg_alloc_reference(scr, o.screen_h, o.depth);
         if (!bm) {
-            printf("p96AllocBitMap %dx%dx%d failed\n", REFERENCE_WIDTH,
-                   o.screen_h, o.depth);
             failures = 1;
             goto cleanup;
         }
@@ -655,26 +642,17 @@ int main(void) {
         rp = &rp_off;
     }
 
-    // Ask the bitmap what it actually is rather than assuming from depth.
-    // A depth-8 run compares pen values, so it needs a bitmap addressed by
-    // pen: chunky RGBFB_CLUT on an RTG board, or RGBFB_NONE for the planar
-    // bitmaps AGA gives -- the name is historical, and ReadPixelArray8 reads
-    // either. A deeper run reads back through p96ReadPixelArray, which
-    // converts any truecolor format to R8G8B8, so there it is those same two
-    // that are refused.
+    // Ask the bitmap what it actually is rather than assuming from depth. A
+    // depth-8 run compares pen values and so needs a pen-addressed bitmap;
+    // a deeper one reads back as R8G8B8 and so needs anything but.
     {
-        ULONG fmt = p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT);
-        bool by_pen = fmt == RGBFB_CLUT || fmt == RGBFB_NONE;
+        const ULONG fmt = rtg_rgbformat(rp->BitMap);
+        const bool by_pen = rtg_format_by_pen(fmt);
+        const bool want_pen = o.depth <= 8;
 
-        if (o.depth <= 8 ? !by_pen : by_pen) {
+        if (by_pen != want_pen) {
             printf("mode is %s, which does not match depth %d\n",
-                   p96cts_format_name(fmt), o.depth);
-            failures = 1;
-            goto cleanup;
-        }
-        if (!o.monitor && p96GetBitMapAttr(rp->BitMap, P96BMA_ISONBOARD)) {
-            printf("reference bitmap landed on the board; it would not be "
-                   "an independent reference\n");
+                   rtg_format_name(fmt), o.depth);
             failures = 1;
             goto cleanup;
         }
@@ -683,7 +661,7 @@ int main(void) {
     printf("testing %s %dx%dx%d %s, scene %dx%d",
            o.monitor ? o.monitor : "P96 software rasterizer",
            o.screen_w, o.screen_h,
-           o.depth, p96cts_format_name(p96GetBitMapAttr(rp->BitMap, P96BMA_RGBFORMAT)),
+           o.depth, rtg_format_name(rtg_rgbformat(rp->BitMap)),
            o.w, o.h);
     // Where a comparison reads from is determined by the scene, so it is not
     // worth a line; where a capture writes to is a side effect worth naming.
@@ -712,13 +690,11 @@ int main(void) {
 cleanup:
     p96cts_backdrop_free();
     // The bitmap goes first: it was allocated with the screen's as friend.
-    if (bm)
-        p96FreeBitMap(bm);
+    rtg_free_bitmap(bm);
     if (scr)
         CloseScreen(scr);
 out:
-    if (P96Base)
-        CloseLibrary(P96Base);
+    rtg_close();
     if (GfxBase)
         CloseLibrary((struct Library *)GfxBase);
     if (IntuitionBase)

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: 0BSD
 //
-// Everything that talks to graphics.library and P96 on the harness's behalf:
-// the color helpers testcases draw through, the display-database search that
-// turns a WxHxD request into a display id, and the readback that turns a
-// rendered scene into the bytes the comparison works on.
+// Everything that talks to graphics.library on the harness's behalf: the color
+// helpers testcases draw through, the display-database search that turns a
+// WxHxD request into a display id, and the readback that turns a rendered
+// scene into the bytes the comparison works on.
 //
 // Split out of p96cts.c, which is left with argument parsing and the run loop.
+// Anything that needs an RTG library rather than graphics.library is in rtg.c.
 
 #include <proto/exec.h>
 #include <proto/graphics.h>
-#include <proto/Picasso96.h>
 #include <graphics/displayinfo.h>
 #include <graphics/gfxmacros.h>
 #include <graphics/rastport.h>
@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include "gfx.h"
+#include "rtg.h"
 
 // --- colors -----------------------------------------------------------------
 
@@ -24,12 +25,12 @@ bool p96cts_truecolor;
 
 // JAM1-fill a rectangle in the given color: a pen number on a palette screen,
 // 0x00RRGGBB on truecolor. Corners are inclusive and callers must pass them
-// sorted -- both RectFill() and p96RectFill() require min <= max, and neither
-// defines what a reversed rectangle does.
+// sorted -- both RectFill() and the RTG fills require min <= max, and none of
+// them defines what a reversed rectangle does.
 void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                  ULONG color) {
     if (p96cts_truecolor) {
-        p96RectFill(rp, x1, y1, x2, y2, color);
+        rtg_fill_rgb(rp, x1, y1, x2, y2, color);
         return;
     }
     // BgPen is passed back unchanged: JAM1 ignores it, and a fill has no
@@ -149,24 +150,6 @@ void p96cts_list_modes(void) {
 
 // --- readback ---------------------------------------------------------------
 
-// Reported so a run says what it actually rendered on. The format is a
-// property of the bitmap, not of its depth: P96 has three 15-bit formats,
-// three 16-bit, two 24-bit and four 32-bit, differing in channel order and
-// byte swapping. So this is indexed by the RGBFormat the bitmap reports,
-// never derived from the depth.
-const char *p96cts_format_name(ULONG fmt) {
-    static const char *const NAMES[] = {
-        "planar",   "clut",     "r8g8b8",   "b8g8r8",   "r5g6b5pc",
-        "r5g5b5pc", "a8r8g8b8", "a8b8g8r8", "r8g8b8a8", "b8g8r8a8",
-        "r5g6b5",   "r5g5b5",   "b5g6r5pc", "b5g5r5pc", "yuv422cgx",
-        "yuv411",   "yuv411pc", "yuv422",   "yuv422pc", "yuv422pa",
-        "yuv422papc",
-    };
-    if (fmt >= (ULONG)(sizeof NAMES / sizeof NAMES[0]))
-        return "unknown";
-    return NAMES[fmt];
-}
-
 // Read the scene back as one pen per pixel, into a freshly AllocVec'd buffer
 // the caller FreeVec's, or NULL. Needs a bitmap addressed by pen.
 //
@@ -189,24 +172,4 @@ UBYTE *p96cts_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
     ReadPixelArray8(rp, 0, 0, w - 1, h - 1, idx, &temprp);
     FreeBitMap(temprp.BitMap);
     return idx;
-}
-
-// The same, three bytes per pixel: the scene read back as R8G8B8 whatever the
-// screen's own format is.
-//
-// p96ReadPixelArray converts into the RenderInfo's format, so a BGRA screen
-// and an RGB one produce identical buffers and share one golden set.
-UBYTE *p96cts_read_rgb(struct RastPort *rp, SHORT w, SHORT h) {
-    UBYTE *px = AllocVec((ULONG)w * h * 3, MEMF_ANY);
-
-    if (!px)
-        return NULL;
-
-    struct RenderInfo ri;
-    ri.Memory = px;
-    ri.BytesPerRow = w * 3;
-    ri.pad = 0;
-    ri.RGBFormat = RGBFB_R8G8B8;
-    p96ReadPixelArray(&ri, 0, 0, rp, 0, 0, w, h);
-    return px;
 }
