@@ -15,6 +15,11 @@ the same primitives without a board involved.
 Runs are non-interactive and the exit code reflects the result, so the suite
 works as an automated check -- including under an emulator with no display.
 
+It also runs on AROS, which has no `Picasso96API.library`: the same questions
+go to `cybergraphics.library` and `graphics.library` instead, chosen once at
+startup. The references stay the ones captured from P96, so an AROS run is
+still checked against what P96 produces.
+
 This is a different tool from iComp's
 [P96Tests](https://aminet.net/package/dev/src/P96Tests), which is an
 interactive visual suite by the P96 maintainer and covers far more of the
@@ -100,51 +105,61 @@ your results.
 | ClipBlit-disjoint | ✅ | ✅ | ✅ | ✅ |
 | BltTemplate-offsets | ✅ | ✅ | ✅ | ✅ |
 | BltTemplate-sizes | ✅ | ✅ | ✅ | ✅ |
-| BltTemplate-drawmodes | ✅ | ❌ | ✅ | ✅ |
+| BltTemplate-drawmodes | ✅ | ✅| ✅ | ✅ |
 | BltTemplate-masks | ✅ | ✅ | ✅ | ✅ |
-| BltPattern-drawmodes | ✅ | ✅ | ✅ | ❌ |
+| BltPattern-drawmodes | ✅ | ✅ | ✅ | [❌](https://github.com/BlitterStudio/amiberry/issues/2236) |
 | BltPattern-mask | ✅ | ✅ | ✅ | ✅ |
 | BltPattern-phase | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-minterms | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-offsets | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-sizes | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-planemask | ✅ | [❌](https://github.com/BlitterStudio/amiberry/issues/2235) | ✅ | ✅ |
+| BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ |
 
-
-Notes:
-* CyberVision (S3) needs an amiberry build with the S3 line-drawing fix
-([amiberry#2211](https://github.com/BlitterStudio/amiberry/issues/2211)); without
-it the `DrawLine` scenes fail by a few pixels at the endpoints.
-* uaegfx fails `BltTemplate-drawmodes` by applying `INVERSVID` to the
-wrong half of the template.
+A ❌ links to the bug it found.
 
 
 ### Copperline
 
-| scene | Z3660 |
-|---|---|
-| DrawLine-solid | ✅ |
-| DrawLine-pattern | ✅ |
-| DrawLine-jam2 | ✅ |
-| DrawLine-inversvid | ✅ |
-| DrawLine-complement | ❌ |
-| RectFill-drawmodes | ✅ |
-| RectFill-edges | ✅ |
-| RectFill-invert | ✅ |
-| ClipBlit-overlap | ✅ |
-| ClipBlit-disjoint | ✅ |
-| BltTemplate-offsets | ✅ |
-| BltTemplate-sizes | ✅ |
-| BltTemplate-drawmodes | ✅ |
-| BltTemplate-masks | ✅ |
-| BltPattern-drawmodes | ❌ |
-| BltPattern-mask | ✅ |
-| BltPattern-phase | ✅ |
+| scene | PAL | Z3660 |
+|---|---|---|
+| DrawLine-solid | ✅ | ✅ |
+| DrawLine-pattern | ✅ | ✅ |
+| DrawLine-jam2 | ✅ | ✅ |
+| DrawLine-inversvid | ✅ | ✅ |
+| DrawLine-complement | ✅ | ❌ |
+| RectFill-drawmodes | ✅ | ✅ |
+| RectFill-edges | ✅ | ✅ |
+| RectFill-invert | ✅ | ✅ |
+| ClipBlit-overlap | ✅ | ✅ |
+| ClipBlit-disjoint | ✅ | ✅ |
+| BltTemplate-offsets | ✅ | ✅ |
+| BltTemplate-sizes | ✅ | ✅ |
+| BltTemplate-drawmodes | ✅ | ✅ |
+| BltTemplate-masks | ✅ | ✅ |
+| BltPattern-drawmodes | ✅ | ❌ |
+| BltPattern-mask | ✅ | ✅ |
+| BltPattern-phase | ✅ | ✅ |
+| BltBitMap-minterms | ✅ | ❌ |
+| BltBitMap-offsets | ✅ | ✅ |
+| BltBitMap-sizes | ✅ | ✅ |
+| BltBitMap-planemask | ✅ | ❌ |
+| BltBitMap-stencil | ✅ | ✅ |
+| BltBitMap-shallow | ✅ | ✅ |
 
 Notes:
 * Z3660 fails `DrawLine-complement` by four pixels where its line rasterizer
 rounds a vertex differently.
-* Z3660 (Copperline) and ZZ9000 (Amiberry) both fail `BltPattern-drawmodes` in
-the two `JAM2 | COMPLEMENT` modes, where they do not treat `COMPLEMENT` as
-ignoring the pens the way the reference does; the `JAM1 | COMPLEMENT` modes
-pass. Z3660.card is a fork of the ZZ9000 driver, so it is one bug in the shared
-lineage, reported as [amiberry#2217](https://github.com/BlitterStudio/amiberry/issues/2217).
+* Z3660 fails `BltPattern-drawmodes` in the two `JAM2 | COMPLEMENT` modes, where
+it does not treat `COMPLEMENT` as ignoring the pens the way the reference does;
+the `JAM1 | COMPLEMENT` modes pass.
+* Z3660.card is a fork of the ZZ9000 driver, which had the same bug
+([amiberry#2217](https://github.com/BlitterStudio/amiberry/issues/2217), fixed); the fork has not picked the fix up.
+* Z3660 fails `BltBitMap-minterms` and `BltBitMap-planemask` for one reason: the
+planar blit hooks ignore the minterm and always copy the source, so `AND`, `DST`
+and `EOR` all render as a plain copy. Every differing pixel holds the source
+where the reference holds the minterm's result.
 
 ## Building
 
