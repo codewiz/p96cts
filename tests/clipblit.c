@@ -59,7 +59,7 @@ static void t_overlap(struct RastPort *rp, SHORT w, SHORT h) {
 
     gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
-    p96cts_backdrop(rp, w, h);
+    backdrop(rp, w, h);
 
     shift_quadrant(rp, 0, 0, qw, qh, 0, 17);   // down
     shift_quadrant(rp, qw, 0, qw, qh, 0, -21); // up
@@ -81,7 +81,7 @@ static void t_disjoint(struct RastPort *rp, SHORT w, SHORT h) {
     // it are the highest-contrast material the scene has.
     SHORT horizon = h * 3 / 5;
 
-    p96cts_backdrop(rp, w, h);
+    backdrop(rp, w, h);
 
     selfblit(rp, 0, 0, w / 2, h / 3, w / 2, h / 3);
 

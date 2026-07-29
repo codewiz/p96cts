@@ -24,7 +24,7 @@
 // a truecolor screen those pens come out as these colors, so anything drawn to
 // compare against them has to name the same color rather than the same number.
 // gfx_pen() in gfx.h is the wrapper scenes actually call.
-ULONG p96cts_pen_rgb(int pen) {
+ULONG pen_rgb(int pen) {
     switch (pen) {
     case 0: return 0x000000; // black, and the scene background
     case 1: return 0xFFFFFF; // white
@@ -41,13 +41,13 @@ ULONG p96cts_pen_rgb(int pen) {
 // The palette as a LoadRGB32 table: a header word pair, then three 32-bit guns
 // per pen, terminated by a zero. Suitable for SA_Colors32 at OpenScreen, and
 // the PNG writer reads the high byte of each gun back out of it.
-const ULONG *p96cts_palette(void) {
+const ULONG *palette(void) {
     static ULONG table[2 + P96CTS_PALETTE_ENTRIES * 3];
     ULONG *e = table;
 
     *e++ = ((ULONG)P96CTS_PALETTE_ENTRIES << 16) | 0;
     for (int p = 0; p < P96CTS_PALETTE_ENTRIES; p++) {
-        ULONG rgb = p96cts_pen_rgb(p);
+        ULONG rgb = pen_rgb(p);
         // LoadRGB32 takes 32 bits per gun, so each byte is replicated.
         *e++ = 0x01010101UL * ((rgb >> 16) & 0xFF);
         *e++ = 0x01010101UL * ((rgb >> 8) & 0xFF);

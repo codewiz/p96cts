@@ -85,14 +85,14 @@ static UBYTE *cached;
 static SHORT cached_w, cached_h;
 static int cached_bpp;
 
-void p96cts_backdrop_free(void) {
+void backdrop_free(void) {
     if (cached)
         FreeVec(cached);
     cached = NULL;
     cached_w = cached_h = 0;
 }
 
-void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
+void backdrop(struct RastPort *rp, SHORT w, SHORT h) {
     int horizon = h * 3 / 5;
     int sun_x = w * 7 / 10, sun_y = h * 7 / 25, sun_r = h / 7;
     int boat_x = w / 4, boat_y = horizon + h / 5;
@@ -109,7 +109,7 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
         goto blit;
     }
 
-    p96cts_backdrop_free();
+    backdrop_free();
     px = AllocVec((ULONG)w * h * bpp, MEMF_ANY);
     if (!px)
         return;

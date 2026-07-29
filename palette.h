@@ -13,7 +13,7 @@
 // Every pen a depth-8 run can name.
 #define P96CTS_PALETTE_ENTRIES 256
 
-const ULONG *p96cts_palette(void);
-ULONG p96cts_pen_rgb(int pen);
+const ULONG *palette(void);
+ULONG pen_rgb(int pen);
 
 #endif

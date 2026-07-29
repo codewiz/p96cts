@@ -367,7 +367,7 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
     int bpp = o->bpp;
 
     char *path = image_path(o->dir, name, ".fail.png");
-    if (!path || p96cts_write_png(path, idx, o->w, o->h, bpp))
+    if (!path || write_png(path, idx, o->w, o->h, bpp))
         failed = true;
     else
         printf("       captured %s\n", path);
@@ -393,7 +393,7 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
         }
 
     path = image_path(o->dir, name, ".diff.png");
-    if (!path || p96cts_write_png(path, d, o->w, o->h, bpp))
+    if (!path || write_png(path, d, o->w, o->h, bpp))
         failed = true;
     else
         printf("       wrote difference to %s\n", path);
@@ -461,7 +461,7 @@ static bool run_test(const struct P96Test *t, const char *name,
     }
     if (o->capture) {
         char *path = image_path(o->dir, name, ".png");
-        if (!path || p96cts_write_png(path, idx, o->w, o->h, bpp))
+        if (!path || write_png(path, idx, o->w, o->h, bpp))
             failed = true;
         else
             printf("captured %s\n", path);
@@ -474,7 +474,7 @@ static bool run_test(const struct P96Test *t, const char *name,
     {
         char *path = image_path(o->golden_dir, name, ".png");
         if (path)
-            gold = p96cts_read_png(path, &gw, &gh, bpp);
+            gold = read_png(path, &gw, &gh, bpp);
         if (!gold) {
             printf("FAIL %-24s no golden at %s\n", name, path ? path : "?");
             free(path);
@@ -613,7 +613,7 @@ int main(void) {
     // other way the palette gets set.
     {
         static WORD no_pens[] = {~0};
-        const ULONG *colors = p96cts_palette();
+        const ULONG *colors = palette();
 
         // The driver run is rendered on the screen, so it gets the size the
         // mode was asked for. The reference run only borrows the screen and
@@ -706,7 +706,7 @@ int main(void) {
     }
 
 cleanup:
-    p96cts_backdrop_free();
+    backdrop_free();
     // The bitmap goes first: it was allocated with the screen's as friend.
     rtg_free_bitmap(bm);
     if (scr)

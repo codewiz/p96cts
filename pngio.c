@@ -22,7 +22,7 @@
 // the LoadRGB32 table: a header word pair, then three 32-bit guns per pen, of
 // which the high byte is the value.
 static void build_palette(png_color *pal) {
-    const ULONG *table = p96cts_palette() + 1;
+    const ULONG *table = palette() + 1;
 
     for (int i = 0; i < P96CTS_PALETTE_ENTRIES; i++) {
         pal[i].red = (png_byte)(table[i * 3] >> 24);
@@ -51,7 +51,7 @@ static void dos_read(png_structp png, png_bytep data, size_t length) {
 
 // --- write ------------------------------------------------------------------
 
-int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
+int write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
                      int bpp) {
     png_structp png = NULL;
     png_infop info = NULL;
@@ -97,7 +97,7 @@ int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
 
 // --- read -------------------------------------------------------------------
 
-UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
+UBYTE *read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
     png_structp png = NULL;
     png_infop info = NULL;
     // volatile: written after setjmp and freed on the error path, so a

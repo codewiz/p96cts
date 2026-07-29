@@ -9,10 +9,10 @@
 
 struct RastPort;
 
-void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h);
+void backdrop(struct RastPort *rp, SHORT w, SHORT h);
 
 // Release the cached scene. The run loop calls this once at the end; scenes
 // never need to.
-void p96cts_backdrop_free(void);
+void backdrop_free(void);
 
 #endif

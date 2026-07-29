@@ -34,7 +34,7 @@ static inline ULONG gfx_color(ULONG pen, ULONG rgb) {
 // alongside pen-indexed data a driver resolves through the same palette, where
 // gfx_color() cannot help because there is only one color to name.
 static inline ULONG gfx_pen(int pen) {
-    return gfx_truecolor ? p96cts_pen_rgb(pen) : (ULONG)pen;
+    return gfx_truecolor ? pen_rgb(pen) : (ULONG)pen;
 }
 
 void gfx_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color);

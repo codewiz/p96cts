@@ -11,8 +11,8 @@
 
 #include <exec/types.h>
 
-int p96cts_write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
+int write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
                      int bpp);
-UBYTE *p96cts_read_png(const char *path, SHORT *w, SHORT *h, int bpp);
+UBYTE *read_png(const char *path, SHORT *w, SHORT *h, int bpp);
 
 #endif
