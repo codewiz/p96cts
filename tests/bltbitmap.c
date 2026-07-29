@@ -109,7 +109,7 @@ static void blit_row(struct RastPort *rp, struct BitMap *src, SHORT x, SHORT y,
 // plain source copy.
 static void t_minterms(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT rows = 8, band = h / rows, half = w / 2;
-    struct P96CTSPlanar s;
+    struct GlyphPlanar s;
 
     gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
@@ -121,8 +121,8 @@ static void t_minterms(struct RastPort *rp, SHORT w, SHORT h) {
 
     checker(rp, w, h, 16);
 
-    if (!p96cts_glyph_planar(&s, 8, p96cts_glyph_pen)) {
-        p96cts_glyph_free_planar(&s);
+    if (!glyph_planar(&s, 8, glyph_pen)) {
+        glyph_free_planar(&s);
         return;
     }
 
@@ -133,7 +133,7 @@ static void t_minterms(struct RastPort *rp, SHORT w, SHORT h) {
         blit_row(rp, &s.bm, half + 2, y, (UBYTE)((r + 8) << 4));
     }
 
-    p96cts_glyph_free_planar(&s);
+    glyph_free_planar(&s);
 }
 
 // A 4x4 grid of 16-wide plain copies, one per source x offset 0..15, over the
@@ -144,7 +144,7 @@ static void t_minterms(struct RastPort *rp, SHORT w, SHORT h) {
 // sixteen destination alignments against them.
 static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT cw = w / 4, ch = h / 4;
-    struct P96CTSPlanar s;
+    struct GlyphPlanar s;
 
     gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
@@ -154,8 +154,8 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
 
     checker(rp, w, h, 16);
 
-    if (!p96cts_glyph_planar(&s, 8, p96cts_glyph_pen)) {
-        p96cts_glyph_free_planar(&s);
+    if (!glyph_planar(&s, 8, glyph_pen)) {
+        glyph_free_planar(&s);
         return;
     }
 
@@ -166,7 +166,7 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
         BltBitMapRastPort(&s.bm, i, 0, rp, dx, dy, 16, 8, 0xC0);
     }
 
-    p96cts_glyph_free_planar(&s);
+    glyph_free_planar(&s);
 }
 
 // Every width and height from 1 up, and a width that is neither a multiple of
@@ -176,7 +176,7 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
 // clean one.
 static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT step = w / 16, band = h / 3;
-    struct P96CTSPlanar s;
+    struct GlyphPlanar s;
 
     gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
@@ -186,8 +186,8 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
 
     checker(rp, w, h, 16);
 
-    if (!p96cts_glyph_planar(&s, 8, p96cts_glyph_pen)) {
-        p96cts_glyph_free_planar(&s);
+    if (!glyph_planar(&s, 8, glyph_pen)) {
+        glyph_free_planar(&s);
         return;
     }
 
@@ -199,7 +199,7 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
         BltBitMapRastPort(&s.bm, i, 0, rp, x, 2 * band + band / 4, 13, 8, 0xC0);
     }
 
-    p96cts_glyph_free_planar(&s);
+    glyph_free_planar(&s);
 }
 
 // The source plane mask: the planes it clears do not reach the destination, so
@@ -223,7 +223,7 @@ static const UBYTE MASKS[] = {0xFF, 0x0F, 0x55, 0x81};
 
 static void t_planemask(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT band = h / NMASKS;
-    struct P96CTSPlanar s;
+    struct GlyphPlanar s;
 
     gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
@@ -233,8 +233,8 @@ static void t_planemask(struct RastPort *rp, SHORT w, SHORT h) {
 
     checker(rp, w, h, 16);
 
-    if (!p96cts_glyph_planar(&s, 8, hash_pen)) {
-        p96cts_glyph_free_planar(&s);
+    if (!glyph_planar(&s, 8, hash_pen)) {
+        glyph_free_planar(&s);
         return;
     }
 
@@ -249,7 +249,7 @@ static void t_planemask(struct RastPort *rp, SHORT w, SHORT h) {
                       (i / (SRC_W + 6)) & 1 ? 0x60 : 0xC0, MASKS[r], NULL);
     }
 
-    p96cts_glyph_free_planar(&s);
+    glyph_free_planar(&s);
 }
 
 // A stencil blit through BltMaskBitMapRastPort(), the call Workbench icons and
@@ -286,7 +286,7 @@ static PLANEPTR build_stencil(void) {
 
 static void t_stencil(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT band = h / 4;
-    struct P96CTSPlanar s;
+    struct GlyphPlanar s;
     PLANEPTR stencil;
 
     gfx_clear(rp, w, h, 0);
@@ -297,12 +297,12 @@ static void t_stencil(struct RastPort *rp, SHORT w, SHORT h) {
 
     checker(rp, w, h, 16);
 
-    if (!p96cts_glyph_planar(&s, 8, p96cts_glyph_pen)) {
-        p96cts_glyph_free_planar(&s);
+    if (!glyph_planar(&s, 8, glyph_pen)) {
+        glyph_free_planar(&s);
         return;
     }
     if (!(stencil = build_stencil())) {
-        p96cts_glyph_free_planar(&s);
+        glyph_free_planar(&s);
         return;
     }
 
@@ -319,7 +319,7 @@ static void t_stencil(struct RastPort *rp, SHORT w, SHORT h) {
 
     WaitBlit();
     FreeRaster(stencil, SRC_W, SRC_H);
-    p96cts_glyph_free_planar(&s);
+    glyph_free_planar(&s);
 }
 
 // A source shallower than the screen, which is what real planar imagery is: a
@@ -346,7 +346,7 @@ static void t_stencil(struct RastPort *rp, SHORT w, SHORT h) {
 static void t_shallow(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT band = h / 4;
     static const UBYTE BANDS[] = {0x00, 0x10, 0x48, 0x50};
-    struct P96CTSPlanar s;
+    struct GlyphPlanar s;
 
     gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
@@ -354,8 +354,8 @@ static void t_shallow(struct RastPort *rp, SHORT w, SHORT h) {
     if (band < SRC_H + 2 || w < 2 * SRC_W)
         return;
 
-    if (!p96cts_glyph_planar(&s, 3, p96cts_glyph_pen)) {
-        p96cts_glyph_free_planar(&s);
+    if (!glyph_planar(&s, 3, glyph_pen)) {
+        glyph_free_planar(&s);
         return;
     }
 
@@ -373,7 +373,7 @@ static void t_shallow(struct RastPort *rp, SHORT w, SHORT h) {
                               (i / (SRC_W + 6)) & 1 ? 0xE0 : 0xC0);
     }
 
-    p96cts_glyph_free_planar(&s);
+    glyph_free_planar(&s);
 }
 
 static const struct P96Test TESTS[] = {

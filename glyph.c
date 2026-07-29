@@ -23,7 +23,7 @@
 // right, which is where an offset error shows first. Each glyph is a cell of
 // its own (14, 14, 15 wide) with a narrow gap between, so a column of set
 // pixels reaches both edges.
-const char *const p96cts_glyph[P96CTS_GLYPH_H] = {
+const char *const glyph[P96CTS_GLYPH_H] = {
     "RRRRRRRRRRRRR." "..." ".GGGGGGGGGGGG." ".." ".BBBBBBBBBBBBBB",
     "RRRRRRRRRRRRRR" "..." "GGGGGGGGGGGGGG" ".." "BBBBBBBBBBBBBBB",
     "RRR.......RRRR" "..." "GGG........GGG" ".." "BBB............",
@@ -52,8 +52,8 @@ const char *const p96cts_glyph[P96CTS_GLYPH_H] = {
 // have their bits spread instead, and between them cover all eight -- which is
 // what a plane mask has to bite on. None is a gray, so a driver that swaps red
 // and blue shows up here too.
-UBYTE p96cts_glyph_pen(SHORT x, SHORT y) {
-    switch (p96cts_glyph[y][x]) {
+UBYTE glyph_pen(SHORT x, SHORT y) {
+    switch (glyph[y][x]) {
     case 'R': return 0x47; // (252,  36,  85)
     case 'G': return 0xB9; // ( 36, 252, 170)
     case 'B': return 0xC1; // ( 36,   0, 255)
@@ -67,7 +67,7 @@ UBYTE p96cts_glyph_pen(SHORT x, SHORT y) {
 // Chip memory, because on a native planar screen graphics.library runs this
 // through the blitter, which cannot see fast RAM -- a template in fast memory
 // renders as garbage there while working fine on every RTG board.
-PLANEPTR p96cts_glyph_template(void) {
+PLANEPTR glyph_template(void) {
     UBYTE *tpl = AllocVec(P96CTS_GLYPH_H * P96CTS_GLYPH_MOD,
                           MEMF_CHIP | MEMF_CLEAR);
 
@@ -76,13 +76,13 @@ PLANEPTR p96cts_glyph_template(void) {
 
     for (SHORT y = 0; y < P96CTS_GLYPH_H; y++)
         for (SHORT x = 0; x < P96CTS_GLYPH_W; x++)
-            if (p96cts_glyph[y][x] != '.')
+            if (glyph[y][x] != '.')
                 tpl[y * P96CTS_GLYPH_MOD + x / 8] |= (UBYTE)(0x80 >> (x % 8));
 
     return (PLANEPTR)tpl;
 }
 
-void p96cts_glyph_free_template(PLANEPTR tpl) {
+void glyph_free_template(PLANEPTR tpl) {
     // Wait for the last blit before freeing chip memory the blitter may still
     // be reading.
     WaitBlit();
@@ -99,7 +99,7 @@ void p96cts_glyph_free_template(PLANEPTR tpl) {
 // AllocBitMap() would leave them NULL and the same bug would be a crash.
 //
 // Chip memory throughout, for the same blitter reason as the template.
-bool p96cts_glyph_planar(struct P96CTSPlanar *p, int depth,
+bool glyph_planar(struct GlyphPlanar *p, int depth,
                          UBYTE (*pen_at)(SHORT x, SHORT y)) {
     InitBitMap(&p->bm, depth, P96CTS_GLYPH_W, P96CTS_GLYPH_H);
     p->ones = NULL;
@@ -134,7 +134,7 @@ bool p96cts_glyph_planar(struct P96CTSPlanar *p, int depth,
     return true;
 }
 
-void p96cts_glyph_free_planar(struct P96CTSPlanar *p) {
+void glyph_free_planar(struct GlyphPlanar *p) {
     WaitBlit();
     for (int i = 0; i < 8; i++)
         if (p->bm.Planes[i] && p->bm.Planes[i] != p->ones)

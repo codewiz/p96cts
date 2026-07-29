@@ -74,7 +74,7 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
 
     checker(rp, w, h, 16);
 
-    PLANEPTR tpl = p96cts_glyph_template();
+    PLANEPTR tpl = glyph_template();
     if (!tpl)
         return;
 
@@ -86,7 +86,7 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
         BltTemplate(tpl, i, TPL_MOD, rp, dx, dy, 16, TPL_H);
     }
 
-    p96cts_glyph_free_template(tpl);
+    glyph_free_template(tpl);
 }
 
 // Every width and height from 1 up, and a width that is neither a multiple of
@@ -107,7 +107,7 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
 
     checker(rp, w, h, 16);
 
-    PLANEPTR tpl = p96cts_glyph_template();
+    PLANEPTR tpl = glyph_template();
     if (!tpl)
         return;
 
@@ -122,7 +122,7 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
         BltTemplate(tpl, i, TPL_MOD, rp, x, 2 * band + band / 4, 13, TPL_H);
     }
 
-    p96cts_glyph_free_template(tpl);
+    glyph_free_template(tpl);
 }
 
 // The draw modes, each over two backgrounds so that no two of them can produce
@@ -152,7 +152,7 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
     SetAPen(rp, 3);
     RectFill(rp, 0, h / 2, w - 1, h - 1);
 
-    PLANEPTR tpl = p96cts_glyph_template();
+    PLANEPTR tpl = glyph_template();
     if (!tpl)
         return;
 
@@ -165,7 +165,7 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
                     TPL_H);
     }
 
-    p96cts_glyph_free_template(tpl);
+    glyph_free_template(tpl);
 }
 
 // rp->Mask restricts the write to the selected bitplanes; the unselected ones
@@ -188,7 +188,7 @@ static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
     if (band < TPL_H + 2 || w < 2 * TPL_W)
         return;
 
-    PLANEPTR tpl = p96cts_glyph_template();
+    PLANEPTR tpl = glyph_template();
     if (!tpl)
         return;
 
@@ -203,7 +203,7 @@ static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
             BltTemplate(tpl, 0, TPL_MOD, rp, x, y, TPL_W, TPL_H);
     }
 
-    p96cts_glyph_free_template(tpl);
+    glyph_free_template(tpl);
 }
 
 static const struct P96Test TESTS[] = {

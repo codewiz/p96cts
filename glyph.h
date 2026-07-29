@@ -13,21 +13,21 @@
 #define P96CTS_GLYPH_H 16
 #define P96CTS_GLYPH_MOD (P96CTS_GLYPH_W / 8) // bytes per one-bit-deep row
 
-extern const char *const p96cts_glyph[P96CTS_GLYPH_H];
+extern const char *const glyph[P96CTS_GLYPH_H];
 
-UBYTE p96cts_glyph_pen(SHORT x, SHORT y);
+UBYTE glyph_pen(SHORT x, SHORT y);
 
-PLANEPTR p96cts_glyph_template(void);
-void p96cts_glyph_free_template(PLANEPTR tpl);
+PLANEPTR glyph_template(void);
+void glyph_free_template(PLANEPTR tpl);
 
 // A planar BitMap of the glyph's size, filled from pen_at.
-struct P96CTSPlanar {
+struct GlyphPlanar {
     struct BitMap bm;
     PLANEPTR ones; // the shared sentinel plane, freed once
 };
 
-bool p96cts_glyph_planar(struct P96CTSPlanar *p, int depth,
+bool glyph_planar(struct GlyphPlanar *p, int depth,
                          UBYTE (*pen_at)(SHORT x, SHORT y));
-void p96cts_glyph_free_planar(struct P96CTSPlanar *p);
+void glyph_free_planar(struct GlyphPlanar *p);
 
 #endif
