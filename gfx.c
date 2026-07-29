@@ -5,7 +5,7 @@
 // WxHxD request into a display id, and the readback that turns a rendered
 // scene into the bytes the comparison works on.
 //
-// Split out of p96cts.c, which is left with argument parsing and the run loop.
+// Split out of main.c, which is left with argument parsing and the run loop.
 // Anything that needs an RTG library rather than graphics.library is in rtg.c.
 
 #include <proto/exec.h>

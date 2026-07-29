@@ -9,7 +9,7 @@
 CompileFlags:
   Compiler: clang
   Add:
-    # 32-bit pointers, so the ReadArgs casts in p96cts.c do not warn. LLVM does
+    # 32-bit pointers, so the ReadArgs casts in main.c do not warn. LLVM does
     # not know the "amigaos" OS field and ignores it; only the arch matters.
     - --target=m68k-unknown-amigaos
     # -nostdinc plus -isystem, not -I: the host's /usr/include must not be

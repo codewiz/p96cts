@@ -3,7 +3,7 @@
 // How a testcase registers itself with the harness, and nothing else.
 //
 // Test groups live in their own translation units (tests/drawline.c, ...) and
-// define a P96TestGroup that p96cts.c walks. What the scenes draw *with* is
+// define a P96TestGroup that main.c walks. What the scenes draw *with* is
 // in gfx.h and backdrop.h.
 
 #ifndef P96CTS_H
