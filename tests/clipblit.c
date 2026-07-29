@@ -57,7 +57,7 @@ static void shift_quadrant(struct RastPort *rp, SHORT qx, SHORT qy, SHORT qw,
 static void t_overlap(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT qw = w / 2, qh = h / 2;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
     p96cts_backdrop(rp, w, h);
 

@@ -81,7 +81,7 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
     if (tile > pitch)
         tile = pitch;
 
-    p96cts_clear(rp, w, h, SCENE_BG);
+    gfx_clear(rp, w, h, SCENE_BG);
     for (SHORT r = 0; r < NMASKS; r++)
         mode_row(rp, x, r * pitch + (pitch - tile) / 2, tile, MASKS[r]);
 }
@@ -101,30 +101,30 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
 // to do anything with a reversed rectangle and there is nothing to conform to.
 static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT n = (w < h ? w : h) / 8;
-    ULONG fg = p96cts_color(FG, FG_RGB);
-    ULONG bg = p96cts_color(BG, BG_RGB);
-    ULONG band = p96cts_color(BAND_BG, BAND_BG_RGB);
+    ULONG fg = gfx_color(FG, FG_RGB);
+    ULONG bg = gfx_color(BG, BG_RGB);
+    ULONG band = gfx_color(BAND_BG, BAND_BG_RGB);
 
-    p96cts_clear(rp, w, h, p96cts_color(SCENE_BG, SCENE_BG_RGB));
+    gfx_clear(rp, w, h, gfx_color(SCENE_BG, SCENE_BG_RGB));
 
     // A diagonal of single pixels, then single-pixel rows and columns of
     // growing length, so an off-by-one in either axis shows up as a short
     // run rather than as nothing at all.
     for (SHORT i = 0; i < n; i++)
-        p96cts_fill(rp, 2 + i * 4, 2 + i * 4, 2 + i * 4, 2 + i * 4, fg);
+        gfx_fill(rp, 2 + i * 4, 2 + i * 4, 2 + i * 4, 2 + i * 4, fg);
 
     for (SHORT i = 0; i < n; i++)
-        p96cts_fill(rp, w / 2, 2 + i * 4, w / 2 + i, 2 + i * 4, band);
+        gfx_fill(rp, w / 2, 2 + i * 4, w / 2 + i, 2 + i * 4, band);
 
     for (SHORT i = 0; i < n; i++)
-        p96cts_fill(rp, 2 + i * 4, h / 2, 2 + i * 4, h / 2 + i, bg);
+        gfx_fill(rp, 2 + i * 4, h / 2, 2 + i * 4, h / 2 + i, bg);
 
     // The scene's own edges, where a fill that is off by one writes outside
     // the bitmap entirely.
-    p96cts_fill(rp, 0, 0, w - 1, 0, fg);
-    p96cts_fill(rp, 0, h - 1, w - 1, h - 1, fg);
-    p96cts_fill(rp, 0, 0, 0, h - 1, fg);
-    p96cts_fill(rp, w - 1, 0, w - 1, h - 1, fg);
+    gfx_fill(rp, 0, 0, w - 1, 0, fg);
+    gfx_fill(rp, 0, h - 1, w - 1, h - 1, fg);
+    gfx_fill(rp, 0, 0, 0, h - 1, fg);
+    gfx_fill(rp, w - 1, 0, w - 1, h - 1, fg);
 }
 
 // COMPLEMENT inverts the destination and needs no color at all, which makes
@@ -133,13 +133,13 @@ static void t_edges(struct RastPort *rp, SHORT w, SHORT h) {
 // rectangle is the heart of the scene: it must come back bit-exact, which no
 // "fill with something plausible" implementation survives.
 static void t_invert(struct RastPort *rp, SHORT w, SHORT h) {
-    p96cts_clear(rp, w, h, p96cts_color(SCENE_BG, SCENE_BG_RGB));
+    gfx_clear(rp, w, h, gfx_color(SCENE_BG, SCENE_BG_RGB));
 
     // Three bands, so the inversions below each cross a color boundary.
-    p96cts_fill(rp, 0, 0, w / 3 - 1, h - 1, p96cts_color(FG, FG_RGB));
-    p96cts_fill(rp, w / 3, 0, 2 * w / 3 - 1, h - 1,
-                p96cts_color(BAND_BG, BAND_BG_RGB));
-    p96cts_fill(rp, 2 * w / 3, 0, w - 1, h - 1, p96cts_color(BG, BG_RGB));
+    gfx_fill(rp, 0, 0, w / 3 - 1, h - 1, gfx_color(FG, FG_RGB));
+    gfx_fill(rp, w / 3, 0, 2 * w / 3 - 1, h - 1,
+                gfx_color(BAND_BG, BAND_BG_RGB));
+    gfx_fill(rp, 2 * w / 3, 0, w - 1, h - 1, gfx_color(BG, BG_RGB));
 
     SetDrMd(rp, COMPLEMENT);
     // One inversion across all three bands; one double inversion, which

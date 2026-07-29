@@ -74,11 +74,11 @@ static void checker(struct RastPort *rp, SHORT w, SHORT h, SHORT cell) {
             SHORT x2 = x + cell - 1, y2 = y + cell - 1;
             int pen = ((x / cell + y / cell) & 1) ? CELL_DARK : CELL_LIGHT;
 
-            // p96cts_fill, not SetAPen and RectFill: on truecolor SetAPen
+            // gfx_fill, not SetAPen and RectFill: on truecolor SetAPen
             // takes a pen number, so it would keep only the low byte of the
             // color and fill with whatever pen that is.
-            p96cts_fill(rp, x, y, x2 < w ? x2 : w - 1, y2 < h ? y2 : h - 1,
-                        p96cts_pen(pen));
+            gfx_fill(rp, x, y, x2 < w ? x2 : w - 1, y2 < h ? y2 : h - 1,
+                        gfx_pen(pen));
         }
 }
 
@@ -111,7 +111,7 @@ static void t_minterms(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT rows = 8, band = h / rows, half = w / 2;
     struct P96CTSPlanar s;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     // The RastPort has no Layer, so nothing clips a blit that runs past the
@@ -146,7 +146,7 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT cw = w / 4, ch = h / 4;
     struct P96CTSPlanar s;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     if (cw < 34 || ch < 10)
@@ -178,7 +178,7 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT step = w / 16, band = h / 3;
     struct P96CTSPlanar s;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     if (step < 18 || band < 18)
@@ -225,7 +225,7 @@ static void t_planemask(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT band = h / NMASKS;
     struct P96CTSPlanar s;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     if (band < 10 || w < 2 * SRC_W)
@@ -289,7 +289,7 @@ static void t_stencil(struct RastPort *rp, SHORT w, SHORT h) {
     struct P96CTSPlanar s;
     PLANEPTR stencil;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     if (band < SRC_H + 2 || w < 2 * SRC_W)
@@ -348,7 +348,7 @@ static void t_shallow(struct RastPort *rp, SHORT w, SHORT h) {
     static const UBYTE BANDS[] = {0x00, 0x10, 0x48, 0x50};
     struct P96CTSPlanar s;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     if (band < SRC_H + 2 || w < 2 * SRC_W)
@@ -362,7 +362,7 @@ static void t_shallow(struct RastPort *rp, SHORT w, SHORT h) {
     for (SHORT r = 0; r < 4; r++) {
         SHORT y = r * band;
 
-        p96cts_fill(rp, 0, y, w - 1, y + band - 1, p96cts_pen(BANDS[r]));
+        gfx_fill(rp, 0, y, w - 1, y + band - 1, gfx_pen(BANDS[r]));
     }
 
     for (SHORT r = 0; r < 4; r++) {

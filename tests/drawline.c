@@ -38,25 +38,25 @@ static void star(struct RastPort *rp, SHORT w, SHORT h, UWORD pattern) {
 }
 
 static void t_solid(struct RastPort *rp, SHORT w, SHORT h) {
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetABPenDrMd(rp, 1, 0, JAM1);
     star(rp, w, h, 0xFFFF);
 }
 
 static void t_pattern(struct RastPort *rp, SHORT w, SHORT h) {
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetABPenDrMd(rp, 1, 0, JAM1);
     star(rp, w, h, 0xF0F0);
 }
 
 static void t_jam2(struct RastPort *rp, SHORT w, SHORT h) {
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetABPenDrMd(rp, 1, 2, JAM2); // pattern gaps get the background pen
     star(rp, w, h, 0xF0F0);
 }
 
 static void t_inversvid(struct RastPort *rp, SHORT w, SHORT h) {
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetABPenDrMd(rp, 1, 0, JAM1 | INVERSVID); // the pattern is inverted
     star(rp, w, h, 0xF0F0);
 }

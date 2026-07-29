@@ -11,7 +11,7 @@
 #include "palette.h"
 
 // A 3-3-2 RGB cube, with the first few pens overridden to colors worth naming.
-// Pen 0 has to be black: p96cts_clear(rp, w, h, 0) paints RGB 0 on truecolor,
+// Pen 0 has to be black: gfx_clear(rp, w, h, 0) paints RGB 0 on truecolor,
 // and the two must agree.
 //
 // Two things a scene must not be built on. Pens 4 and 192 are both pure blue,
@@ -23,7 +23,7 @@
 // Exported because scenes whose source data is pen-indexed need it: blitted to
 // a truecolor screen those pens come out as these colors, so anything drawn to
 // compare against them has to name the same color rather than the same number.
-// p96cts_pen() in gfx.h is the wrapper scenes actually call.
+// gfx_pen() in gfx.h is the wrapper scenes actually call.
 ULONG p96cts_pen_rgb(int pen) {
     switch (pen) {
     case 0: return 0x000000; // black, and the scene background

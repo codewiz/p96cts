@@ -64,7 +64,7 @@ static void checker(struct RastPort *rp, SHORT w, SHORT h, SHORT cell) {
 static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT cw = w / 4, ch = h / 4;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     // The RastPort has no Layer, so nothing clips a blit that runs past the
@@ -97,7 +97,7 @@ static void t_offsets(struct RastPort *rp, SHORT w, SHORT h) {
 static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT step = w / 16, band = h / 3;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     // The widest blit here is 16, so tiles need only that much room, not the
@@ -139,7 +139,7 @@ static const UBYTE MODES[] = {
 static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT cw = w / NMODES;
 
-    p96cts_clear(rp, w, h, 0);
+    gfx_clear(rp, w, h, 0);
     SetDrMd(rp, JAM1);
 
     if (cw < TPL_W + 2 || h < 2 * TPL_H + 4)
@@ -183,7 +183,7 @@ static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
 
     // A spread-bit background, so the planes a mask protects are visible in the
     // result rather than reading back as zero.
-    p96cts_clear(rp, w, h, 0x3C);
+    gfx_clear(rp, w, h, 0x3C);
 
     if (band < TPL_H + 2 || w < 2 * TPL_W)
         return;

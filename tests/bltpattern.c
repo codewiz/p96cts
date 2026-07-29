@@ -141,7 +141,7 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
     if (tile > pitch)
         tile = pitch;
 
-    p96cts_clear(rp, w, h, SCENE_BG);
+    gfx_clear(rp, w, h, SCENE_BG);
     if (tile < 4)
         return;
 
@@ -196,7 +196,7 @@ static void t_mask(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT x1 = w / 2 + x0;
     SHORT y0 = (h - mh) / 2;
 
-    p96cts_clear(rp, w, h, 3);
+    gfx_clear(rp, w, h, 3);
     if (mw < 16 || mh < 8)
         return;
 
@@ -240,7 +240,7 @@ static void t_phase(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT rows = (h - 2 * y0) / th;
     SHORT bytecnt = mask_bytes(tw);
 
-    p96cts_clear(rp, w, h, 3);
+    gfx_clear(rp, w, h, 3);
     if (cols < 2 || rows < 2)
         return;
 

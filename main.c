@@ -413,8 +413,8 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
 static void reset_scene(struct RastPort *rp, const struct RunOpts *o) {
     const SHORT cell = 16;
     ULONG color[2] = {
-        p96cts_color(0xAA, 0xFF00FFUL),
-        p96cts_color(0x55, 0xFFFF00UL),
+        gfx_color(0xAA, 0xFF00FFUL),
+        gfx_color(0x55, 0xFFFF00UL),
     };
     int row = 0;
 
@@ -426,7 +426,7 @@ static void reset_scene(struct RastPort *rp, const struct RunOpts *o) {
         for (SHORT x = 0; x < o->w; x += cell) {
             SHORT x2 = x + cell - 1 < o->w ? x + cell - 1 : o->w - 1;
 
-            p96cts_fill(rp, x, y, x2, y2, color[i]);
+            gfx_fill(rp, x, y, x2, y2, color[i]);
             i ^= 1;
         }
         row ^= 1;
@@ -454,7 +454,7 @@ static bool run_test(const struct P96Test *t, const char *name,
     // Wait for the blitter before reading the scene back.
     WaitBlit();
     UBYTE *idx = bpp == 3 ? rtg_read_rgb(rp, o->w, o->h)
-                          : p96cts_read_pens(rp, o->w, o->h, o->depth);
+                          : gfx_read_pens(rp, o->w, o->h, o->depth);
     if (!idx) {
         printf("FAIL %-24s memory allocation failed\n", name);
         return true;
@@ -549,7 +549,7 @@ int main(void) {
         free_args(&o);
         return rc;
     }
-    p96cts_truecolor = o.depth > 8;
+    gfx_truecolor = o.depth > 8;
 
     // Before the libraries, since it needs none of them.
     if (o.list_tests) {
@@ -696,7 +696,7 @@ int main(void) {
             test_name(full, sizeof full, GROUPS[g], t);
             if (!selected(o.test, full))
                 continue;
-            if (p96cts_truecolor && t->palette_only) {
+            if (gfx_truecolor && t->palette_only) {
                 printf("skip %s: palette only, it tests something truecolor "
                        "has no equivalent of\n", full);
                 continue;

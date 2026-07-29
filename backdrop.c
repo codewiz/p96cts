@@ -101,7 +101,7 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
     // breaks it at a high-contrast edge. A boat sitting wholly inside the
     // rectangle would just translate intact and show nothing.
     int boat_w = w / 6, boat_h = h / 12;
-    int bpp = p96cts_truecolor ? 3 : 1;
+    int bpp = gfx_truecolor ? 3 : 1;
     UBYTE *px;
 
     if (cached && cached_w == w && cached_h == h && cached_bpp == bpp) {
@@ -188,7 +188,7 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
                 b = 210;
             }
 
-            if (p96cts_truecolor) {
+            if (gfx_truecolor) {
                 ULONG p = ((ULONG)y * w + x) * 3;
                 px[p] = clamp8(r + d);
                 px[p + 1] = clamp8(g + d);
@@ -200,7 +200,7 @@ void p96cts_backdrop(struct RastPort *rp, SHORT w, SHORT h) {
     }
 
 blit:
-    if (p96cts_truecolor) {
+    if (gfx_truecolor) {
         // The buffer is already R8G8B8, which is what rtg_write_rgb() wants;
         // it converts to whatever the screen's format is.
         rtg_write_rgb(rp, px, w, h);

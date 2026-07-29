@@ -18,15 +18,15 @@
 
 // --- colors -----------------------------------------------------------------
 
-bool p96cts_truecolor;
+bool gfx_truecolor;
 
 // JAM1-fill a rectangle in the given color: a pen number on a palette screen,
 // 0x00RRGGBB on truecolor. Corners are inclusive and callers must pass them
 // sorted -- both RectFill() and the RTG fills require min <= max, and none of
 // them defines what a reversed rectangle does.
-void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
+void gfx_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                  ULONG color) {
-    if (p96cts_truecolor) {
+    if (gfx_truecolor) {
         rtg_fill_rgb(rp, x1, y1, x2, y2, color);
         return;
     }
@@ -37,8 +37,8 @@ void p96cts_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
 }
 
 // Fill the whole scene with one color, as above. 0 is black either way.
-void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
-    p96cts_fill(rp, 0, 0, w - 1, h - 1, color);
+void gfx_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
+    gfx_fill(rp, 0, 0, w - 1, h - 1, color);
 }
 
 // --- readback ---------------------------------------------------------------
@@ -48,7 +48,7 @@ void p96cts_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
 //
 // ReadPixelArray8 works in 16-pixel granules, so w must be a multiple of 16;
 // that is where the screen-width constraint on a run comes from.
-UBYTE *p96cts_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
+UBYTE *gfx_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
     struct RastPort temprp = *rp;
     UBYTE *idx = AllocVec((ULONG)w * h, MEMF_ANY);
 
