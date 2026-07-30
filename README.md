@@ -119,6 +119,18 @@ your results.
 
 A ❌ links to the bug it found.
 
+Notes:
+* uaegfx drops the source plane mask in `BlitPlanar2Direct`, so
+`BltBitMap-planemask` fails at 24 bits and passes at 8
+([amiberry#2235](https://github.com/BlitterStudio/amiberry/issues/2235)).
+* ZZ9000's `BltPattern-drawmodes` failure
+([amiberry#2236](https://github.com/BlitterStudio/amiberry/issues/2236)) needs
+two fixes, and passes with both:
+[zz9000-drivers#56](https://github.com/BlitterStudio/zz9000-drivers/pull/56) in
+the driver and
+[amiberry#2237](https://github.com/BlitterStudio/amiberry/pull/2237) in the
+emulated blitter. It is the same zero-stride template bug as Z3660#18 below.
+
 
 ### Copperline
 
@@ -128,7 +140,7 @@ A ❌ links to the bug it found.
 | DrawLine-pattern | ✅ | ✅ |
 | DrawLine-jam2 | ✅ | ✅ |
 | DrawLine-inversvid | ✅ | ✅ |
-| DrawLine-complement | ✅ | ❌ |
+| DrawLine-complement | ✅ | ✅ |
 | RectFill-drawmodes | ✅ | ✅ |
 | RectFill-edges | ✅ | ✅ |
 | RectFill-invert | ✅ | ✅ |
@@ -138,28 +150,38 @@ A ❌ links to the bug it found.
 | BltTemplate-sizes | ✅ | ✅ |
 | BltTemplate-drawmodes | ✅ | ✅ |
 | BltTemplate-masks | ✅ | ✅ |
-| BltPattern-drawmodes | ✅ | ❌ |
+| BltPattern-drawmodes | ✅ | ✅ |
 | BltPattern-mask | ✅ | ✅ |
 | BltPattern-phase | ✅ | ✅ |
-| BltBitMap-minterms | ✅ | ❌ |
+| BltBitMap-minterms | ✅ | [❌](https://github.com/BlitterStudio/zz9000-drivers/issues/57) |
 | BltBitMap-offsets | ✅ | ✅ |
 | BltBitMap-sizes | ✅ | ✅ |
-| BltBitMap-planemask | ✅ | ❌ |
+| BltBitMap-planemask | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ |
 
 Notes:
-* Z3660 fails `DrawLine-complement` by four pixels where its line rasterizer
-rounds a vertex differently.
-* Z3660 fails `BltPattern-drawmodes` in the two `JAM2 | COMPLEMENT` modes, where
-it does not treat `COMPLEMENT` as ignoring the pens the way the reference does;
-the `JAM1 | COMPLEMENT` modes pass.
-* Z3660.card is a fork of the ZZ9000 driver, which had the same bug
-([amiberry#2217](https://github.com/BlitterStudio/amiberry/issues/2217), fixed); the fork has not picked the fix up.
-* Z3660 fails `BltBitMap-minterms` and `BltBitMap-planemask` for one reason: the
-planar blit hooks ignore the minterm and always copy the source, so `AND`, `DST`
-and `EOR` all render as a plain copy. Every differing pixel holds the source
-where the reference holds the minterm's result.
+* The Z3660 column is measured with three changes that are not merged yet:
+[Z3660#18](https://github.com/shanshe/Z3660/pull/18) and
+[Z3660#19](https://github.com/shanshe/Z3660/pull/19) in the driver, and
+[Copperline#332](https://github.com/CopperlineHQ/Copperline/pull/332) in the
+emulator's planar blitter.
+* Z3660#19 leaves `COMPLEMENT` lines to Picasso96, as the ZZ9000 driver already
+does. `struct Line` carries no `FRST_DOT`, so an accelerated `COMPLEMENT` line
+cannot tell a fresh `Draw()` from one continuing at a vertex, and inverting a
+shared vertex twice restores it.
+* Z3660#18 uploads the one template line a patterned blit reads. P96 sends the
+`JAM2 | COMPLEMENT` tiles as a template blit whose `Template->BytesPerRow` is 0,
+so sizing the upload as `BytesPerRow * h` copies nothing and leaves the board to
+blit whatever the previous operation left in the template buffer. Z3660.card is
+a fork of the ZZ9000 driver, which has the same bug
+([zz9000-drivers#56](https://github.com/BlitterStudio/zz9000-drivers/pull/56)).
+Why P96 passes a zero stride here is unexplained.
+* `BltBitMap-minterms` fails at 24 bits only, by 936 pixels. ZZ9000 is reported
+failing the same test by the same 936 pixels, at 8 bits
+([zz9000-drivers#57](https://github.com/BlitterStudio/zz9000-drivers/issues/57)),
+and Z3660.card is a fork of that driver, so the two are plausibly one bug in the
+shared planar blit code -- though the differing depth is unexplained.
 
 ## Building
 
