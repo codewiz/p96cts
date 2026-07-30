@@ -129,29 +129,36 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
 
 // --- amounts ----------------------------------------------------------------
 
-// Zero, one either way, a distance that crosses a 16-pixel word, and one larger
-// than the rectangle. The last is a case of its own: ScrollRaster has nothing
-// left to copy and fills the whole rectangle instead, a path no other distance
-// reaches.
-static const short AMOUNTS[] = {0, 1, -1, 15, -17, 4096};
+// Zero, one either way, and a distance that crosses a 16-pixel word. OVER_EXTENT
+// stands for one more than the extent being scrolled, resolved per axis below
+// because the tiles are not square: it is the smallest distance that moves
+// everything off. Together with the 4096 that follows it, it pins down what
+// happens once there is nothing left to copy -- whether that is a distance the
+// call declines outright or one it treats as vacating the whole rectangle, and
+// whether the two answers agree at 4096.
+#define OVER_EXTENT 32767
+static const short AMOUNTS[] = {0, 1, -1, 15, -17, OVER_EXTENT, 4096};
 
 static void t_amounts(struct RastPort *rp, SHORT w, SHORT h) {
     int n = (int)(sizeof AMOUNTS / sizeof AMOUNTS[0]);
     SHORT tw = w / n, th = h / 2;
+    SHORT rectw = tw - 4, recth = h - 3 - (th + 2) + 1;
 
     backdrop(rp, w, h);
     SetABPenDrMd(rp, gfx_pen(FG), gfx_pen(BG), JAM2);
 
-    if (tw < 8)
+    if (tw < 8 || rectw < 4 || recth < 4)
         return;
 
     // Horizontally on the top row and vertically on the bottom one, so a
     // distance handled correctly in one axis and not the other cannot pass.
     for (int i = 0; i < n; i++) {
         SHORT x = i * tw;
+        SHORT dx = AMOUNTS[i] == OVER_EXTENT ? rectw + 1 : AMOUNTS[i];
+        SHORT dy = AMOUNTS[i] == OVER_EXTENT ? recth + 1 : AMOUNTS[i];
 
-        ScrollRaster(rp, AMOUNTS[i], 0, x + 2, 2, x + tw - 3, th - 3);
-        ScrollRaster(rp, 0, AMOUNTS[i], x + 2, th + 2, x + tw - 3, h - 3);
+        ScrollRaster(rp, dx, 0, x + 2, 2, x + tw - 3, th - 3);
+        ScrollRaster(rp, 0, dy, x + 2, th + 2, x + tw - 3, h - 3);
     }
 }
 

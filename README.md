@@ -116,9 +116,9 @@ your results.
 | BltBitMap-planemask | ✅ | [❌](https://github.com/BlitterStudio/amiberry/issues/2235) | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ |
-| ScrollRaster-directions | - | ✅ | - | ✅ |
-| ScrollRaster-drawmodes | - | ✅ | - | ✅ |
-| ScrollRaster-amounts | - | ✅ | - | ✅ |
+| ScrollRaster-directions | ✅ | ✅ | ✅ | ✅ |
+| ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ |
+| ScrollRaster-amounts | ✅ | ✅ | ✅ | ✅ |
 
 A ❌ links to the bug it found. A `-` is untested.
 
