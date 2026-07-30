@@ -26,7 +26,8 @@ TARGET   = p96cts
 # the graphics layer and the PNG codec stay at the top level.
 OBJS     = main.o gfx.o rtg.o modes.o palette.o pngio.o backdrop.o glyph.o \
            tests/drawline.o tests/rectfill.o tests/clipblit.o \
-           tests/blttemplate.o tests/bltpattern.o tests/bltbitmap.o
+           tests/blttemplate.o tests/bltpattern.o tests/bltbitmap.o \
+           tests/scrollraster.o
 
 # zlib and libpng, built for this target and committed. See
 # third_party/README.md for provenance and how to rebuild them.

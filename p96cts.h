@@ -40,5 +40,6 @@ extern const struct P96TestGroup ClipBlitGroup;
 extern const struct P96TestGroup BltTemplateGroup;
 extern const struct P96TestGroup BltPatternGroup;
 extern const struct P96TestGroup BltBitMapGroup;
+extern const struct P96TestGroup ScrollRasterGroup;
 
 #endif

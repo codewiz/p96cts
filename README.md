@@ -210,12 +210,10 @@ checksums, and why both are built `-noixemul`.
 
 ## Adding testcases
 
-A test group is one translation unit in `tests/` exporting a `P96TestGroup`;
-see `tests/drawline.c`. Add the file to `OBJS` in the Makefile and the group to
-`GROUPS` in `main.c`. A group is named after the function it exercises
-(`DrawLine`, `RectFill`, `ClipBlit`, `BltTemplate`, `BltPattern`, `BltBitMap`)
-and a testcase for what it does (`solid`, `overlap`); the full name a user types
-is `<group>-<test>`, matched case-insensitively. `LISTTESTS` prints them all.
+A group is one translation unit in `tests/` exporting a `P96TestGroup`; see
+`tests/drawline.c`, then add it to `OBJS` and to `GROUPS` in `main.c`. A group is
+named after the function it exercises and a testcase for what it does, so the
+name a user types is `<group>-<test>`; `LISTTESTS` prints them all.
 
 A testcase renders a complete scene, clearing it first, and must keep all
 drawing inside the bitmap: the RastPort has no Layer, so graphics.library does
@@ -225,4 +223,38 @@ Scenes should be built so that a wrong driver cannot pass by accident. Drawing
 solid lines in one pen, for instance, cannot detect a pixel written twice --
 it takes a mode like `COMPLEMENT`, where writing twice is not the same as
 writing once, and a figure whose lines actually cross.
+
+
+## Coverage
+
+What each group reaches. The P96 hook is what a card driver has to get right; a
+`Default` implementation in P96's shared code stands in for any hook a driver
+leaves out, so a missing hook still renders.
+
+| group | graphics.library | P96 hook |
+|---|---|---|
+| DrawLine | `Move()`, `Draw()` | `DrawLine` |
+| RectFill | `RectFill()` | `FillRect`, `InvertRect` |
+| ClipBlit | `ClipBlit()` | `BlitRect` |
+| BltTemplate | `BltTemplate()` | `BlitTemplate` |
+| BltPattern | `BltPattern()` | `BlitPattern` |
+| BltBitMap | `BltBitMap()`, `BltMaskBitMapRastPort()` | `BlitRectNoMaskComplete` |
+| ScrollRaster | `ScrollRaster()` | `BlitRect`, `FillRect` |
+
+Hooks with no coverage: `BlitPlanar2Chunky`, `BlitPlanar2Direct`,
+`WriteYUVRect`, `ScrollPlanar`, `UpdatePlanar`. AROS calls none of them (see the
+TODO in `p96gfx_rtg.h`), so scenes for these would only exercise AmigaOS.
+
+
+## TODO
+
+- `ScrollRasterBF()`: `ScrollRaster()` plus a backfill hook; extend that group.
+- `EraseRect()`: its no-layer path fills through `RectFill()`; no font state to set up.
+- `Text()`: renders through `BlitTemplate`; wants a write-mask sweep.
+- `ClearEOL()`, `ClearScreen()`: clear to pen 0, or BPen in JAM2. A golden pins one font's metrics.
+- `SetRast()`, `Flood()`, `AreaEnd()`, `DrawCircle()`, `DrawEllipse()`: uncovered.
+- `WritePixelArray()` / `ReadPixelArray()` family: uncovered.
+- `BltMaskBitMapRastPort()`: reached only incidentally, via `BltBitMap-stencil`.
+- `BltBitMapRastPort()`: uncovered.
+- A caller-level group needs a font with identical metrics under AmigaOS and AROS.
 
