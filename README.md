@@ -116,8 +116,11 @@ your results.
 | BltBitMap-planemask | ✅ | [❌](https://github.com/BlitterStudio/amiberry/issues/2235) | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ |
+| ScrollRaster-directions | - | ✅ | - | ✅ |
+| ScrollRaster-drawmodes | - | ✅ | - | ✅ |
+| ScrollRaster-amounts | - | ✅ | - | ✅ |
 
-A ❌ links to the bug it found.
+A ❌ links to the bug it found. A `-` is untested.
 
 Notes:
 * uaegfx drops the source plane mask in `BlitPlanar2Direct`, so
@@ -159,6 +162,9 @@ emulated blitter. It is the same zero-stride template bug as Z3660#18 below.
 | BltBitMap-planemask | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ |
+| ScrollRaster-directions | - | ✅ |
+| ScrollRaster-drawmodes | - | ✅ |
+| ScrollRaster-amounts | - | ✅ |
 
 Notes:
 * The Z3660 column is measured with three changes that are not merged yet:
