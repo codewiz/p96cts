@@ -26,6 +26,7 @@
 #include "modes.h"
 #include "palette.h"
 #include "pngio.h"
+#include "wall.h"
 #include "rtg.h"
 
 // Standard AmigaOS version tag, readable with the Version command.
@@ -449,13 +450,19 @@ static bool run_test(const struct P96Test *t, const char *name,
     int bpp = o->bpp;
     ULONG pixels = (ULONG)o->w * o->h, bad = 0;
     SHORT gw, gh;
+    const struct Wall wall = {o->w, o->h, o->screen_w, o->screen_h, o->bpp,
+                              o->depth};
 
+    // Before reset_scene, so the testcase inherits its render state reset.
+    build_walls(rp, &wall);
     reset_scene(rp, o);
     t->fn(rp, o->w, o->h);
     // Wait for the blitter before reading the scene back.
     WaitBlit();
-    UBYTE *idx = bpp == 3 ? rtg_read_rgb(rp, o->w, o->h)
-                          : gfx_read_pens(rp, o->w, o->h, o->depth);
+    if (wall_broken(rp, &wall, name))
+        return true;
+    UBYTE *idx = bpp == 3 ? rtg_read_rgb(rp, 0, 0, o->w, o->h)
+                          : gfx_read_pens(rp, 0, 0, o->w, o->h, o->depth);
     if (!idx) {
         printf("FAIL %-24s memory allocation failed\n", name);
         return true;
@@ -671,11 +678,22 @@ int main(void) {
         }
     }
 
+    // The mode asked for is not always the mode that opens, and drawing into
+    // scr->RastPort is unclipped.
+    if (o.monitor && (scr->Width < o.w || scr->Height < o.h)) {
+        printf("screen opened %dx%d, smaller than the %dx%d scene\n",
+               scr->Width, scr->Height, o.w, o.h);
+        failures = 1;
+        goto cleanup;
+    }
+
     printf("testing %s %dx%dx%d %s, scene %dx%d",
            o.monitor ? o.monitor : "P96 software rasterizer",
            o.screen_w, o.screen_h,
            o.depth, rtg_format_name(rtg_rgbformat(rp->BitMap)),
            o.w, o.h);
+    if (o.monitor && (scr->Width != o.screen_w || scr->Height != o.screen_h))
+        printf(", screen opened %dx%d", scr->Width, scr->Height);
     // Where a comparison reads from is determined by the scene, so it is not
     // worth a line; where a capture writes to is a side effect worth naming.
     if (o.capture)

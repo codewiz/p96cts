@@ -25,7 +25,7 @@ bool rtg_format_by_pen(ULONG fmt);
 
 void rtg_fill_rgb(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                   ULONG rgb);
-UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT w, SHORT h);
+UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h);
 void rtg_write_rgb(struct RastPort *rp, UBYTE *px, SHORT w, SHORT h);
 
 #endif

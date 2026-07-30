@@ -43,12 +43,13 @@ void gfx_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
 
 // --- readback ---------------------------------------------------------------
 
-// Read the scene back as one pen per pixel, into a freshly AllocVec'd buffer
+// Read a rectangle back as one pen per pixel, into a freshly AllocVec'd buffer
 // the caller FreeVec's, or NULL. Needs a bitmap addressed by pen.
 //
 // ReadPixelArray8 works in 16-pixel granules, so w must be a multiple of 16;
 // that is where the screen-width constraint on a run comes from.
-UBYTE *gfx_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
+UBYTE *gfx_read_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                     int depth) {
     struct RastPort temprp = *rp;
     UBYTE *idx = AllocVec((ULONG)w * h, MEMF_ANY);
 
@@ -62,7 +63,7 @@ UBYTE *gfx_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth) {
         return NULL;
     }
 
-    ReadPixelArray8(rp, 0, 0, w - 1, h - 1, idx, &temprp);
+    ReadPixelArray8(rp, x0, y0, x0 + w - 1, y0 + h - 1, idx, &temprp);
     FreeBitMap(temprp.BitMap);
     return idx;
 }

@@ -191,7 +191,7 @@ void rtg_fill_rgb(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
 }
 
 // Into a freshly AllocVec'd buffer the caller FreeVec's, or NULL.
-UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT w, SHORT h) {
+UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h) {
     UBYTE *px = AllocVec((ULONG)w * h * 3, MEMF_ANY);
 
     if (!px)
@@ -203,10 +203,10 @@ UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT w, SHORT h) {
         ri.BytesPerRow = w * 3;
         ri.pad = 0;
         ri.RGBFormat = RGBFB_R8G8B8;
-        p96ReadPixelArray(&ri, 0, 0, rp, 0, 0, w, h);
+        p96ReadPixelArray(&ri, 0, 0, rp, x0, y0, w, h);
     } else {
         // RECTFMT_RGB is CGX's name for the same layout as RGBFB_R8G8B8.
-        ReadPixelArray(px, 0, 0, w * 3, rp, 0, 0, w, h, RECTFMT_RGB);
+        ReadPixelArray(px, 0, 0, w * 3, rp, x0, y0, w, h, RECTFMT_RGB);
     }
     return px;
 }

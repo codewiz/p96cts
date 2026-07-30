@@ -24,10 +24,23 @@ DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src stefan
 TARGET   = p96cts
 # Testcase scenes live in tests/, one translation unit per group; the harness,
 # the graphics layer and the PNG codec stay at the top level.
-OBJS     = main.o gfx.o rtg.o modes.o palette.o pngio.o backdrop.o glyph.o \
-           tests/drawline.o tests/rectfill.o tests/clipblit.o \
-           tests/blttemplate.o tests/bltpattern.o tests/bltbitmap.o \
-           tests/scrollraster.o
+OBJS     = \
+	backdrop.o \
+	gfx.o \
+	glyph.o \
+	main.o \
+	modes.o \
+	palette.o \
+	pngio.o \
+	rtg.o \
+	tests/bltbitmap.o \
+	tests/bltpattern.o \
+	tests/blttemplate.o \
+	tests/clipblit.o \
+	tests/drawline.o \
+	tests/rectfill.o \
+	tests/scrollraster.o \
+	wall.o
 
 # zlib and libpng, built for this target and committed. See
 # third_party/README.md for provenance and how to rebuild them.
@@ -38,7 +51,7 @@ PNGLIB   = third_party/libpng/lib/libpng16.a third_party/zlib/lib/libz.a
 # headers. -Wstrict-prototypes and -Wold-style-definition matter here because
 # these sources are otherwise easy to write in K&R style by accident.
 WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
-           -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
+	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
 
 CFLAGS  ?= -O3 -fomit-frame-pointer -m68020 $(WARNINGS)
 
@@ -53,7 +66,16 @@ all: $(TARGET)
 $(TARGET): $(OBJS) $(PNGLIB)
 	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNGLIB) -lm
 
-HEADERS  = p96cts.h gfx.h rtg.h modes.h palette.h pngio.h backdrop.h
+HEADERS  = \
+	backdrop.h \
+	gfx.h \
+	glyph.h \
+	modes.h \
+	p96cts.h \
+	palette.h \
+	pngio.h \
+	rtg.h \
+	wall.h
 
 %.o: %.c $(HEADERS)
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<

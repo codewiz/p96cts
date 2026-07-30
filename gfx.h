@@ -43,6 +43,7 @@ void gfx_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
 
 // --- readback ---------------------------------------------------------------
 
-UBYTE *gfx_read_pens(struct RastPort *rp, SHORT w, SHORT h, int depth);
+UBYTE *gfx_read_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                     int depth);
 
 #endif
