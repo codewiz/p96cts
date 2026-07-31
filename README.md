@@ -106,6 +106,7 @@ board, please run the suite and open an issue to share your results.
 | BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-directions | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ |
+| ScrollRaster-backfill | - | - | - | - |
 | ScrollRaster-amounts | ✅ | ✅ | ✅ | ✅ |
 
 A ❌ links to the bug it found. A `-` is untested.
@@ -144,9 +145,10 @@ in WinUAE, so the column turns green once Amiberry picks that up.
 | BltBitMap-planemask | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ |
-| ScrollRaster-directions | - | ✅ |
-| ScrollRaster-drawmodes | - | ✅ |
-| ScrollRaster-amounts | - | ✅ |
+| ScrollRaster-directions | ✅ | ✅ |
+| ScrollRaster-drawmodes | ✅ | ✅ |
+| ScrollRaster-backfill | ✅ | ✅ |
+| ScrollRaster-amounts | ✅ | ✅ |
 
 Notes:
 * The Z3660 column needs a `Z3660.card` built from git: it depends on
@@ -178,7 +180,7 @@ leaves out, so a missing hook still renders.
 | BltTemplate | `BltTemplate()` | `BlitTemplate` |
 | BltPattern | `BltPattern()` | `BlitPattern` |
 | BltBitMap | `BltBitMap()`, `BltMaskBitMapRastPort()` | `BlitRectNoMaskComplete` |
-| ScrollRaster | `ScrollRaster()` | `BlitRect`, `FillRect` |
+| ScrollRaster | `ScrollRaster()`, `ScrollRasterBF()` | `BlitRect`, `FillRect` |
 
 `BltBitMap` also reaches `BlitPlanar2Chunky` and `BlitPlanar2Direct`, which
 nothing else here does: a planar source bitmap goes through the first on a CLUT
@@ -191,7 +193,6 @@ only exercise AmigaOS.
 
 ## TODO
 
-- `ScrollRasterBF()`: `ScrollRaster()` plus a backfill hook; extend that group.
 - `EraseRect()`: its no-layer path fills through `RectFill()`; no font state to set up.
 - `Text()`: renders through `BlitTemplate`; wants a write-mask sweep.
 - `ClearEOL()`, `ClearScreen()`: clear to pen 0, or BPen in JAM2. A golden pins one font's metrics.

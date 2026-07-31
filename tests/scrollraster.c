@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: 0BSD
 //
-// ScrollRaster() testcases.
+// ScrollRaster() and ScrollRasterBF() testcases.
 //
 // ScrollRaster is the only call the suite covers that pairs an overlapping blit
 // with a fill: the scroll is a copy of the region that stays on screen, and the
@@ -25,10 +25,7 @@
 // miss of a right one.
 #define FG 0x5A
 #define BG 0xA5
-#define STRIPE_A 0x1C
-#define STRIPE_B 0x63
 #define VACATED 0xC6
-#define SCENE_BG 0x35
 
 // --- directions -------------------------------------------------------------
 
@@ -84,47 +81,72 @@ static const UBYTE MODES[COLS] = {
     JAM2 | INVERSVID | COMPLEMENT,
 };
 
-// One tile: horizontal stripes above the strip the scroll will vacate, and the
-// strip itself in a third tone.
+// How far each column scrolls. All distinct, so one scroll of the whole grid
+// cannot pass for eight scrolls of a tile; none a multiple of 4, to stay off
+// the backdrop's dither phase; and spanning 16, since a scroll can go wrong
+// only past a word.
+static const SHORT BANDS[COLS] = {5, 9, 13, 17, 21, 25, 29, 33};
+#define BAND_MAX 33
+
+// One tile of the grid, scrolled up over whatever the grid drew underneath.
 //
-// The stripe period does not divide the scroll distance, so the scroll has to
-// land the stripes somewhere a phase error would not. Priming the vacated strip
-// matters because a scroll leaves that strip holding its own old contents
-// before the fill runs -- so under COMPLEMENT the result is this tone inverted,
-// and under a mode that fills nothing at all it is this tone untouched. Both
-// are then distinguishable from every pen the tile draws with.
+// Prime the strip the scroll will vacate in a tone of its own, since the scroll
+// leaves it holding its old contents before the fill runs: COMPLEMENT then
+// shows this tone inverted, and a mode that fills nothing shows it untouched.
+// Both stay distinguishable from every other pen in the scene.
 static void mode_tile(struct RastPort *rp, SHORT x, SHORT y, SHORT tw, SHORT th,
-                      SHORT band, UBYTE mode) {
+                      SHORT band, UBYTE mode, bool bf) {
     SHORT top = th - band;
 
-    for (SHORT r = 0; r < top; r += 5) {
-        SHORT last = (r + 4 < top) ? r + 4 : top - 1;
-
-        gfx_fill(rp, x, y + r, x + tw - 1, y + last,
-                 gfx_pen(((r / 5) & 1) ? STRIPE_A : STRIPE_B));
-    }
     gfx_fill(rp, x, y + top, x + tw - 1, y + th - 1, gfx_pen(VACATED));
 
     // After the fills, because gfx_fill() sets the pen and the draw mode.
     SetABPenDrMd(rp, gfx_pen(FG), gfx_pen(BG), mode);
-    ScrollRaster(rp, 0, band, x, y, x + tw - 1, y + th - 1);
+    if (bf)
+        ScrollRasterBF(rp, 0, band, x, y, x + tw - 1, y + th - 1);
+    else
+        ScrollRaster(rp, 0, band, x, y, x + tw - 1, y + th - 1);
 }
 
-// The eight draw modes across, one tile each, every tile scrolled up by the
-// same distance. The tiles differ only in the mode, so the whole scene is a
-// readout of how graphics.library asks for the vacated strip to be filled --
-// the one thing about ScrollRaster a caller cannot see any other way.
-static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
+// The tile grid both scroll calls render, so their goldens differ only where
+// the calls do: in the vacated strip along the bottom of each tile.
+//
+// Scrolling the backdrop is what makes it readable. A column that moved by the
+// wrong amount breaks the horizon against its neighbours, where flat bands
+// would look alike however far they slid.
+static void mode_grid(struct RastPort *rp, SHORT w, SHORT h, bool bf) {
     SHORT tw = w / COLS;
     SHORT th = h - 16;
-    SHORT band = 13;
 
-    gfx_clear(rp, w, h, gfx_pen(SCENE_BG));
-    if (tw < 8 || th < band * 2)
+    backdrop(rp, w, h);
+    if (tw < 8 || th < BAND_MAX * 2)
         return;
 
     for (SHORT c = 0; c < COLS; c++)
-        mode_tile(rp, c * tw, 8, tw, th, band, MODES[c]);
+        mode_tile(rp, c * tw, 8, tw, th, BANDS[c], MODES[c], bf);
+}
+
+// The eight draw modes across, one tile each. Only the mode varies between
+// tiles, so the strips read out how graphics.library asks for the vacated area
+// to be filled -- the one thing about ScrollRaster a caller cannot see any
+// other way.
+static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
+    mode_grid(rp, w, h, false);
+}
+
+// --- backfill ---------------------------------------------------------------
+
+// The same grid through ScrollRasterBF(), which vacates with EraseRect()
+// instead of RectFill(). This RastPort has no Layer, so there is no BackFill
+// hook and EraseRect() simply clears. That is the assertion: the draw mode and
+// both pens stop mattering, and every strip comes out pen 0.
+//
+// Reusing the drawmodes grid is what gives it teeth. An implementation that
+// reaches BF through ScrollRaster's fill path -- the obvious way to write it --
+// reproduces the drawmodes strips here and fails. The backdrop uses no pen 0,
+// so a strip holding it is unambiguous.
+static void t_backfill(struct RastPort *rp, SHORT w, SHORT h) {
+    mode_grid(rp, w, h, true);
 }
 
 // --- amounts ----------------------------------------------------------------
@@ -165,6 +187,7 @@ static void t_amounts(struct RastPort *rp, SHORT w, SHORT h) {
 static const struct P96Test TESTS[] = {
     {"directions", t_directions, false},
     {"drawmodes", t_drawmodes, false},
+    {"backfill", t_backfill, false},
     {"amounts", t_amounts, false},
 };
 
