@@ -211,15 +211,39 @@ UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h) {
     return px;
 }
 
-void rtg_write_rgb(struct RastPort *rp, UBYTE *px, SHORT w, SHORT h) {
+// Write w x h pixels into the rectangle at (x0, y0), taking them from (sx, sy)
+// within a buffer whose rows are `stride` bytes apart. The source rectangle and
+// stride are what let a scene blit a sub-rectangle of a larger image, which is
+// the case a driver is most likely to get wrong.
+//
+// `fmt` picks how px is read: RGBFB_R8G8B8 for three bytes per pixel, or
+// RGBFB_CLUT for one pen per byte, which both libraries convert to whatever the
+// screen's own format is.
+static void write_array(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w,
+                        SHORT h, UBYTE *px, SHORT sx, SHORT sy, SHORT stride,
+                        ULONG fmt) {
     if (P96Base) {
         struct RenderInfo ri;
         ri.Memory = px;
-        ri.BytesPerRow = w * 3;
+        ri.BytesPerRow = stride;
         ri.pad = 0;
-        ri.RGBFormat = RGBFB_R8G8B8;
-        p96WritePixelArray(&ri, 0, 0, rp, 0, 0, w, h);
+        ri.RGBFormat = fmt;
+        p96WritePixelArray(&ri, sx, sy, rp, x0, y0, w, h);
         return;
     }
-    WritePixelArray(px, 0, 0, w * 3, rp, 0, 0, w, h, RECTFMT_RGB);
+    // CGX names the same two layouts RECTFMT_RGB and RECTFMT_LUT8.
+    WritePixelArray(px, sx, sy, stride, rp, x0, y0, w, h,
+                    fmt == RGBFB_CLUT ? RECTFMT_LUT8 : RECTFMT_RGB);
+}
+
+void rtg_write_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                   UBYTE *px, SHORT sx, SHORT sy, SHORT stride) {
+    write_array(rp, x0, y0, w, h, px, sx, sy, stride, RGBFB_R8G8B8);
+}
+
+// One pen per byte. Defined on truecolor screens too, where the RTG library
+// resolves each pen through the screen's palette.
+void rtg_write_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                    UBYTE *px, SHORT sx, SHORT sy, SHORT stride) {
+    write_array(rp, x0, y0, w, h, px, sx, sy, stride, RGBFB_CLUT);
 }

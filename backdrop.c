@@ -203,16 +203,8 @@ blit:
     if (gfx_truecolor) {
         // The buffer is already R8G8B8, which is what rtg_write_rgb() wants;
         // it converts to whatever the screen's format is.
-        rtg_write_rgb(rp, px, w, h);
+        rtg_write_rgb(rp, 0, 0, w, h, px, 0, 0, w * 3);
     } else {
-        // WritePixelArray8 needs a single-row scratch RastPort, like the
-        // readback in gfx.c.
-        struct RastPort temprp = *rp;
-        temprp.Layer = NULL;
-        temprp.BitMap = AllocBitMap(w, 1, 8, 0, rp->BitMap);
-        if (temprp.BitMap) {
-            WritePixelArray8(rp, 0, 0, w - 1, h - 1, px, &temprp);
-            FreeBitMap(temprp.BitMap);
-        }
+        gfx_write_pens(rp, 0, 0, w, h, px, 8);
     }
 }

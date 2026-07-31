@@ -45,5 +45,7 @@ void gfx_fill(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
 
 UBYTE *gfx_read_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
                      int depth);
+void gfx_write_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                    UBYTE *px, int depth);
 
 #endif

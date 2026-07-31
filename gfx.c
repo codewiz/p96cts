@@ -43,6 +43,25 @@ void gfx_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
 
 // --- readback ---------------------------------------------------------------
 
+// The one-row scratch RastPort both pixel-array calls need, w pixels wide.
+// Returns false and leaves nothing allocated on failure.
+//
+// Built from scratch rather than copied from rp on purpose. The autodoc's
+// WritePixelArray8 BUGS section retracts the old advice to copy it: rp->Mask
+// interferes with the ClipBlit() these calls are implemented over, which
+// corrupts the data. Scenes do leave a mask set -- BltTemplate-masks ends on
+// 0x81 -- so a copy would carry it into the readback.
+static bool temp_rastport(struct RastPort *temprp, struct BitMap *friend,
+                          SHORT w, int depth) {
+    InitRastPort(temprp);
+    temprp->BitMap = AllocBitMap(w, 1, depth, 0, friend);
+    return temprp->BitMap != NULL;
+}
+
+static void free_temp_rastport(struct RastPort *temprp) {
+    FreeBitMap(temprp->BitMap);
+}
+
 // Read a rectangle back as one pen per pixel, into a freshly AllocVec'd buffer
 // the caller FreeVec's, or NULL. Needs a bitmap addressed by pen.
 //
@@ -50,20 +69,33 @@ void gfx_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
 // that is where the screen-width constraint on a run comes from.
 UBYTE *gfx_read_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
                      int depth) {
-    struct RastPort temprp = *rp;
+    struct RastPort temprp;
     UBYTE *idx = AllocVec((ULONG)w * h, MEMF_ANY);
 
     if (!idx)
         return NULL;
 
-    temprp.Layer = NULL;
-    temprp.BitMap = AllocBitMap(w, 1, depth, 0, rp->BitMap);
-    if (!temprp.BitMap) {
+    if (!temp_rastport(&temprp, rp->BitMap, w, depth)) {
         FreeVec(idx);
         return NULL;
     }
 
     ReadPixelArray8(rp, x0, y0, x0 + w - 1, y0 + h - 1, idx, &temprp);
-    FreeBitMap(temprp.BitMap);
+    free_temp_rastport(&temprp);
     return idx;
+}
+
+// The other direction: w x h pens from px into the rectangle at (x0, y0).
+//
+// WritePixelArray8 converts the array in place and is documented to destroy it,
+// so callers must not expect px back intact.
+void gfx_write_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                    UBYTE *px, int depth) {
+    struct RastPort temprp;
+
+    if (!temp_rastport(&temprp, rp->BitMap, w, depth))
+        return;
+
+    WritePixelArray8(rp, x0, y0, x0 + w - 1, y0 + h - 1, px, &temprp);
+    free_temp_rastport(&temprp);
 }

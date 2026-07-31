@@ -26,6 +26,12 @@ bool rtg_format_by_pen(ULONG fmt);
 void rtg_fill_rgb(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                   ULONG rgb);
 UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h);
-void rtg_write_rgb(struct RastPort *rp, UBYTE *px, SHORT w, SHORT h);
+
+// Both take the source rectangle as (sx, sy) plus a row stride in bytes, so a
+// scene can blit a sub-rectangle of a larger buffer.
+void rtg_write_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                   UBYTE *px, SHORT sx, SHORT sy, SHORT stride);
+void rtg_write_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                    UBYTE *px, SHORT sx, SHORT sy, SHORT stride);
 
 #endif
