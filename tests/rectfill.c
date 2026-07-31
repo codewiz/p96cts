@@ -155,9 +155,9 @@ static const struct P96Test TESTS[] = {
     // mode across rp->Mask, which selects bitplanes and has no truecolor
     // counterpart. The pens themselves are fine -- BPen resolves through the
     // screen's palette at any depth.
-    {"drawmodes", t_drawmodes, true},
-    {"edges", t_edges, false},
-    {"invert", t_invert, false},
+    {.name = "drawmodes", .fn = t_drawmodes, .palette_only = true},
+    {.name = "edges", .fn = t_edges},
+    {.name = "invert", .fn = t_invert},
 };
 
 const struct P96TestGroup RectFillGroup = {

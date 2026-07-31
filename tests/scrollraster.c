@@ -185,10 +185,10 @@ static void t_amounts(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {"directions", t_directions, false},
-    {"drawmodes", t_drawmodes, false},
-    {"backfill", t_backfill, false},
-    {"amounts", t_amounts, false},
+    {.name = "directions", .fn = t_directions},
+    {.name = "drawmodes", .fn = t_drawmodes},
+    {.name = "backfill", .fn = t_backfill},
+    {.name = "amounts", .fn = t_amounts},
 };
 
 const struct P96TestGroup ScrollRasterGroup = {

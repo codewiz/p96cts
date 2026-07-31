@@ -95,8 +95,8 @@ static void t_disjoint(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {"overlap", t_overlap, false},
-    {"disjoint", t_disjoint, false},
+    {.name = "overlap", .fn = t_overlap},
+    {.name = "disjoint", .fn = t_disjoint},
 };
 
 const struct P96TestGroup ClipBlitGroup = {

@@ -377,12 +377,12 @@ static void t_shallow(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {"minterms", t_minterms, false},
-    {"offsets", t_offsets, false},
-    {"sizes", t_sizes, false},
-    {"planemask", t_planemask, false},
-    {"stencil", t_stencil, false},
-    {"shallow", t_shallow, false},
+    {.name = "minterms", .fn = t_minterms},
+    {.name = "offsets", .fn = t_offsets},
+    {.name = "sizes", .fn = t_sizes},
+    {.name = "planemask", .fn = t_planemask},
+    {.name = "stencil", .fn = t_stencil},
+    {.name = "shallow", .fn = t_shallow},
 };
 
 const struct P96TestGroup BltBitMapGroup = {

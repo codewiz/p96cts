@@ -267,9 +267,9 @@ static void t_phase(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {"drawmodes", t_drawmodes, true},
-    {"mask", t_mask, false},
-    {"phase", t_phase, false},
+    {.name = "drawmodes", .fn = t_drawmodes, .palette_only = true},
+    {.name = "mask", .fn = t_mask},
+    {.name = "phase", .fn = t_phase},
 };
 
 const struct P96TestGroup BltPatternGroup = {

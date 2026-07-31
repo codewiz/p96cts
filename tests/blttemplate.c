@@ -207,10 +207,10 @@ static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {"offsets", t_offsets, false},
-    {"sizes", t_sizes, false},
-    {"drawmodes", t_drawmodes, false},
-    {"masks", t_masks, true},
+    {.name = "offsets", .fn = t_offsets},
+    {.name = "sizes", .fn = t_sizes},
+    {.name = "drawmodes", .fn = t_drawmodes},
+    {.name = "masks", .fn = t_masks, .palette_only = true},
 };
 
 const struct P96TestGroup BltTemplateGroup = {
