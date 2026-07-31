@@ -66,7 +66,6 @@ invocation is `p96cts <monitor> <WxHxD>`.
 | `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
 | `GOLDENDIR/K` | Reference directory (default `golden/<scene>x<depth>`) |
 | `OUTDIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
-| `THRESHOLD/K/N` | Tolerate up to this many differing pixels |
 | `LISTMODES/S` | Dump the display database and exit |
 | `LISTTESTS/S` | List the testcase names `TEST` accepts and exit |
 | `HELP/S` | Print this table and exit; `-h` and `--help` work too |

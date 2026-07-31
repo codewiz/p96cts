@@ -155,7 +155,6 @@ struct RunOpts {
     SHORT screen_w, screen_h;
     int depth;
     int bpp; // bytes per compared pixel: 1 (pen) or 3 (R8G8B8)
-    ULONG threshold;
     bool capture;
     bool list_modes;
     bool list_tests;
@@ -186,7 +185,6 @@ static void usage(void) {
         "  OUTDIR/K       output directory (default output/<monitor>/<scene>x<depth>)\n"
         "  GOLDENDIR/K    reference directory (default golden/<scene>x<depth>)\n"
         "  SCENE/K        region rendered and compared, as WxH (default 320x200)\n"
-        "  THRESHOLD/K/N  tolerate up to this many differing pixels\n"
         "  LISTMODES/S    dump the display database and exit\n"
         "  LISTTESTS/S    list the testcase names TEST accepts and exit\n"
         "  HELP/S         this text; -h and --help work too\n");
@@ -230,11 +228,10 @@ static int parse_args(struct RunOpts *o) {
         /* [4] = */ "OUTDIR/K,"
         /* [5] = */ "GOLDENDIR/K,"
         /* [6] = */ "SCENE/K,"
-        /* [7] = */ "THRESHOLD/K/N,"
-        /* [8] = */ "LISTMODES/S,"
-        /* [9] = */ "LISTTESTS/S,"
-        /* [10] = */ "HELP=--help=-h/S";
-    LONG args[11];
+        /* [7] = */ "LISTMODES/S,"
+        /* [8] = */ "LISTTESTS/S,"
+        /* [9] = */ "HELP=--help=-h/S";
+    LONG args[10];
 
     memset(o, 0, sizeof *o);
     memset(args, 0, sizeof args);
@@ -248,7 +245,7 @@ static int parse_args(struct RunOpts *o) {
 
     printf("%s\n", VERSION_LINE);
 
-    if (args[10]) {
+    if (args[9]) {
         usage();
         return RETURN_WARN;
     }
@@ -260,8 +257,8 @@ static int parse_args(struct RunOpts *o) {
     o->depth = 8;
     o->test = args[2] ? (const char *)args[2] : NULL;
     o->capture = args[3] != 0;
-    o->list_modes = args[8] != 0;
-    o->list_tests = args[9] != 0;
+    o->list_modes = args[7] != 0;
+    o->list_tests = args[8] != 0;
 
     // The reference run is the absence of a board, which as a positional
     // argument needs a name of its own. Internally it stays NULL, which is
@@ -305,15 +302,6 @@ static int parse_args(struct RunOpts *o) {
         printf("mode %dx%d is smaller than the %dx%d scene\n", o->screen_w,
                o->screen_h, o->w, o->h);
         return RETURN_ERROR;
-    }
-
-    if (args[7]) {
-        LONG threshold = *(LONG *)args[7];
-        if (threshold < 0) {
-            printf("THRESHOLD must not be negative\n");
-            return RETURN_ERROR;
-        }
-        o->threshold = (ULONG)threshold;
     }
 
     // 8 compares pen values; 24 compares R8G8B8, which any truecolor screen
@@ -503,21 +491,17 @@ static bool run_test(const struct P96Test *t, const char *name,
                 if (memcmp(idx + p, gold + p, bpp))
                     bad++;
             }
-        if (bad > o->threshold) {
-            printf("FAIL %-24s %lu of %lu pixels differ\n", name,
-                   (unsigned long)bad, (unsigned long)pixels);
-            failed = true;
-        } else if (bad) {
-            // Under THRESHOLD, so a pass -- but say how close it came.
-            printf("PASS %-24s %lu pixels differ\n", name,
-                   (unsigned long)bad);
-        } else {
+        if (!bad) {
             printf("PASS %s\n", name);
-        }
-        if (bad) {
+        } else {
             // Hunting a handful of single pixels in a 320x200 image by eye is
             // hopeless, so name the first few outright.
             int shown = 0;
+
+            printf("FAIL %-24s %lu of %lu pixels differ\n", name,
+                   (unsigned long)bad, (unsigned long)pixels);
+            failed = true;
+
             for (SHORT y = 0; y < o->h && shown < MAX_REPORTED_DIFFS; y++)
                 for (SHORT x = 0; x < o->w && shown < MAX_REPORTED_DIFFS; x++) {
                     ULONG p = ((ULONG)y * o->w + x) * bpp;
@@ -535,9 +519,8 @@ static bool run_test(const struct P96Test *t, const char *name,
                 }
             if (bad > (ULONG)shown)
                 printf("       ... and %lu more\n", (unsigned long)(bad - shown));
-        }
-        if (bad)
             failed |= write_failure_images(name, idx, gold, o);
+        }
     }
     FreeVec(gold);
     FreeVec(idx);
