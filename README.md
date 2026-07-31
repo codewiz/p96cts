@@ -74,12 +74,8 @@ invocation is `p96cts <monitor> <WxHxD>`.
 
 ## Test Results
 
-The tables below are from emulators. The suite has also been run on a physical
-ZZ9000, where everything passed but `BltBitMap-minterms`
-([zz9000-drivers#57](https://github.com/BlitterStudio/zz9000-drivers/issues/57));
-the fix for that has landed in the board's firmware but has not been rerun on
-hardware yet. If you have access to an Amiga with an RTG board, please run the
-suite and open an issue to share your results.
+The tables below are from emulators. If you have access to an Amiga with an RTG
+board, please run the suite and open an issue to share your results.
 
 ### Amiberry
 
@@ -142,7 +138,7 @@ in WinUAE, so the column turns green once Amiberry picks that up.
 | BltPattern-drawmodes | ✅ | ✅ |
 | BltPattern-mask | ✅ | ✅ |
 | BltPattern-phase | ✅ | ✅ |
-| BltBitMap-minterms | ✅ | [❌](https://github.com/BlitterStudio/zz9000-drivers/issues/57) |
+| BltBitMap-minterms | ✅ | ✅ |
 | BltBitMap-offsets | ✅ | ✅ |
 | BltBitMap-sizes | ✅ | ✅ |
 | BltBitMap-planemask | ✅ | ✅ |
@@ -153,9 +149,10 @@ in WinUAE, so the column turns green once Amiberry picks that up.
 | ScrollRaster-amounts | - | ✅ |
 
 Notes:
-* The Z3660 column is measured with two driver changes that are not merged yet,
+* The Z3660 column needs a `Z3660.card` built from git: it depends on
 [Z3660#18](https://github.com/shanshe/Z3660/pull/18) and
-[Z3660#19](https://github.com/shanshe/Z3660/pull/19).
+[Z3660#19](https://github.com/shanshe/Z3660/pull/19), merged after the last
+release.
 * Z3660#19 leaves `COMPLEMENT` lines to Picasso96, as the ZZ9000 driver already
 does. `struct Line` carries no `FRST_DOT`, so an accelerated `COMPLEMENT` line
 cannot tell a fresh `Draw()` from one continuing at a vertex, and inverting a
@@ -165,12 +162,6 @@ shared vertex twice restores it.
 so sizing the upload as `BytesPerRow * h` copies nothing and leaves the board to
 blit whatever the previous operation left in the template buffer. Why P96 passes
 a zero stride here is unexplained.
-* `BltBitMap-minterms` fails at 24 bits only, by 936 pixels. A physical ZZ9000
-failed the same test by the same 936 pixels, fixed in its firmware
-([zz9000-firmware#61](https://github.com/BlitterStudio/zz9000-firmware/pull/61)):
-the chunky path turned `NEOR` into `EOR`, and direct color inverted the wrong
-operand. Whether the Z3660 residue is the same bug, on the board or in
-Copperline's emulation of it, is untested.
 
 
 ## Coverage
@@ -189,9 +180,13 @@ leaves out, so a missing hook still renders.
 | BltBitMap | `BltBitMap()`, `BltMaskBitMapRastPort()` | `BlitRectNoMaskComplete` |
 | ScrollRaster | `ScrollRaster()` | `BlitRect`, `FillRect` |
 
-Hooks with no coverage: `BlitPlanar2Chunky`, `BlitPlanar2Direct`,
-`WriteYUVRect`, `ScrollPlanar`, `UpdatePlanar`. AROS calls none of them (see the
-TODO in `p96gfx_rtg.h`), so scenes for these would only exercise AmigaOS.
+`BltBitMap` also reaches `BlitPlanar2Chunky` and `BlitPlanar2Direct`, which
+nothing else here does: a planar source bitmap goes through the first on a CLUT
+screen and the second on a truecolor one.
+
+Hooks with no coverage: `WriteYUVRect`, `ScrollPlanar`, `UpdatePlanar`. AROS
+calls none of them (see the TODO in `p96gfx_rtg.h`), so scenes for these would
+only exercise AmigaOS.
 
 
 ## TODO
