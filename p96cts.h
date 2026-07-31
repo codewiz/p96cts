@@ -25,6 +25,11 @@ struct P96Test {
     // defined color on both kinds of screen; rp->Mask, which selects
     // bitplanes, is.
     bool palette_only;
+    // The mirror image: the scene needs a truecolor screen. An R8G8B8 source
+    // array is the case -- on a CLUT screen the RTG library would have to
+    // solve for the nearest pen of every pixel, which is not what any of these
+    // calls promise. PixelArray-lut8 covers the palette side instead.
+    bool truecolor_only;
 };
 
 struct P96TestGroup {
@@ -41,5 +46,6 @@ extern const struct P96TestGroup BltTemplateGroup;
 extern const struct P96TestGroup BltPatternGroup;
 extern const struct P96TestGroup BltBitMapGroup;
 extern const struct P96TestGroup ScrollRasterGroup;
+extern const struct P96TestGroup PixelArrayGroup;
 
 #endif

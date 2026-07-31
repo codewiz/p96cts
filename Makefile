@@ -38,6 +38,7 @@ OBJS     = \
 	tests/blttemplate.o \
 	tests/clipblit.o \
 	tests/drawline.o \
+	tests/pixelarray.o \
 	tests/rectfill.o \
 	tests/scrollraster.o \
 	wall.o

@@ -56,6 +56,7 @@ static const struct P96TestGroup *const GROUPS[] = {
     &BltPatternGroup,
     &BltBitMapGroup,
     &ScrollRasterGroup,
+    &PixelArrayGroup,
 };
 #define NGROUPS ((int)(sizeof GROUPS / sizeof GROUPS[0]))
 
@@ -130,6 +131,8 @@ static void list_tests(void) {
             test_name(full, sizeof full, GROUPS[g], t);
             if (t->palette_only)
                 printf("%-24s palette only\n", full);
+            else if (t->truecolor_only)
+                printf("%-24s truecolor only\n", full);
             else
                 printf("%s\n", full);
         }
@@ -699,8 +702,11 @@ int main(void) {
             if (!selected(o.test, full))
                 continue;
             if (gfx_truecolor && t->palette_only) {
-                printf("skip %s: palette only, it tests something truecolor "
-                       "has no equivalent of\n", full);
+                printf("skip %s: palette only\n", full);
+                continue;
+            }
+            if (!gfx_truecolor && t->truecolor_only) {
+                printf("skip %s: truecolor only\n", full);
                 continue;
             }
             failures += run_test(t, full, rp, &o);

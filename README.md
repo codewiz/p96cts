@@ -107,6 +107,9 @@ board, please run the suite and open an issue to share your results.
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-backfill | - | - | - | - |
 | ScrollRaster-amounts | ✅ | ✅ | ✅ | ✅ |
+| PixelArray-pens8 | - | - | - | - |
+| PixelArray-lut8 | - | - | - | - |
+| PixelArray-rgb | - | - | - | - |
 
 A ❌ links to the bug it found. A `-` is untested.
 
@@ -148,6 +151,9 @@ in WinUAE, so the column turns green once Amiberry picks that up.
 | ScrollRaster-drawmodes | ✅ | ✅ |
 | ScrollRaster-backfill | ✅ | ✅ |
 | ScrollRaster-amounts | ✅ | ✅ |
+| PixelArray-pens8 | - | ✅ |
+| PixelArray-lut8 | - | ✅ |
+| PixelArray-rgb | - | ✅ |
 
 Notes:
 * The Z3660 column needs a `Z3660.card` built from git: it depends on
@@ -180,6 +186,7 @@ leaves out, so a missing hook still renders.
 | BltPattern | `BltPattern()` | `BlitPattern` |
 | BltBitMap | `BltBitMap()`, `BltMaskBitMapRastPort()` | `BlitRectNoMaskComplete` |
 | ScrollRaster | `ScrollRaster()`, `ScrollRasterBF()` | `BlitRect`, `FillRect` |
+| PixelArray | `WritePixelArray8()`, `p96WritePixelArray()` | `WriteTrueColorData`, `WriteTrueColorPixels` |
 
 `BltBitMap` also reaches `BlitPlanar2Chunky` and `BlitPlanar2Direct`, which
 nothing else here does: a planar source bitmap goes through the first on a CLUT
@@ -196,7 +203,6 @@ only exercise AmigaOS.
 - `Text()`: renders through `BlitTemplate`; wants a write-mask sweep.
 - `ClearEOL()`, `ClearScreen()`: clear to pen 0, or BPen in JAM2. A golden pins one font's metrics.
 - `SetRast()`, `Flood()`, `AreaEnd()`, `DrawCircle()`, `DrawEllipse()`: uncovered.
-- `WritePixelArray()` / `ReadPixelArray()` family: uncovered.
 - `BltMaskBitMapRastPort()`: reached only incidentally, via `BltBitMap-stencil`.
 - `BltBitMapRastPort()`: uncovered.
 - A caller-level group needs a font with identical metrics under AmigaOS and AROS.
