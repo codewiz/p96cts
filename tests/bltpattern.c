@@ -34,6 +34,7 @@
 
 #include "p96cts.h"
 #include "gfx.h"
+#include "inline-macros-gcc16.h" // for BltPattern()
 
 // A down-left diagonal, three pixels wide on an eight-pixel period. Sixteen
 // wide is two periods and eight tall is exactly one, so the pattern tiles
