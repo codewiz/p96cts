@@ -100,24 +100,18 @@ board, please run the suite and open an issue to share your results.
 | BltBitMap-minterms | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-offsets | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-sizes | ✅ | ✅ | ✅ | ✅ |
-| BltBitMap-planemask | ✅ | [❌](https://github.com/BlitterStudio/amiberry/issues/2235) | ✅ | ✅ |
+| BltBitMap-planemask | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-directions | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ |
-| ScrollRaster-backfill | - | - | - | - |
+| ScrollRaster-backfill | - | ✅ | - | ✅ |
 | ScrollRaster-amounts | ✅ | ✅ | ✅ | ✅ |
-| PixelArray-pens8 | - | - | - | - |
-| PixelArray-lut8 | - | - | - | - |
-| PixelArray-rgb | - | - | - | - |
+| PixelArray-pens8 | - | ✅ | - | ✅ |
+| PixelArray-lut8 | - | ✅ | - | ✅ |
+| PixelArray-rgb | - | ✅ | - | ✅ |
 
 A ❌ links to the bug it found. A `-` is untested.
-
-Notes:
-* uaegfx drops the source plane mask in `BlitPlanar2Direct`, so
-`BltBitMap-planemask` fails at 24 bits and passes at 8
-([amiberry#2235](https://github.com/BlitterStudio/amiberry/issues/2235)). Fixed
-in WinUAE, so the column turns green once Amiberry picks that up.
 
 
 ### Copperline
@@ -169,6 +163,57 @@ shared vertex twice restores it.
 so sizing the upload as `BytesPerRow * h` copies nothing and leaves the board to
 blit whatever the previous operation left in the template buffer. Why P96 passes
 a zero stride here is unexplained.
+
+
+### AROS
+
+AROS has no Picasso96API.library, so the suite falls back to
+`cybergraphics.library` and `graphics.library`. What a red cell finds here is a
+divergence in AROS itself rather than in a card driver. Both columns are under
+Copperline: PAL is the native planar path, Z3660 the RTG one.
+
+| scene | PAL | Z3660 |
+|---|---|---|
+| DrawLine-solid | ❌ | ✅ |
+| DrawLine-pattern | ❌ | ✅ |
+| DrawLine-jam2 | ❌ | ✅ |
+| DrawLine-inversvid | ❌ | ✅ |
+| DrawLine-complement | ❌ | ❌ |
+| RectFill-drawmodes | ✅ | ✅ |
+| RectFill-edges | ✅ | ✅ |
+| RectFill-invert | ✅ | ✅ |
+| ClipBlit-overlap | ✅ | ✅ |
+| ClipBlit-disjoint | ✅ | ✅ |
+| BltTemplate-offsets | ✅ | ✅ |
+| BltTemplate-sizes | ✅ | ✅ |
+| BltTemplate-drawmodes | ✅ | ✅ |
+| BltTemplate-masks | ✅ | ✅ |
+| BltPattern-drawmodes | ❌ | ❌ |
+| BltPattern-mask | ❌ | ✅ |
+| BltPattern-phase | ❌ | ✅ |
+| BltBitMap-minterms | ❌ | ❌ |
+| BltBitMap-offsets | ✅ | ✅ |
+| BltBitMap-sizes | ✅ | ✅ |
+| BltBitMap-planemask | ❌ | ❌ |
+| BltBitMap-stencil | ✅ | ✅ |
+| BltBitMap-shallow | ✅ | ❌ |
+| ScrollRaster-directions | ✅ | ✅ |
+| ScrollRaster-drawmodes | ✅ | ✅ |
+| ScrollRaster-backfill | ✅ | ❌ |
+| ScrollRaster-amounts | ✅ | ✅ |
+| PixelArray-pens8 | ✅ | ✅ |
+| PixelArray-lut8 | ✅ | ✅ |
+| PixelArray-rgb | - | ✅ |
+
+The Z3660 column is red if the scene fails at either depth: `BltBitMap-minterms`,
+`BltBitMap-planemask` and `BltBitMap-shallow` fail only at 24 bits,
+`BltPattern-drawmodes` and `ScrollRaster-backfill` only at 8. PAL runs at 8 bits
+alone, which is why `PixelArray-rgb` has no result there.
+
+The two columns disagree more than they agree, which is the point of running
+both: `DrawLine` and the `BltPattern` mask and phase scenes fail only on the
+planar path, while `BltBitMap-shallow` and `ScrollRaster-backfill` fail only on
+the RTG one.
 
 
 ## Coverage
