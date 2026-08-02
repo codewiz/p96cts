@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: 0BSD
 //
-// The screen is bigger than the scene and a testcase draws into a RastPort with
-// no Layer, so nothing clips it. The leftover area is walled off the way
+// The screen is bigger than the scene and nothing clips a testcase's drawing --
+// the RastPort has either no Layer at all or one covering the whole bitmap, and
+// neither trims anything. The leftover area is walled off the way
 // MungWall fences a heap allocation: painted before a testcase runs, checked
 // after, and any change to it is the testcase writing where it must not.
 //

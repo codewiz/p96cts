@@ -28,6 +28,7 @@ OBJS     = \
 	backdrop.o \
 	gfx.o \
 	glyph.o \
+	layer.o \
 	main.o \
 	modes.o \
 	palette.o \
@@ -77,6 +78,7 @@ HEADERS  = \
 	backdrop.h \
 	gfx.h \
 	glyph.h \
+	layer.h \
 	modes.h \
 	p96cts.h \
 	palette.h \

@@ -23,6 +23,7 @@
 #include "p96cts.h"
 #include "backdrop.h"
 #include "gfx.h"
+#include "layer.h"
 #include "modes.h"
 #include "palette.h"
 #include "pngio.h"
@@ -159,6 +160,8 @@ struct RunOpts {
     int depth;
     int bpp; // bytes per compared pixel: 1 (pen) or 3 (R8G8B8)
     bool capture;
+    bool layer; // draw through a Layer rather than a bare RastPort
+
     bool list_modes;
     bool list_tests;
 
@@ -185,6 +188,7 @@ static void usage(void) {
         "  MODE           screen mode as WxHxD (default: the scene size at depth 8)\n"
         "  TEST/K         one testcase as <group>-<test>; all of them by default\n"
         "  CAPTURE/S      write the reference instead of comparing against it\n"
+        "  LAYER/S        draw through a Layer covering the whole bitmap\n"
         "  OUTDIR/K       output directory (default output/<monitor>/<scene>x<depth>)\n"
         "  GOLDENDIR/K    reference directory (default golden/<scene>x<depth>)\n"
         "  SCENE/K        region rendered and compared, as WxH (default 320x200)\n"
@@ -228,13 +232,14 @@ static int parse_args(struct RunOpts *o) {
         /* [1] = */ "MODE,"
         /* [2] = */ "TEST/K,"
         /* [3] = */ "CAPTURE/S,"
-        /* [4] = */ "OUTDIR/K,"
-        /* [5] = */ "GOLDENDIR/K,"
-        /* [6] = */ "SCENE/K,"
-        /* [7] = */ "LISTMODES/S,"
-        /* [8] = */ "LISTTESTS/S,"
-        /* [9] = */ "HELP=--help=-h/S";
-    LONG args[10];
+        /* [4] = */ "LAYER/S,"
+        /* [5] = */ "OUTDIR/K,"
+        /* [6] = */ "GOLDENDIR/K,"
+        /* [7] = */ "SCENE/K,"
+        /* [8] = */ "LISTMODES/S,"
+        /* [9] = */ "LISTTESTS/S,"
+        /* [10] = */ "HELP=--help=-h/S";
+    LONG args[11];
 
     memset(o, 0, sizeof *o);
     memset(args, 0, sizeof args);
@@ -248,7 +253,7 @@ static int parse_args(struct RunOpts *o) {
 
     printf("%s\n", VERSION_LINE);
 
-    if (args[9]) {
+    if (args[10]) {
         usage();
         return RETURN_WARN;
     }
@@ -260,8 +265,9 @@ static int parse_args(struct RunOpts *o) {
     o->depth = 8;
     o->test = args[2] ? (const char *)args[2] : NULL;
     o->capture = args[3] != 0;
-    o->list_modes = args[7] != 0;
-    o->list_tests = args[8] != 0;
+    o->layer = args[4] != 0;
+    o->list_modes = args[8] != 0;
+    o->list_tests = args[9] != 0;
 
     // The reference run is the absence of a board, which as a positional
     // argument needs a name of its own. Internally it stays NULL, which is
@@ -281,7 +287,7 @@ static int parse_args(struct RunOpts *o) {
         return RETURN_ERROR;
     }
 
-    if (args[6] && !parse_scene((const char *)args[6], &o->w, &o->h)) {
+    if (args[7] && !parse_scene((const char *)args[7], &o->w, &o->h)) {
         printf("SCENE must be WxH\n");
         return RETURN_ERROR;
     }
@@ -336,15 +342,18 @@ static int parse_args(struct RunOpts *o) {
     //
     // Run output is per monitor, so several boards can be compared against the
     // one reference set.
+    // A layered run renders the same scenes down a different path, so its
+    // images get a directory of their own rather than overwriting the
+    // unlayered ones: the two are meant to be compared against each other.
     if (asprintf(&o->golden_buf, "golden/%dx%dx%d", o->w, o->h, o->depth) < 0 ||
-        asprintf(&o->output_buf, "output/%s/%dx%dx%d",
+        asprintf(&o->output_buf, "output/%s/%dx%dx%d%s",
                  o->monitor ? o->monitor : "softrast",
-                 o->w, o->h, o->depth) < 0) {
+                 o->w, o->h, o->depth, o->layer ? "-layered" : "") < 0) {
         printf("out of memory\n");
         return RETURN_FAIL;
     }
-    o->golden_dir = args[5] ? (const char *)args[5] : o->golden_buf;
-    o->dir = args[4] ? (const char *)args[4]
+    o->golden_dir = args[6] ? (const char *)args[6] : o->golden_buf;
+    o->dir = args[5] ? (const char *)args[5]
                      : (o->capture ? o->golden_dir : o->output_buf);
     return RETURN_OK;
 }
@@ -673,6 +682,21 @@ int main(void) {
         goto cleanup;
     }
 
+    // Every scene so far is drawn through a RastPort with no Layer, which is
+    // the unclipped path. An application draws into a window, so its calls
+    // reach the driver split against a ClipRect list instead. This layer
+    // covers the whole bitmap and so clips nothing, which makes the same
+    // golden set the assertion: the two paths must produce identical pixels.
+    if (o.layer) {
+        struct RastPort *layer_rp = layer_install(rp->BitMap);
+
+        if (!layer_rp) {
+            failures = 1;
+            goto cleanup;
+        }
+        rp = layer_rp;
+    }
+
     printf("testing %s %dx%dx%d %s, scene %dx%d",
            o.monitor ? o.monitor : "P96 software rasterizer",
            o.screen_w, o.screen_h,
@@ -680,6 +704,8 @@ int main(void) {
            o.w, o.h);
     if (o.monitor && (scr->Width != o.screen_w || scr->Height != o.screen_h))
         printf(", screen opened %dx%d", scr->Width, scr->Height);
+    if (o.layer)
+        printf(", layered");
     // Where a comparison reads from is determined by the scene, so it is not
     // worth a line; where a capture writes to is a side effect worth naming.
     if (o.capture)
@@ -715,6 +741,8 @@ int main(void) {
 
 cleanup:
     backdrop_free();
+    // Before the bitmap it was created over.
+    layer_free();
     // The bitmap goes first: it was allocated with the screen's as friend.
     rtg_free_bitmap(bm);
     if (scr)
