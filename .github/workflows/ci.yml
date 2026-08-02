@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    # A tag push is a release; release.yml builds and packages it there, so a
-    # CI run on the same tag would just duplicate that build.
-    tags-ignore:
+    # Every commit on every branch, and no tag pushes: release.yml builds
+    # those, so a CI run on the same tag would just duplicate that build.
+    branches:
       - '**'
   pull_request:
   workflow_dispatch:
