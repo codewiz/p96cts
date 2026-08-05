@@ -464,8 +464,9 @@ static void t_shallow(struct RastPort *rp, SHORT w, SHORT h) {
 static const struct P96Test TESTS[] = {
     {.name = "minterms", .fn = t_minterms},
     // palette_only until iComp fixes rtg.library 43.787: its software chunky
-    // blit hangs on truecolor at minterm 0xB0 with an unaligned width (see
-    // repro-blitrect.c), so the x24 golden cannot be captured.
+    // blit runs away on truecolor at minterm 0xB0 with an unaligned width,
+    // overwriting memory far outside the destination (repro-blitrect.c), so
+    // the x24 golden cannot be captured.
     {.name = "friend", .fn = t_friend, .palette_only = true},
     {.name = "offsets", .fn = t_offsets},
     {.name = "sizes", .fn = t_sizes},
