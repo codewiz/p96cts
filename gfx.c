@@ -51,10 +51,10 @@ void gfx_clear(struct RastPort *rp, SHORT w, SHORT h, ULONG color) {
 // interferes with the ClipBlit() these calls are implemented over, which
 // corrupts the data. Scenes do leave a mask set -- BltTemplate-masks ends on
 // 0x81 -- so a copy would carry it into the readback.
-static bool temp_rastport(struct RastPort *temprp, struct BitMap *friend,
+static bool temp_rastport(struct RastPort *temprp, struct BitMap *friend_bm,
                           SHORT w, int depth) {
     InitRastPort(temprp);
-    temprp->BitMap = AllocBitMap(w, 1, depth, 0, friend);
+    temprp->BitMap = AllocBitMap(w, 1, depth, 0, friend_bm);
     return temprp->BitMap != NULL;
 }
 
