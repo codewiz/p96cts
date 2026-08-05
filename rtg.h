@@ -19,6 +19,10 @@ void rtg_close(void);
 struct BitMap *rtg_alloc_reference(struct Screen *scr, int height, int depth);
 void rtg_free_bitmap(struct BitMap *bm);
 
+// A small bitmap in the same pixel format as `like`, and its release.
+struct BitMap *rtg_alloc_friend(struct BitMap *like, SHORT w, SHORT h);
+void rtg_free_friend(struct BitMap *bm);
+
 ULONG rtg_rgbformat(struct BitMap *bm);
 const char *rtg_format_name(ULONG fmt);
 bool rtg_format_by_pen(ULONG fmt);

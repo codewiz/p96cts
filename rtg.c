@@ -125,6 +125,34 @@ void rtg_free_bitmap(struct BitMap *bm) {
         FreeBitMap(bm);
 }
 
+// A small bitmap in the same pixel format as `like`, freed with
+// rtg_free_friend(). A P96 bitmap needs p96AllocBitMap with its own
+// RGBFormat: plain AllocBitMap does not recover a truecolor format from the
+// off-board reference bitmap. Off-board friends get off-board copies, so a
+// reference run stays driver-independent. Everything else -- planar screens,
+// and all of AROS -- is the standard friend-bitmap idiom.
+struct BitMap *rtg_alloc_friend(struct BitMap *like, SHORT w, SHORT h) {
+    if (P96Base && p96GetBitMapAttr(like, P96BMA_ISP96)) {
+        ULONG flags = BMF_CLEAR;
+
+        if (!p96GetBitMapAttr(like, P96BMA_ISONBOARD))
+            flags |= BMF_USERPRIVATE;
+        return p96AllocBitMap(w, h, p96GetBitMapAttr(like, P96BMA_DEPTH),
+                              flags, like,
+                              p96GetBitMapAttr(like, P96BMA_RGBFORMAT));
+    }
+    return AllocBitMap(w, h, GetBitMapAttr(like, BMA_DEPTH), BMF_CLEAR, like);
+}
+
+// Branches on the bitmap itself: the friend it was allocated against may be
+// gone by free time.
+void rtg_free_friend(struct BitMap *bm) {
+    if (bm && P96Base && p96GetBitMapAttr(bm, P96BMA_ISP96))
+        p96FreeBitMap(bm);
+    else
+        FreeBitMap(bm);
+}
+
 // --- pixel format -----------------------------------------------------------
 
 // The bitmap's pixel format, as an RGBFB_ code. A property of the bitmap,
