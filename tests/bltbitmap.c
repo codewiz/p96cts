@@ -36,6 +36,7 @@
 #include "p96cts.h"
 #include "gfx.h"
 #include "glyph.h"
+#include "rtg.h"
 
 // The shared glyph as a picture with real pens rather than a one-bit mask: 48
 // wide, three source words, 16 rows of which most scenes blit 8, leaving rows
@@ -107,6 +108,18 @@ static void blit_row(struct RastPort *rp, struct BitMap *src, SHORT x, SHORT y,
 // of the two -- FALSE, NOR, ONLYDST, ... , OR, TRUE. This is the same sweep
 // P96Tests runs, and the only place in the suite where the minterm is not a
 // plain source copy.
+static void minterm_grid(struct RastPort *rp, struct BitMap *src, SHORT w,
+                         SHORT h) {
+    SHORT rows = 8, band = h / rows, half = w / 2;
+
+    for (SHORT r = 0; r < rows; r++) {
+        SHORT y = r * band + (band - 8) / 2;
+
+        blit_row(rp, src, 4, y, (UBYTE)(r << 4));
+        blit_row(rp, src, half + 2, y, (UBYTE)((r + 8) << 4));
+    }
+}
+
 static void t_minterms(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT rows = 8, band = h / rows, half = w / 2;
     struct GlyphPlanar s;
@@ -126,13 +139,52 @@ static void t_minterms(struct RastPort *rp, SHORT w, SHORT h) {
         return;
     }
 
-    for (SHORT r = 0; r < rows; r++) {
-        SHORT y = r * band + (band - 8) / 2;
+    minterm_grid(rp, &s.bm, w, h);
 
-        blit_row(rp, &s.bm, 4, y, (UBYTE)(r << 4));
-        blit_row(rp, &s.bm, half + 2, y, (UBYTE)((r + 8) << 4));
+    glyph_free_planar(&s);
+}
+
+// The same grid from a source in the screen's own pixel format: the blit
+// every off-screen buffer takes. On RTG this is the one scene that reaches
+// BlitRectNoMaskComplete with a minterm that is not a plain copy; the planar
+// scenes land in the conversion hooks instead. Same layout as minterms, so
+// the two goldens are the same picture.
+static void t_friend(struct RastPort *rp, SHORT w, SHORT h) {
+    SHORT rows = 8, band = h / rows, half = w / 2;
+    struct GlyphPlanar s;
+    struct BitMap *fb;
+    struct RastPort frp;
+
+    gfx_clear(rp, w, h, 0);
+    SetDrMd(rp, JAM1);
+
+    if (band < 10 || half < ROW_W + 4)
+        return;
+
+    checker(rp, w, h, 16);
+
+    if (!glyph_planar(&s, 8, glyph_pen)) {
+        glyph_free_planar(&s);
+        return;
     }
 
+    fb = rtg_alloc_friend(rp->BitMap, SRC_W, SRC_H);
+    if (!fb) {
+        glyph_free_planar(&s);
+        return;
+    }
+
+    // Copied rather than InitRastPort'd: rp belongs to the screen. Only the
+    // layer and the bitmap are replaced.
+    frp = *rp;
+    frp.Layer = NULL;
+    frp.BitMap = fb;
+    BltBitMapRastPort(&s.bm, 0, 0, &frp, 0, 0, SRC_W, SRC_H, 0xC0);
+
+    minterm_grid(rp, fb, w, h);
+
+    WaitBlit();
+    rtg_free_friend(fb);
     glyph_free_planar(&s);
 }
 
@@ -247,6 +299,39 @@ static void t_planemask(struct RastPort *rp, SHORT w, SHORT h) {
         for (SHORT i = 0; i + SRC_W <= w - 4; i += SRC_W + 6)
             BltBitMap(&s.bm, 0, 0, rp->BitMap, i + 2, y, SRC_W, 8,
                       (i / (SRC_W + 6)) & 1 ? 0x60 : 0xC0, MASKS[r], NULL);
+    }
+
+    glyph_free_planar(&s);
+}
+
+// rp->Mask with BltBitMapRastPort(): the planemask scene selects planes of
+// the source before the minterm, this one protects planes of the destination
+// after it, and a driver can get one right and the other wrong. Planar only,
+// and on the hash source, for the same reasons as planemask.
+static void t_writemask(struct RastPort *rp, SHORT w, SHORT h) {
+    SHORT band = h / NMASKS;
+    struct GlyphPlanar s;
+
+    // Spread-bit background, so protected planes stay visible.
+    gfx_clear(rp, w, h, 0x3C);
+    SetDrMd(rp, JAM1);
+
+    if (band < 10 || w < 2 * SRC_W)
+        return;
+
+    if (!glyph_planar(&s, 8, hash_pen)) {
+        glyph_free_planar(&s);
+        return;
+    }
+
+    for (SHORT r = 0; r < NMASKS; r++) {
+        SHORT y = r * band + (band - 8) / 2;
+
+        rp->Mask = MASKS[r];
+        // Alternate copy and EOR along the row.
+        for (SHORT i = 0; i + SRC_W <= w - 4; i += SRC_W + 6)
+            BltBitMapRastPort(&s.bm, 0, 0, rp, i + 2, y, SRC_W, 8,
+                              (i / (SRC_W + 6)) & 1 ? 0x60 : 0xC0);
     }
 
     glyph_free_planar(&s);
@@ -378,9 +463,14 @@ static void t_shallow(struct RastPort *rp, SHORT w, SHORT h) {
 
 static const struct P96Test TESTS[] = {
     {.name = "minterms", .fn = t_minterms},
+    // palette_only until iComp fixes rtg.library 43.787: its software chunky
+    // blit hangs on truecolor at minterm 0xB0 with an unaligned width (see
+    // repro-blitrect.c), so the x24 golden cannot be captured.
+    {.name = "friend", .fn = t_friend, .palette_only = true},
     {.name = "offsets", .fn = t_offsets},
     {.name = "sizes", .fn = t_sizes},
     {.name = "planemask", .fn = t_planemask},
+    {.name = "writemask", .fn = t_writemask, .palette_only = true},
     {.name = "stencil", .fn = t_stencil},
     {.name = "shallow", .fn = t_shallow},
 };

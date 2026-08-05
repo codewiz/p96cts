@@ -108,10 +108,10 @@ board, please run the suite and open an issue to share your results.
 
 | scene | PAL | uaegfx | CyberVision | ZZ9000 |
 |---|---|---|---|---|
-| DrawLine-solid | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-solid | ✅ | ✅ | ❌ | ✅ |
 | DrawLine-pattern | ✅ | ✅ | ✅ | ✅ |
-| DrawLine-jam2 | ✅ | ✅ | ✅ | ✅ |
-| DrawLine-inversvid | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-jam2 | ✅ | ✅ | ❌ | ✅ |
+| DrawLine-inversvid | ✅ | ✅ | ❌ | ✅ |
 | DrawLine-complement | ✅ | ✅ | ✅ | ✅ |
 | RectFill-drawmodes | ✅ | ✅ | ✅ | ✅ |
 | RectFill-edges | ✅ | ✅ | ✅ | ✅ |
@@ -126,18 +126,20 @@ board, please run the suite and open an issue to share your results.
 | BltPattern-mask | ✅ | ✅ | ✅ | ✅ |
 | BltPattern-phase | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-minterms | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-friend | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-offsets | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-sizes | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-planemask | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-writemask | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-directions | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ |
-| ScrollRaster-backfill | - | ✅ | - | ✅ |
+| ScrollRaster-backfill | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-amounts | ✅ | ✅ | ✅ | ✅ |
-| PixelArray-pens8 | - | ✅ | - | ✅ |
-| PixelArray-lut8 | - | ✅ | - | ✅ |
-| PixelArray-rgb | - | ✅ | - | ✅ |
+| PixelArray-pens8 | ✅ | ✅ | ✅ | ✅ |
+| PixelArray-lut8 | ✅ | ✅ | ✅ | ✅ |
+| PixelArray-rgb | - | ✅ | ✅ | ✅ |
 
 A ❌ links to the bug it found. A `-` is untested.
 
@@ -164,9 +166,11 @@ A ❌ links to the bug it found. A `-` is untested.
 | BltPattern-mask | ✅ | ✅ |
 | BltPattern-phase | ✅ | ✅ |
 | BltBitMap-minterms | ✅ | ✅ |
+| BltBitMap-friend | - | - |
 | BltBitMap-offsets | ✅ | ✅ |
 | BltBitMap-sizes | ✅ | ✅ |
 | BltBitMap-planemask | ✅ | ✅ |
+| BltBitMap-writemask | - | - |
 | BltBitMap-stencil | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ |
 | ScrollRaster-directions | ✅ | ✅ |
@@ -221,9 +225,11 @@ scene fails at either 8 or 24 bits.
 | BltPattern-mask | ❌ | ✅ | ✅ |
 | BltPattern-phase | ❌ | ✅ | ✅ |
 | BltBitMap-minterms | ❌ | ❌ | ❌ |
+| BltBitMap-friend | - | - | - |
 | BltBitMap-offsets | ✅ | ✅ | ✅ |
 | BltBitMap-sizes | ✅ | ✅ | ✅ |
 | BltBitMap-planemask | ❌ | ❌ | ❌ |
+| BltBitMap-writemask | - | - | - |
 | BltBitMap-stencil | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ❌ | ❌ |
 | ScrollRaster-directions | ✅ | ✅ | ✅ |
@@ -252,7 +258,7 @@ leaves out, so a missing hook still renders.
 | ClipBlit | `ClipBlit()` | `BlitRect` |
 | BltTemplate | `BltTemplate()` | `BlitTemplate` |
 | BltPattern | `BltPattern()` | `BlitPattern` |
-| BltBitMap | `BltBitMap()`, `BltMaskBitMapRastPort()` | `BlitRectNoMaskComplete` |
+| BltBitMap | `BltBitMap()`, `BltBitMapRastPort()`, `BltMaskBitMapRastPort()` | `BlitRectNoMaskComplete` |
 | ScrollRaster | `ScrollRaster()`, `ScrollRasterBF()` | `BlitRect`, `FillRect` |
 | PixelArray | `WritePixelArray8()`, `p96WritePixelArray()` | `WriteTrueColorData`, `WriteTrueColorPixels` |
 
@@ -271,8 +277,6 @@ only exercise AmigaOS.
 - `Text()`: renders through `BlitTemplate`; wants a write-mask sweep.
 - `ClearEOL()`, `ClearScreen()`: clear to pen 0, or BPen in JAM2. A golden pins one font's metrics.
 - `SetRast()`, `Flood()`, `AreaEnd()`, `DrawCircle()`, `DrawEllipse()`: uncovered.
-- `BltMaskBitMapRastPort()`: reached only incidentally, via `BltBitMap-stencil`.
-- `BltBitMapRastPort()`: uncovered.
 - A caller-level group needs a font with identical metrics under AmigaOS and AROS.
 
 
