@@ -27,6 +27,7 @@
 #include "modes.h"
 #include "palette.h"
 #include "pngio.h"
+#include "report.h"
 #include "wall.h"
 #include "rtg.h"
 
@@ -45,7 +46,7 @@ void __chkabort(void) {}
 static bool user_break(void) {
     if (!(SetSignal(0, SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C))
         return false;
-    printf("***Break\n");
+    rpt(RPT_INFO, "***Break");
     return true;
 }
 
@@ -68,7 +69,7 @@ static char *image_path(const char *dir, const char *name, const char *suffix) {
     char *path = NULL;
 
     if (asprintf(&path, "%s/%s%s", dir, name, suffix) < 0) {
-        printf("out of memory composing a path for %s\n", name);
+        rpt_errorf("out of memory composing a path for %s", name);
         return NULL;
     }
     return path;
@@ -372,12 +373,12 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
     if (!path || write_png(path, idx, o->w, o->h, bpp))
         failed = true;
     else
-        printf("       captured %s\n", path);
+        rptf("       captured %s", path);
     free(path);
 
     UBYTE *d = AllocVec((ULONG)o->w * o->h * bpp, MEMF_CLEAR);
     if (!d) {
-        printf("WARNING: failed to allocate diff buffer for %s\n", name);
+        rpt_errorf("WARNING: failed to allocate diff buffer for %s", name);
         return failed;
     }
     for (SHORT y = 0; y < o->h; y++)
@@ -398,7 +399,7 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
     if (!path || write_png(path, d, o->w, o->h, bpp))
         failed = true;
     else
-        printf("       wrote difference to %s\n", path);
+        rptf("       wrote difference to %s", path);
     free(path);
     FreeVec(d);
     return failed;
@@ -464,7 +465,7 @@ static bool run_test(const struct P96Test *t, const char *name,
     UBYTE *idx = bpp == 3 ? rtg_read_rgb(rp, 0, 0, o->w, o->h)
                           : gfx_read_pens(rp, 0, 0, o->w, o->h, o->depth);
     if (!idx) {
-        printf("FAIL %-24s memory allocation failed\n", name);
+        rpt_failure(name, "memory allocation failed");
         return true;
     }
     if (o->capture) {
@@ -472,7 +473,7 @@ static bool run_test(const struct P96Test *t, const char *name,
         if (!path || write_png(path, idx, o->w, o->h, bpp))
             failed = true;
         else
-            printf("captured %s\n", path);
+            rptf("captured %s", path);
         free(path);
         FreeVec(idx);
         return failed;
@@ -484,7 +485,7 @@ static bool run_test(const struct P96Test *t, const char *name,
         if (path)
             gold = read_png(path, &gw, &gh, bpp);
         if (!gold) {
-            printf("FAIL %-24s no golden at %s\n", name, path ? path : "?");
+            rpt_failure(name, "no golden at %s", path ? path : "?");
             free(path);
             FreeVec(idx);
             return true;
@@ -493,8 +494,8 @@ static bool run_test(const struct P96Test *t, const char *name,
     }
 
     if (gw != o->w || gh != o->h) {
-        printf("FAIL %-24s golden is %dx%d, scene is %dx%d\n", name, gw, gh,
-               o->w, o->h);
+        rpt_failure(name, "golden is %dx%d, scene is %dx%d", gw, gh,
+                       o->w, o->h);
         failed = true;
     } else {
         for (SHORT y = 0; y < o->h; y++)
@@ -504,14 +505,14 @@ static bool run_test(const struct P96Test *t, const char *name,
                     bad++;
             }
         if (!bad) {
-            printf("PASS %s\n", name);
+            rpt_success(name);
         } else {
             // Hunting a handful of single pixels in a 320x200 image by eye is
             // hopeless, so name the first few outright.
             int shown = 0;
 
-            printf("FAIL %-24s %lu of %lu pixels differ\n", name,
-                   (unsigned long)bad, (unsigned long)pixels);
+            rpt_failure(name, "%lu of %lu pixels differ",
+                           (unsigned long)bad, (unsigned long)pixels);
             failed = true;
 
             for (SHORT y = 0; y < o->h && shown < MAX_REPORTED_DIFFS; y++)
@@ -520,17 +521,17 @@ static bool run_test(const struct P96Test *t, const char *name,
                     if (!memcmp(idx + p, gold + p, bpp))
                         continue;
                     if (bpp == 3)
-                        printf("       at %3d,%3d golden %02X%02X%02X, "
-                               "got %02X%02X%02X\n", x, y,
-                               gold[p], gold[p + 1], gold[p + 2],
-                               idx[p], idx[p + 1], idx[p + 2]);
+                        rptf("       at %3d,%3d golden %02X%02X%02X, "
+                                "got %02X%02X%02X", x, y,
+                                gold[p], gold[p + 1], gold[p + 2],
+                                idx[p], idx[p + 1], idx[p + 2]);
                     else
-                        printf("       at %3d,%3d golden %3d, got %3d\n", x, y,
-                               gold[p], idx[p]);
+                        rptf("       at %3d,%3d golden %3d, got %3d", x, y,
+                                gold[p], idx[p]);
                     shown++;
                 }
             if (bad > (ULONG)shown)
-                printf("       ... and %lu more\n", (unsigned long)(bad - shown));
+                rptf("       ... and %lu more", (unsigned long)(bad - shown));
             failed |= write_failure_images(name, idx, gold, o);
         }
     }
@@ -562,13 +563,13 @@ int main(void) {
 
     IntuitionBase = (struct IntuitionBase *)OpenLibrary((STRPTR)"intuition.library", 39);
     if (!IntuitionBase) {
-        printf("failed to open intuition.library 39\n");
+        rpt_errorf("failed to open intuition.library 39");
         rc = 20;
         goto out;
     }
     GfxBase = (struct GfxBase *)OpenLibrary((STRPTR)"graphics.library", 39);
     if (!GfxBase) {
-        printf("failed to open graphics.library 39\n");
+        rpt_errorf("failed to open graphics.library 39");
         rc = 20;
         goto out;
     }
@@ -595,15 +596,15 @@ int main(void) {
     if (o.monitor) {
         id = find_mode(o.screen_w, o.screen_h, o.depth, o.monitor, NULL, 0);
         if (id == INVALID_MODE) {
-            printf("no %s mode %dx%dx%d in the display database\n", o.monitor,
-                   o.screen_w, o.screen_h, o.depth);
+            rpt_errorf("no %s mode %dx%dx%d in the display database",
+                          o.monitor, o.screen_w, o.screen_h, o.depth);
             failures = 1;
             goto out;
         }
     } else {
         id = find_mode(0, 0, o.depth, NULL, NULL, 0);
         if (id == INVALID_MODE) {
-            printf("no %d-bit mode in the display database\n", o.depth);
+            rpt_errorf("no %d-bit mode in the display database", o.depth);
             failures = 1;
             goto out;
         }
@@ -635,7 +636,7 @@ int main(void) {
                              SA_ShowTitle, FALSE, TAG_DONE);
     }
     if (!scr) {
-        printf("OpenScreen failed\n");
+        rpt_errorf("OpenScreen failed");
         failures = 1;
         goto out;
     }
@@ -666,8 +667,8 @@ int main(void) {
         const bool want_pen = o.depth <= 8;
 
         if (by_pen != want_pen) {
-            printf("mode is %s, which does not match depth %d\n",
-                   rtg_format_name(fmt), o.depth);
+            rpt_errorf("mode is %s, which does not match depth %d",
+                          rtg_format_name(fmt), o.depth);
             failures = 1;
             goto cleanup;
         }
@@ -676,8 +677,8 @@ int main(void) {
     // The mode asked for is not always the mode that opens, and drawing into
     // scr->RastPort is unclipped.
     if (o.monitor && (scr->Width < o.w || scr->Height < o.h)) {
-        printf("screen opened %dx%d, smaller than the %dx%d scene\n",
-               scr->Width, scr->Height, o.w, o.h);
+        rpt_errorf("screen opened %dx%d, smaller than the %dx%d scene",
+                      scr->Width, scr->Height, o.w, o.h);
         failures = 1;
         goto cleanup;
     }
@@ -697,20 +698,17 @@ int main(void) {
         rp = layer_rp;
     }
 
-    printf("testing %s %dx%dx%d %s, scene %dx%d",
-           o.monitor ? o.monitor : "P96 software rasterizer",
-           o.screen_w, o.screen_h,
-           o.depth, rtg_format_name(rtg_rgbformat(rp->BitMap)),
-           o.w, o.h);
+    rptf("testing %s %dx%dx%d %s, scene %dx%d%s",
+            o.monitor ? o.monitor : "softrast",
+            o.screen_w, o.screen_h, o.depth,
+            rtg_format_name(rtg_rgbformat(rp->BitMap)),
+            o.w, o.h, o.layer ? " (layered)" : "");
     if (o.monitor && (scr->Width != o.screen_w || scr->Height != o.screen_h))
-        printf(", screen opened %dx%d", scr->Width, scr->Height);
-    if (o.layer)
-        printf(", layered");
+        rptf("screen opened %dx%d instead", scr->Width, scr->Height);
     // Where a comparison reads from is determined by the scene, so it is not
     // worth a line; where a capture writes to is a side effect worth naming.
     if (o.capture)
-        printf(", capturing to %s", o.golden_dir);
-    printf("\n");
+        rptf("capturing to %s", o.golden_dir);
 
     make_path(o.dir);
 
@@ -728,11 +726,11 @@ int main(void) {
             if (!selected(o.test, full))
                 continue;
             if (gfx_truecolor && t->palette_only) {
-                printf("skip %s: palette only\n", full);
+                rpt_skip(full, "palette only");
                 continue;
             }
             if (!gfx_truecolor && t->truecolor_only) {
-                printf("skip %s: truecolor only\n", full);
+                rpt_skip(full, "truecolor only");
                 continue;
             }
             failures += run_test(t, full, rp, &o);

@@ -28,9 +28,9 @@
 #include <graphics/gfx.h>
 #include <graphics/layers.h>
 #include <graphics/rastport.h>
-#include <stdio.h>
 
 #include "layer.h"
+#include "report.h"
 
 struct Library *LayersBase;
 
@@ -47,12 +47,12 @@ struct RastPort *layer_install(struct BitMap *bm) {
 
     LayersBase = OpenLibrary((STRPTR)"layers.library", 39);
     if (!LayersBase) {
-        printf("failed to open layers.library 39\n");
+        rpt_errorf("failed to open layers.library 39");
         return NULL;
     }
     layer_info = NewLayerInfo();
     if (!layer_info) {
-        printf("NewLayerInfo failed\n");
+        rpt_errorf("NewLayerInfo failed");
         return NULL;
     }
     // Corners are inclusive, and the layer sits at the bitmap's origin so
@@ -61,7 +61,7 @@ struct RastPort *layer_install(struct BitMap *bm) {
     layer = CreateUpfrontLayer(layer_info, bm, 0, 0, w - 1, h - 1, LAYERSIMPLE,
                                NULL);
     if (!layer) {
-        printf("CreateUpfrontLayer %ldx%ld failed\n", (long)w, (long)h);
+        rpt_errorf("CreateUpfrontLayer %ldx%ld failed", (long)w, (long)h);
         return NULL;
     }
     return layer->rp;

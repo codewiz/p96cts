@@ -10,9 +10,9 @@
 
 #include <proto/exec.h>
 #include <graphics/rastport.h>
-#include <stdio.h>
 
 #include "gfx.h"
+#include "report.h"
 #include "rtg.h"
 #include "wall.h"
 
@@ -130,8 +130,8 @@ bool wall_broken(struct RastPort *rp, const struct Wall *wall,
                                          q[2] == (UBYTE)rgb
                                    : q[0] == WALL_SHADE[s].pen)
                     continue;
-                printf("FAIL %-24s drew outside the scene at %d,%d\n", name,
-                       bx + x, by + y);
+                rpt_failure(name, "drew outside the scene at %d,%d",
+                               bx + x, by + y);
                 FreeVec(px);
                 return true;
             }

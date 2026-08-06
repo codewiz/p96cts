@@ -17,6 +17,7 @@
 
 #include "palette.h"
 #include "pngio.h"
+#include "report.h"
 
 // The PNG carries the palette the screen was opened with, taken straight from
 // the LoadRGB32 table: a header word pair, then three 32-bit guns per pen, of
@@ -61,7 +62,7 @@ int write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
 
     BPTR f = Open((STRPTR)path, MODE_NEWFILE);
     if (!f) {
-        printf("cannot create %s\n", path);
+        rpt_errorf("cannot create %s", path);
         return 1;
     }
 
@@ -70,7 +71,7 @@ int write_png(const char *path, const UBYTE *px, SHORT w, SHORT h,
         info = png_create_info_struct(png);
     // libpng reports errors by longjmp-ing back here.
     if (!png || !info || setjmp(png_jmpbuf(png))) {
-        printf("cannot encode %s\n", path);
+        rpt_errorf("cannot encode %s", path);
         if (png)
             png_destroy_write_struct(&png, info ? &info : NULL);
         Close(f);
@@ -112,7 +113,7 @@ UBYTE *read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
     if (png)
         info = png_create_info_struct(png);
     if (!png || !info || setjmp(png_jmpbuf(png))) {
-        printf("cannot decode %s\n", path);
+        rpt_errorf("cannot decode %s", path);
         if (idx)
             FreeVec(idx);
         if (png)
@@ -132,8 +133,8 @@ UBYTE *read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
     // no longer a reference: the comparison is on the stored bytes.
     if (depth != 8 ||
         color != (bpp == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_PALETTE)) {
-        printf("%s is not an 8-bit %s PNG\n", path,
-               bpp == 3 ? "RGB" : "palette");
+        rpt_errorf("%s is not an 8-bit %s PNG", path,
+                      bpp == 3 ? "RGB" : "palette");
         png_destroy_read_struct(&png, &info, NULL);
         Close(f);
         return NULL;

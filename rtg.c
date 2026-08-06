@@ -21,8 +21,8 @@
 #include <exec/memory.h>
 #include <graphics/rastport.h>
 #include <intuition/screens.h>
-#include <stdio.h>
 
+#include "report.h"
 #include "rtg.h"
 
 // Either may stay NULL; rtg_open() refuses to return with both unset.
@@ -35,8 +35,8 @@ bool rtg_open(void) {
     P96Base = OpenLibrary((STRPTR)"Picasso96API.library", 2);
     CyberGfxBase = OpenLibrary((STRPTR)"cybergraphics.library", 40);
     if (!P96Base && !CyberGfxBase) {
-        printf("failed to open Picasso96API.library 2 or cybergraphics.library "
-               "40; one of them is needed\n");
+        rpt_errorf("failed to open Picasso96API.library 2 or "
+                      "cybergraphics.library 40; one of them is needed");
         return false;
     }
     return true;
@@ -76,15 +76,15 @@ static struct BitMap *p96_alloc_reference(struct Screen *scr, int height,
                                        depth > 8 ? RGBFB_R8G8B8 : RGBFB_CLUT);
 
     if (!bm) {
-        printf("p96AllocBitMap %dx%dx%d failed\n", REFERENCE_WIDTH, height,
+        rpt_errorf("p96AllocBitMap %dx%dx%d failed", REFERENCE_WIDTH, height,
                depth);
         return NULL;
     }
     // Checked rather than assumed from the width, since landing on the board
     // is the one failure that would still produce plausible-looking output.
     if (p96GetBitMapAttr(bm, P96BMA_ISONBOARD)) {
-        printf("reference bitmap landed on the board; it would not be an "
-               "independent reference\n");
+        rpt_errorf("reference bitmap landed on the board; it would not be "
+                      "an independent reference");
         p96FreeBitMap(bm);
         return NULL;
     }
@@ -107,7 +107,8 @@ static struct BitMap *gfx_alloc_reference(struct Screen *scr, int height,
                     scr->RastPort.BitMap);
 
     if (!bm)
-        printf("AllocBitMap %dx%dx%d failed\n", REFERENCE_WIDTH, height, depth);
+        rpt_errorf("AllocBitMap %dx%dx%d failed", REFERENCE_WIDTH, height,
+                      depth);
     return bm;
 }
 
