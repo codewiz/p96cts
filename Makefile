@@ -35,6 +35,7 @@ OBJS     = \
 	pngio.o \
 	report.o \
 	rtg.o \
+	tests/bitmapscale.o \
 	tests/bltbitmap.o \
 	tests/bltpattern.o \
 	tests/blttemplate.o \

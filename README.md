@@ -133,6 +133,9 @@ board, please run the suite and open an issue to share your results.
 | BltBitMap-writemask | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ |
+| BitMapScale-down | - | ✅ | - | - |
+| BitMapScale-up | - | ✅ | - | - |
+| BitMapScale-ratios | - | ✅ | - | - |
 | ScrollRaster-directions | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-backfill | ✅ | ✅ | ✅ | ✅ |
@@ -173,6 +176,9 @@ A ❌ links to the bug it found. A `-` is untested.
 | BltBitMap-writemask | - | - |
 | BltBitMap-stencil | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ |
+| BitMapScale-down | - | - |
+| BitMapScale-up | - | - |
+| BitMapScale-ratios | - | - |
 | ScrollRaster-directions | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ |
 | ScrollRaster-backfill | ✅ | ✅ |
@@ -232,6 +238,9 @@ scene fails at either 8 or 24 bits.
 | BltBitMap-writemask | - | - | - |
 | BltBitMap-stencil | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ❌ | ❌ |
+| BitMapScale-down | - | - | - |
+| BitMapScale-up | - | - | - |
+| BitMapScale-ratios | - | - | - |
 | ScrollRaster-directions | ✅ | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ |
 | ScrollRaster-backfill | ✅ | ❌ | ✅ |
@@ -242,7 +251,8 @@ scene fails at either 8 or 24 bits.
 
 These failures are tracked in
 [AROS issue #936](https://github.com/aros-development-team/AROS/issues/936),
-which has the per-mode breakdown.
+which has the per-mode breakdown. BitMapScale divergences are in
+[AROS issue #950](https://github.com/aros-development-team/AROS/issues/950).
 
 
 ## Coverage
@@ -259,12 +269,22 @@ leaves out, so a missing hook still renders.
 | BltTemplate | `BltTemplate()` | `BlitTemplate` |
 | BltPattern | `BltPattern()` | `BlitPattern` |
 | BltBitMap | `BltBitMap()`, `BltBitMapRastPort()`, `BltMaskBitMapRastPort()` | `BlitRectNoMaskComplete` |
+| BitMapScale | `BitMapScale()`, `ScalerDiv()` | - |
 | ScrollRaster | `ScrollRaster()`, `ScrollRasterBF()` | `BlitRect`, `FillRect` |
 | PixelArray | `WritePixelArray8()`, `p96WritePixelArray()` | `WriteTrueColorData`, `WriteTrueColorPixels` |
 
 `BltBitMap` also reaches `BlitPlanar2Chunky` and `BlitPlanar2Direct`, which
 nothing else here does: a planar source bitmap goes through the first on a CLUT
 screen and the second on a truecolor one.
+
+`BitMapScale` has no driver hook: P96 scales in common code, and the scenes
+prove it by comparing bit-identically on the software rasterizer and on a
+board. Each scale also cross-checks the autodoc rule that the size
+`BitMapScale()` reports equals what `ScalerDiv()` computes, and paints a red
+square at the destination origin where the two disagree. P96's truecolor
+scaler makes every downscale one pixel wider and taller than `ScalerDiv`
+says, so the 24-bit goldens carry those red flags: they record the reference
+faithfully, bug included, and get recaptured when it is fixed.
 
 Hooks with no coverage: `WriteYUVRect`, `ScrollPlanar`, `UpdatePlanar`. AROS
 calls none of them (see the TODO in `p96gfx_rtg.h`), so scenes for these would

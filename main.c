@@ -57,6 +57,7 @@ static const struct P96TestGroup *const GROUPS[] = {
     &BltTemplateGroup,
     &BltPatternGroup,
     &BltBitMapGroup,
+    &BitMapScaleGroup,
     &ScrollRasterGroup,
     &PixelArrayGroup,
 };
