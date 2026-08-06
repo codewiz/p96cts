@@ -11,10 +11,33 @@
 extern __stdargs int vasprintf(char **__restrict strp,
                                const char *__restrict fmt, va_list ap);
 
+// The REPORTFILE, when one is open.
+static FILE *rpt_file;
+
 void rpt(enum ReportKind kind, const char *line) {
     (void)kind; // stdout keeps every kind; future sinks split on it
     fputs(line, stdout);
     putchar('\n');
+    if (rpt_file) {
+        fputs(line, rpt_file);
+        putc('\n', rpt_file);
+        // Per line: a failing driver can take the machine with it, and a
+        // report that stops at the fatal testcase is the useful one.
+        fflush(rpt_file);
+    }
+}
+
+bool rpt_open(const char *path) {
+    rpt_close();
+    rpt_file = fopen(path, "w");
+    return rpt_file != NULL;
+}
+
+void rpt_close(void) {
+    if (rpt_file) {
+        fclose(rpt_file);
+        rpt_file = NULL;
+    }
 }
 
 void rpt_panic(void) {

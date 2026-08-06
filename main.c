@@ -152,10 +152,11 @@ static bool validate_test(const char *name) {
 // Everything the command line settles, so the run loop never looks at argv
 // again. parse_args() fills it; free_args() releases what it owns.
 struct RunOpts {
-    const char *test;       // the one testcase to run, or NULL for all of them
-    const char *monitor;    // mode-name prefix, or NULL for the reference
-    const char *dir;        // where this run's own images go
-    const char *golden_dir; // where the references it compares against live
+    const char *test;        // the one testcase to run, or NULL for all of them
+    const char *monitor;     // mode-name prefix, or NULL for the reference
+    const char *dir;         // where this run's own images go
+    const char *golden_dir;  // where the references it compares against live
+    const char *report_file; // splice the run's report here too, or NULL
     SHORT w, h;             // scene: the region rendered and compared
     SHORT screen_w, screen_h;
     int depth;
@@ -193,6 +194,7 @@ static void usage(void) {
         "  OUTDIR/K       output directory (default output/<monitor>/<scene>x<depth>)\n"
         "  GOLDENDIR/K    reference directory (default golden/<scene>x<depth>)\n"
         "  SCENE/K        region rendered and compared, as WxH (default 320x200)\n"
+        "  REPORTFILE/K   also write the report to this file\n"
         "  LISTMODES/S    dump the display database and exit\n"
         "  LISTTESTS/S    list the testcase names TEST accepts and exit\n"
         "  HELP/S         this text; -h and --help work too\n");
@@ -237,10 +239,11 @@ static int parse_args(struct RunOpts *o) {
         /* [5] = */ "OUTDIR/K,"
         /* [6] = */ "GOLDENDIR/K,"
         /* [7] = */ "SCENE/K,"
-        /* [8] = */ "LISTMODES/S,"
-        /* [9] = */ "LISTTESTS/S,"
-        /* [10] = */ "HELP=--help=-h/S";
-    LONG args[11];
+        /* [8] = */ "REPORTFILE/K,"
+        /* [9] = */ "LISTMODES/S,"
+        /* [10] = */ "LISTTESTS/S,"
+        /* [11] = */ "HELP=--help=-h/S";
+    LONG args[12];
 
     memset(o, 0, sizeof *o);
     memset(args, 0, sizeof args);
@@ -254,7 +257,7 @@ static int parse_args(struct RunOpts *o) {
 
     printf("%s\n", VERSION_LINE);
 
-    if (args[10]) {
+    if (args[11]) {
         usage();
         return RETURN_WARN;
     }
@@ -267,8 +270,9 @@ static int parse_args(struct RunOpts *o) {
     o->test = args[2] ? (const char *)args[2] : NULL;
     o->capture = args[3] != 0;
     o->layer = args[4] != 0;
-    o->list_modes = args[8] != 0;
-    o->list_tests = args[9] != 0;
+    o->report_file = args[8] ? (const char *)args[8] : NULL;
+    o->list_modes = args[9] != 0;
+    o->list_tests = args[10] != 0;
 
     // The reference run is the absence of a board, which as a positional
     // argument needs a name of its own. Internally it stays NULL, which is
@@ -561,6 +565,14 @@ int main(void) {
         goto out;
     }
 
+    // From here on every line is run output, so the report file gets all
+    // of it, including a failure to set the run up.
+    if (o.report_file && !rpt_open(o.report_file)) {
+        printf("cannot create %s\n", o.report_file);
+        rc = RETURN_ERROR;
+        goto out;
+    }
+
     IntuitionBase = (struct IntuitionBase *)OpenLibrary((STRPTR)"intuition.library", 39);
     if (!IntuitionBase) {
         rpt_errorf("failed to open intuition.library 39");
@@ -751,6 +763,7 @@ out:
         CloseLibrary((struct Library *)GfxBase);
     if (IntuitionBase)
         CloseLibrary((struct Library *)IntuitionBase);
+    rpt_close();
     free_args(&o);
     return rc ? rc : (failures ? 1 : 0);
 }

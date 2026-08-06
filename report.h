@@ -9,6 +9,8 @@
 #ifndef P96CTS_REPORT_H
 #define P96CTS_REPORT_H
 
+#include <stdbool.h>
+
 enum ReportKind {
     RPT_INFO,  // banners, progress, diff detail
     RPT_ERROR, // the run cannot do what was asked
@@ -20,6 +22,12 @@ enum ReportKind {
 // The single sink: one complete line, without the trailing newline --
 // how a line ends is the sink's business.
 void rpt(enum ReportKind kind, const char *line);
+
+// Duplicate every line into <path> alongside stdout, flushed per line so
+// the report survives a run that takes the machine down. rpt_close() is
+// safe without a matching rpt_open().
+bool rpt_open(const char *path);
+void rpt_close(void);
 
 // printf one whole line into rpt().
 void rptf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
