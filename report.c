@@ -80,15 +80,15 @@ void rpt_errorf(const char *fmt, ...) {
     va_end(ap);
 }
 
-// One testcase's verdict line: "PASS <name> <time>", or
-// "FAIL <name> <time> <reason>" with the reason formatted printf-style.
+// One testcase's verdict line: "PASS <time> <name>", or
+// "FAIL <time> <name> <reason>" with the reason formatted printf-style.
 // `micros` is how long the scene took to render.
 void rpt_success(const char *name, ULONG micros) {
     char *buf = NULL;
 
-    if (asprintf(&buf, "PASS %-24s %4lu.%03lums", name,
+    if (asprintf(&buf, "PASS %4lu.%03lums %s",
                  (unsigned long)(micros / 1000),
-                 (unsigned long)(micros % 1000)) < 0) {
+                 (unsigned long)(micros % 1000), name) < 0) {
         rpt_panic();
         return;
     }
@@ -104,9 +104,9 @@ void rpt_failure(const char *name, ULONG micros, const char *fmt, ...) {
     va_start(ap, fmt);
     r = vasprintf(&reason, fmt, ap);
     va_end(ap);
-    if (r < 0 || asprintf(&buf, "FAIL %-24s %4lu.%03lums %s", name,
+    if (r < 0 || asprintf(&buf, "FAIL %4lu.%03lums %-24s %s",
                           (unsigned long)(micros / 1000),
-                          (unsigned long)(micros % 1000), reason) < 0) {
+                          (unsigned long)(micros % 1000), name, reason) < 0) {
         rpt_panic();
         free(reason);
         return;
