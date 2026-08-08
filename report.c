@@ -72,10 +72,12 @@ void rpt_errorf(const char *fmt, ...) {
     va_end(ap);
 }
 
-void rpt_success(const char *name) {
+void rpt_success(const char *name, ULONG micros) {
     char *buf = NULL;
 
-    if (asprintf(&buf, "PASS %s", name) < 0) {
+    if (asprintf(&buf, "PASS %-24s %4lu.%03lums", name,
+                 (unsigned long)(micros / 1000),
+                 (unsigned long)(micros % 1000)) < 0) {
         rpt_panic();
         return;
     }
@@ -83,7 +85,7 @@ void rpt_success(const char *name) {
     free(buf);
 }
 
-void rpt_failure(const char *name, const char *fmt, ...) {
+void rpt_failure(const char *name, ULONG micros, const char *fmt, ...) {
     char *reason = NULL, *buf = NULL;
     va_list ap;
     int r;
@@ -91,7 +93,9 @@ void rpt_failure(const char *name, const char *fmt, ...) {
     va_start(ap, fmt);
     r = vasprintf(&reason, fmt, ap);
     va_end(ap);
-    if (r < 0 || asprintf(&buf, "FAIL %-24s %s", name, reason) < 0) {
+    if (r < 0 || asprintf(&buf, "FAIL %-24s %4lu.%03lums %s", name,
+                          (unsigned long)(micros / 1000),
+                          (unsigned long)(micros % 1000), reason) < 0) {
         rpt_panic();
         free(reason);
         return;

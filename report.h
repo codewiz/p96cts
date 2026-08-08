@@ -9,6 +9,7 @@
 #ifndef P96CTS_REPORT_H
 #define P96CTS_REPORT_H
 
+#include <exec/types.h>
 #include <stdbool.h>
 
 enum ReportKind {
@@ -33,11 +34,12 @@ void rpt_close(void);
 void rptf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void rpt_errorf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
-// One testcase's verdict line: "PASS <name>", or "FAIL <name> <reason>"
-// with the reason formatted printf-style.
-void rpt_success(const char *name);
-void rpt_failure(const char *name, const char *fmt, ...)
-    __attribute__((format(printf, 2, 3)));
+// One testcase's verdict line: "PASS <name> <time>", or
+// "FAIL <name> <time> <reason>" with the reason formatted printf-style.
+// `micros` is how long the scene took to render.
+void rpt_success(const char *name, ULONG micros);
+void rpt_failure(const char *name, ULONG micros, const char *fmt, ...)
+    __attribute__((format(printf, 3, 4)));
 
 // "skip <name>: <why>" for a testcase the run does not apply to.
 void rpt_skip(const char *name, const char *why);

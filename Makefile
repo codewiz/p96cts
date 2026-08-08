@@ -44,6 +44,7 @@ OBJS     = \
 	tests/pixelarray.o \
 	tests/rectfill.o \
 	tests/scrollraster.o \
+	timer.o \
 	wall.o
 
 # zlib and libpng, built for this target and committed. See

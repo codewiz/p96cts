@@ -25,6 +25,6 @@ struct Wall {
 
 void build_walls(struct RastPort *rp, struct Wall *wall);
 bool wall_broken(struct RastPort *rp, const struct Wall *wall,
-                 const char *name);
+                 const char *name, ULONG micros);
 
 #endif

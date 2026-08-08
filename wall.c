@@ -147,8 +147,9 @@ void build_walls(struct RastPort *rp, struct Wall *wall) {
 }
 
 // True if a wall was written through, naming the first pixel found.
+// `micros` is the scene's render time, passed through to the verdict line.
 bool wall_broken(struct RastPort *rp, const struct Wall *wall,
-                 const char *name) {
+                 const char *name, ULONG micros) {
     SHORT rect[2][4];
 
     wall_strips(wall, rect);
@@ -175,7 +176,7 @@ bool wall_broken(struct RastPort *rp, const struct Wall *wall,
                                          q[2] == wall->shade_expect[s][2]
                                    : q[0] == WALL_SHADE[s].pen)
                     continue;
-                rpt_failure(name, "drew outside the scene at %d,%d",
+                rpt_failure(name, micros, "drew outside the scene at %d,%d",
                                bx + x, by + y);
                 FreeVec(px);
                 return true;

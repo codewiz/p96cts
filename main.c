@@ -28,6 +28,7 @@
 #include "palette.h"
 #include "pngio.h"
 #include "report.h"
+#include "timer.h"
 #include "wall.h"
 #include "rtg.h"
 
@@ -456,21 +457,28 @@ static bool run_test(const struct P96Test *t, const char *name,
     int bpp = o->bpp;
     ULONG pixels = (ULONG)o->w * o->h, bad = 0;
     SHORT gw, gh;
+    struct EClockVal t0, t1;
     struct Wall wall = {o->w, o->h, o->screen_w, o->screen_h, o->bpp,
                         o->depth, {{0}}};
 
     // Before reset_scene, so the testcase inherits its render state reset.
     build_walls(rp, &wall);
     reset_scene(rp, o);
+    // The timed span is the scene render alone, blitter completion included;
+    // walls, readback and comparison are harness overhead and stay outside.
+    timer_now(&t0);
     t->fn(rp, o->w, o->h);
     // Wait for the blitter before reading the scene back.
     WaitBlit();
-    if (wall_broken(rp, &wall, name))
+    timer_now(&t1);
+    const ULONG us = eclock_micros(&t0, &t1);
+
+    if (wall_broken(rp, &wall, name, us))
         return true;
     UBYTE *idx = bpp == 3 ? rtg_read_rgb(rp, 0, 0, o->w, o->h)
                           : gfx_read_pens(rp, 0, 0, o->w, o->h, o->depth);
     if (!idx) {
-        rpt_failure(name, "memory allocation failed");
+        rpt_failure(name, us, "memory allocation failed");
         return true;
     }
     if (o->capture) {
@@ -478,7 +486,8 @@ static bool run_test(const struct P96Test *t, const char *name,
         if (!path || write_png(path, idx, o->w, o->h, bpp))
             failed = true;
         else
-            rptf("captured %s", path);
+            rptf("captured %s (%lu.%03lums)", path,
+                 (unsigned long)(us / 1000), (unsigned long)(us % 1000));
         free(path);
         FreeVec(idx);
         return failed;
@@ -490,7 +499,7 @@ static bool run_test(const struct P96Test *t, const char *name,
         if (path)
             gold = read_png(path, &gw, &gh, bpp);
         if (!gold) {
-            rpt_failure(name, "no golden at %s", path ? path : "?");
+            rpt_failure(name, us, "no golden at %s", path ? path : "?");
             free(path);
             FreeVec(idx);
             return true;
@@ -499,7 +508,7 @@ static bool run_test(const struct P96Test *t, const char *name,
     }
 
     if (gw != o->w || gh != o->h) {
-        rpt_failure(name, "golden is %dx%d, scene is %dx%d", gw, gh,
+        rpt_failure(name, us, "golden is %dx%d, scene is %dx%d", gw, gh,
                        o->w, o->h);
         failed = true;
     } else {
@@ -510,13 +519,13 @@ static bool run_test(const struct P96Test *t, const char *name,
                     bad++;
             }
         if (!bad) {
-            rpt_success(name);
+            rpt_success(name, us);
         } else {
             // Hunting a handful of single pixels in a 320x200 image by eye is
             // hopeless, so name the first few outright.
             int shown = 0;
 
-            rpt_failure(name, "%lu of %lu pixels differ",
+            rpt_failure(name, us, "%lu of %lu pixels differ",
                            (unsigned long)bad, (unsigned long)pixels);
             failed = true;
 
@@ -587,6 +596,11 @@ int main(void) {
         goto out;
     }
     if (!rtg_open()) {
+        rc = 20;
+        goto out;
+    }
+    if (!timer_open()) {
+        rpt_errorf("failed to open timer.device");
         rc = 20;
         goto out;
     }
@@ -759,6 +773,7 @@ cleanup:
     if (scr)
         CloseScreen(scr);
 out:
+    timer_close();
     rtg_close();
     if (GfxBase)
         CloseLibrary((struct Library *)GfxBase);
