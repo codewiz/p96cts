@@ -116,12 +116,12 @@ void rpt_failure(const char *name, ULONG micros, const char *fmt, ...) {
     free(buf);
 }
 
-// "skip <name>: <why>" for a testcase the run does not apply to. The time
+// "skip <name> <why>" for a testcase the run does not apply to. The time
 // column is left blank so the names align with the PASS/FAIL lines.
 void rpt_skip(const char *name, const char *why) {
     char *buf = NULL;
 
-    if (asprintf(&buf, "skip %10s %s: %s", "", name, why) < 0) {
+    if (asprintf(&buf, "skip %10s %-24s %s", "", name, why) < 0) {
         rpt_panic();
         return;
     }
