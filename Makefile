@@ -23,18 +23,20 @@ DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src stefan
 
 TARGET   = p96cts
 # Testcase scenes live in tests/, one translation unit per group; the harness,
-# the graphics layer and the PNG codec stay at the top level.
+# the graphics layer and the PNG codec live in src/.
 OBJS     = \
-	backdrop.o \
-	gfx.o \
-	glyph.o \
-	layer.o \
-	main.o \
-	modes.o \
-	palette.o \
-	pngio.o \
-	report.o \
-	rtg.o \
+	src/backdrop.o \
+	src/gfx.o \
+	src/glyph.o \
+	src/layer.o \
+	src/main.o \
+	src/modes.o \
+	src/palette.o \
+	src/pngio.o \
+	src/report.o \
+	src/rtg.o \
+	src/timer.o \
+	src/wall.o \
 	tests/bitmapscale.o \
 	tests/bltbitmap.o \
 	tests/bltpattern.o \
@@ -43,9 +45,7 @@ OBJS     = \
 	tests/drawline.o \
 	tests/pixelarray.o \
 	tests/rectfill.o \
-	tests/scrollraster.o \
-	timer.o \
-	wall.o
+	tests/scrollraster.o
 
 # zlib and libpng, built for this target and committed. See
 # third_party/README.md for provenance and how to rebuild them.
@@ -68,7 +68,7 @@ LRA = -mlra
 
 # Kept apart from CFLAGS: a command-line CFLAGS= replaces the variable
 # entirely, and dropping -noixemul or the include path breaks the link.
-ALL_CFLAGS = $(CFLAGS) $(LRA) -noixemul -I. -I$(P96INC) $(PNGINC)
+ALL_CFLAGS = $(CFLAGS) $(LRA) -noixemul -Isrc -I$(P96INC) $(PNGINC)
 
 all: $(TARGET)
 
@@ -78,16 +78,18 @@ $(TARGET): $(OBJS) $(PNGLIB)
 	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNGLIB) -lm
 
 HEADERS  = \
-	backdrop.h \
-	gfx.h \
-	glyph.h \
-	layer.h \
-	modes.h \
-	p96cts.h \
-	palette.h \
-	pngio.h \
-	rtg.h \
-	wall.h
+	src/backdrop.h \
+	src/gfx.h \
+	src/glyph.h \
+	src/layer.h \
+	src/modes.h \
+	src/p96cts.h \
+	src/palette.h \
+	src/pngio.h \
+	src/report.h \
+	src/rtg.h \
+	src/timer.h \
+	src/wall.h
 
 %.o: %.c $(HEADERS)
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<
