@@ -263,7 +263,7 @@ leaves out, so a missing hook still renders.
 
 | group | graphics.library | P96 hook |
 |---|---|---|
-| DrawLine | `Move()`, `Draw()` | `DrawLine` |
+| DrawLine | `Move()`, `Draw()`, `PolyDraw()` | `DrawLine` |
 | RectFill | `RectFill()` | `FillRect`, `InvertRect` |
 | ClipBlit | `ClipBlit()` | `BlitRect` |
 | BltTemplate | `BltTemplate()` | `BlitTemplate` |

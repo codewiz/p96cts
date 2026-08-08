@@ -61,9 +61,10 @@ static void t_inversvid(struct RastPort *rp, SHORT w, SHORT h) {
     star(rp, w, h, 0xF0F0);
 }
 
-// Pentagon vertices * 1024, every 72 degrees starting at the top.
-static const short PENTA[5][2] = {
-    {0, -1024}, {974, -316}, {602, 828}, {-602, 828}, {-974, 316},
+// Pentagon vertices * 1024, every 72 degrees starting at the top, listed in
+// pentagram order: visiting them two apart, back to the start.
+static const short PENTA[6][2] = {
+    {0, -1024}, {602, 828}, {-974, 316}, {974, -316}, {-602, 828}, {0, -1024},
 };
 
 // A closed pentagram: visiting the pentagon's vertices two apart draws five
@@ -71,16 +72,21 @@ static const short PENTA[5][2] = {
 // so under COMPLEMENT they inverse twice and must come back to exactly the
 // background value -- which is what makes this scene test XOR semantics
 // rather than just "some pixels changed".
+//
+// The five segments go through PolyDraw(), which is specified as Draw() to
+// the first array point and then between successive pairs, so this also
+// covers PolyDraw() against the same golden a Draw() loop produces.
 static void pentagram(struct RastPort *rp, SHORT w, SHORT h) {
-    static const int ORDER[6] = {0, 2, 4, 1, 3, 0};
+    WORD pts[6][2];
     int cx = w / 2, cy = h / 2;
     int r = ((w < h ? w : h) / 2) - 8;
 
-    Move(rp, cx + PENTA[ORDER[0]][0] * r / 1024,
-         cy + PENTA[ORDER[0]][1] * r / 1024);
-    for (int k = 1; k < 6; k++)
-        Draw(rp, cx + PENTA[ORDER[k]][0] * r / 1024,
-             cy + PENTA[ORDER[k]][1] * r / 1024);
+    for (int k = 0; k < 6; k++) {
+        pts[k][0] = cx + PENTA[k][0] * r / 1024;
+        pts[k][1] = cy + PENTA[k][1] * r / 1024;
+    }
+    Move(rp, pts[0][0], pts[0][1]);
+    PolyDraw(rp, 5, &pts[1][0]);
 }
 
 // Backgrounds for the COMPLEMENT scene. Deliberately not 0 and 1: inverting
