@@ -63,15 +63,9 @@ WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
 
 CFLAGS  ?= -O3 -fomit-frame-pointer -m68020 $(WARNINGS)
 
-# -mlra is required by the hard register constraints in inline-macros-gcc16.h,
-# which work around an NDK inline macro that silently drops an argument on gcc
-# 13 and later. m68k still defaults to the old reload pass; gcc rejects those
-# constraints without it. Goes away with that header.
-LRA = -mlra
-
 # Kept apart from CFLAGS: a command-line CFLAGS= replaces the variable
 # entirely, and dropping -noixemul or the include path breaks the link.
-ALL_CFLAGS = $(CFLAGS) $(LRA) -noixemul -Isrc $(P96_CFLAGS) $(PNGINC)
+ALL_CFLAGS = $(CFLAGS) -noixemul -Isrc $(P96_CFLAGS) $(PNGINC)
 
 all: $(TARGET)
 
