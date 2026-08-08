@@ -10,3 +10,8 @@
 # A run's own images. The references under golden/ are committed -- PNG makes
 # them small enough to carry -- but these are regenerated on every run.
 /output
+
+# Local AmigaDOS run scripts, tuned to one machine's boards and modes.
+/pal
+/z3660
+/zz9000
