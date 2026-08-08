@@ -1,0 +1,6 @@
+set CARD PAL
+set RES 320x256
+
+cd P96CTS:
+delete ALL FORCE QUIET output/$CARD
+p96cts $CARD ${RES}x8 REPORTFILE $CARD-${RES}x8-AROS.out

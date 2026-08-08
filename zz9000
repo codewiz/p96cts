@@ -1,0 +1,9 @@
+set CARD ZZ9000
+; the updated ZZ9000 driver no longer offers 640x480
+set RES 800x600
+
+cd P96CTS:
+delete ALL FORCE QUIET output/$CARD
+p96cts $CARD ${RES}x8  REPORTFILE $CARD-${RES}x8-AROS.out
+p96cts $CARD ${RES}x16 REPORTFILE $CARD-${RES}x16-AROS.out
+p96cts $CARD ${RES}x24 REPORTFILE $CARD-${RES}x24-AROS.out
