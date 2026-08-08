@@ -283,6 +283,8 @@ static void write_array(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w,
                     fmt == RGBFB_CLUT ? RECTFMT_LUT8 : RECTFMT_RGB);
 }
 
+// This and rtg_write_pens() take the source rectangle as (sx, sy) plus a row
+// stride in bytes, so a scene can blit a sub-rectangle of a larger buffer.
 void rtg_write_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
                    UBYTE *px, SHORT sx, SHORT sy, SHORT stride) {
     write_array(rp, x0, y0, w, h, px, sx, sy, stride, RGBFB_R8G8B8);

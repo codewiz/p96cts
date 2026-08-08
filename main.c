@@ -464,12 +464,15 @@ static bool run_test(const struct P96Test *t, const char *name,
     // Before reset_scene, so the testcase inherits its render state reset.
     build_walls(rp, &wall);
     reset_scene(rp, o);
+
     // The timed span is the scene render alone, blitter completion included;
     // walls, readback and comparison are harness overhead and stay outside.
     timer_now(&t0);
+
     t->fn(rp, o->w, o->h);
     // Wait for the blitter before reading the scene back.
     WaitBlit();
+
     timer_now(&t1);
     const ULONG us = eclock_micros(&t0, &t1);
 

@@ -14,6 +14,8 @@ extern __stdargs int vasprintf(char **__restrict strp,
 // The REPORTFILE, when one is open.
 static FILE *rpt_file;
 
+// The single sink: one complete line, without the trailing newline --
+// how a line ends is the sink's business.
 void rpt(enum ReportKind kind, const char *line) {
     (void)kind; // stdout keeps every kind; future sinks split on it
     fputs(line, stdout);
@@ -27,6 +29,9 @@ void rpt(enum ReportKind kind, const char *line) {
     }
 }
 
+// Duplicate every line into <path> alongside stdout, flushed per line so
+// the report survives a run that takes the machine down. rpt_close() is
+// safe without a matching rpt_open().
 bool rpt_open(const char *path) {
     rpt_close();
     rpt_file = fopen(path, "w");
@@ -40,6 +45,8 @@ void rpt_close(void) {
     }
 }
 
+// The reporter itself could not allocate: emit a fixed last-resort mark
+// (a GUI sink might DisplayBeep() instead).
 void rpt_panic(void) {
     // Static text on purpose: this runs when malloc has already failed.
     fputs("*** OUT OF MEMORY ***\n", stdout);
@@ -56,6 +63,7 @@ static void vrptf(enum ReportKind kind, const char *fmt, va_list ap) {
     free(buf);
 }
 
+// printf one whole line into rpt(); rpt_errorf() the same, tagged RPT_ERROR.
 void rptf(const char *fmt, ...) {
     va_list ap;
 
@@ -72,6 +80,9 @@ void rpt_errorf(const char *fmt, ...) {
     va_end(ap);
 }
 
+// One testcase's verdict line: "PASS <name> <time>", or
+// "FAIL <name> <time> <reason>" with the reason formatted printf-style.
+// `micros` is how long the scene took to render.
 void rpt_success(const char *name, ULONG micros) {
     char *buf = NULL;
 
@@ -105,6 +116,7 @@ void rpt_failure(const char *name, ULONG micros, const char *fmt, ...) {
     free(buf);
 }
 
+// "skip <name>: <why>" for a testcase the run does not apply to.
 void rpt_skip(const char *name, const char *why) {
     char *buf = NULL;
 

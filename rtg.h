@@ -19,7 +19,6 @@ void rtg_close(void);
 struct BitMap *rtg_alloc_reference(struct Screen *scr, int height, int depth);
 void rtg_free_bitmap(struct BitMap *bm);
 
-// A small bitmap in the same pixel format as `like`, and its release.
 struct BitMap *rtg_alloc_friend(struct BitMap *like, SHORT w, SHORT h);
 void rtg_free_friend(struct BitMap *bm);
 
@@ -31,8 +30,6 @@ void rtg_fill_rgb(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                   ULONG rgb);
 UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h);
 
-// Both take the source rectangle as (sx, sy) plus a row stride in bytes, so a
-// scene can blit a sub-rectangle of a larger buffer.
 void rtg_write_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
                    UBYTE *px, SHORT sx, SHORT sy, SHORT stride);
 void rtg_write_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,

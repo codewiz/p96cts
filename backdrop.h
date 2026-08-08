@@ -10,9 +10,6 @@
 struct RastPort;
 
 void backdrop(struct RastPort *rp, SHORT w, SHORT h);
-
-// Release the cached scene. The run loop calls this once at the end; scenes
-// never need to.
 void backdrop_free(void);
 
 #endif

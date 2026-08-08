@@ -37,6 +37,8 @@ struct Library *LayersBase;
 static struct Layer_Info *layer_info;
 static struct Layer *layer;
 
+// Open layers.library and lay a single simple-refresh layer over the whole of
+// bm. Returns the layer's RastPort to draw through, or NULL, having said why.
 struct RastPort *layer_install(struct BitMap *bm) {
     // The bitmap's own size, not the screen's or the scene's: the reference
     // bitmap is deliberately far wider than the mode, and a layer narrower
@@ -67,6 +69,8 @@ struct RastPort *layer_install(struct BitMap *bm) {
     return layer->rp;
 }
 
+// Tear it back down. A no-op if layer_install() was never called or failed,
+// so it can sit unconditionally on the cleanup path.
 void layer_free(void) {
     if (layer)
         DeleteLayer(0, layer);

@@ -12,12 +12,7 @@
 struct BitMap;
 struct RastPort;
 
-// Open layers.library and lay a single simple-refresh layer over the whole of
-// bm. Returns the layer's RastPort to draw through, or NULL, having said why.
 struct RastPort *layer_install(struct BitMap *bm);
-
-// Tear it back down. A no-op if layer_install() was never called or failed,
-// so it can sit unconditionally on the cleanup path.
 void layer_free(void);
 
 #endif

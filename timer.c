@@ -35,10 +35,12 @@ void timer_close(void) {
     }
 }
 
+// The current E clock, for a later eclock_micros().
 void timer_now(struct EClockVal *now) {
     ReadEClock(now);
 }
 
+// Microseconds elapsed from t0 to t1.
 ULONG eclock_micros(const struct EClockVal *t0, const struct EClockVal *t1) {
     const unsigned long long a =
         ((unsigned long long)t0->ev_hi << 32) | t0->ev_lo;

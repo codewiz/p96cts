@@ -85,6 +85,8 @@ static UBYTE *cached;
 static SHORT cached_w, cached_h;
 static int cached_bpp;
 
+// Release the cached scene. The run loop calls this once at the end; scenes
+// never need to.
 void backdrop_free(void) {
     if (cached)
         FreeVec(cached);
