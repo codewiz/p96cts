@@ -318,7 +318,7 @@ With a toolchain that does not bundle them, point at an unpacked
 `P96Develop.lha`:
 
     make CC=/path/to/bin/m68k-amigaos-gcc \
-         P96INC=/path/to/Picasso96Develop/Include
+         P96_CFLAGS=-I/path/to/Picasso96Develop/Include
 
 Images are read and written with zlib and libpng, which are committed under
 `third_party/` already built for this target, so nothing needs fetching or

@@ -3,8 +3,8 @@
 # p96cts -- P96 driver conformance test suite (AmigaOS m68k target).
 #
 # Needs an m68k-amigaos-gcc and the Picasso96 developer includes. The default
-# P96INC is where the amiga-gcc toolchain ships them, so a containerised build
-# needs no arguments at all:
+# P96_CFLAGS points where the amiga-gcc toolchain ships them, so a
+# containerised build needs no arguments at all:
 #
 #   make docker-build
 #
@@ -12,12 +12,15 @@
 # unpacked P96Develop.lha instead:
 #
 #   make CC=/path/to/bin/m68k-amigaos-gcc \
-#        P96INC=/path/to/Picasso96Develop/Include
+#        P96_CFLAGS=-I/path/to/Picasso96Develop/Include
+#
+# A toolchain that bundles them on its default include path wants
+# P96_CFLAGS= (empty).
 
 # Plain assignment, not ?=: make predefines CC as "cc". A command-line
 # CC=... still overrides this.
 CC       = m68k-amigaos-gcc
-P96INC  ?= /opt/amiga/m68k-amigaos/include
+P96_CFLAGS ?= -I/opt/amiga/m68k-amigaos/include
 
 DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src stefanreinauer/amiga-gcc:gcc-v16.1
 
@@ -68,7 +71,7 @@ LRA = -mlra
 
 # Kept apart from CFLAGS: a command-line CFLAGS= replaces the variable
 # entirely, and dropping -noixemul or the include path breaks the link.
-ALL_CFLAGS = $(CFLAGS) $(LRA) -noixemul -Isrc -I$(P96INC) $(PNGINC)
+ALL_CFLAGS = $(CFLAGS) $(LRA) -noixemul -Isrc $(P96_CFLAGS) $(PNGINC)
 
 all: $(TARGET)
 
