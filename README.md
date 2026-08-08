@@ -281,10 +281,17 @@ screen and the second on a truecolor one.
 prove it by comparing bit-identically on the software rasterizer and on a
 board. Each scale also cross-checks the autodoc rule that the size
 `BitMapScale()` reports equals what `ScalerDiv()` computes, and paints a red
-square at the destination origin where the two disagree. P96's truecolor
+square at the destination origin where the two disagree. P96's 24-bit
 scaler makes every downscale one pixel wider and taller than `ScalerDiv`
 says, so the 24-bit goldens carry those red flags: they record the reference
-faithfully, bug included, and get recaptured when it is fixed.
+faithfully, bug included, and get recaptured when it is fixed. The 16-bit
+path agrees with `ScalerDiv`, so the 16-bit goldens carry none.
+
+Runs compare pens at depth 8 and canonical R8G8B8 readback at 15, 16 and 24.
+A 15/16-bit run renders its off-board reference in the screen's own quantized
+format, so both sides lose channel precision identically, and the guard wall
+samples what its shades actually read back rather than predicting each
+format's rounding.
 
 Hooks with no coverage: `WriteYUVRect`, `ScrollPlanar`, `UpdatePlanar`. AROS
 calls none of them (see the TODO in `p96gfx_rtg.h`), so scenes for these would

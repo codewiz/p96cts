@@ -87,7 +87,54 @@ static void build_wall(struct RastPort *rp, SHORT bx, SHORT by, SHORT bw,
     }
 }
 
-void build_walls(struct RastPort *rp, const struct Wall *wall) {
+// The two wall strips: right of the scene, and below it.
+static void wall_strips(const struct Wall *wall, SHORT rect[2][4]) {
+    rect[0][0] = wall->scene_w;
+    rect[0][1] = 0;
+    rect[0][2] = (SHORT)(wall->screen_w - wall->scene_w);
+    rect[0][3] = wall->screen_h;
+    rect[1][0] = 0;
+    rect[1][1] = wall->scene_h;
+    rect[1][2] = wall->scene_w;
+    rect[1][3] = (SHORT)(wall->screen_h - wall->scene_h);
+}
+
+// A truecolor screen does not read back the nominal shade values: 15/16-bit
+// formats quantize the channels as they render. Rather than predicting each
+// format's rounding, sample the first pixel of every shade from the freshly
+// painted wall; a shade the wall never shows is one no later check needs.
+static void calibrate_shades(struct RastPort *rp, struct Wall *wall) {
+    SHORT rect[2][4];
+    int seen = 0;
+
+    wall_strips(wall, rect);
+    for (int i = 0; i < 2 && seen != 0xF; i++) {
+        const SHORT bx = rect[i][0], by = rect[i][1];
+        const SHORT bw = rect[i][2], bh = rect[i][3];
+        UBYTE *px;
+
+        if (bw <= 0 || bh <= 0)
+            continue;
+        px = rtg_read_rgb(rp, bx, by, bw, bh);
+        if (!px)
+            continue;
+        for (SHORT y = 0; y < bh && seen != 0xF; y++)
+            for (SHORT x = 0; x < bw; x++) {
+                const int s = wall_shade((SHORT)(bx + x), (SHORT)(by + y));
+
+                if (seen & (1 << s))
+                    continue;
+                const UBYTE *q = px + ((ULONG)y * bw + x) * 3;
+                wall->shade_expect[s][0] = q[0];
+                wall->shade_expect[s][1] = q[1];
+                wall->shade_expect[s][2] = q[2];
+                seen |= 1 << s;
+            }
+        FreeVec(px);
+    }
+}
+
+void build_walls(struct RastPort *rp, struct Wall *wall) {
     rp->Mask = 0xFF;
     if (wall->screen_w > wall->scene_w)
         build_wall(rp, wall->scene_w, 0,
@@ -95,17 +142,16 @@ void build_walls(struct RastPort *rp, const struct Wall *wall) {
     if (wall->screen_h > wall->scene_h)
         build_wall(rp, 0, wall->scene_h, wall->scene_w,
                    (SHORT)(wall->screen_h - wall->scene_h));
+    if (wall->bpp == 3)
+        calibrate_shades(rp, wall);
 }
 
 // True if a wall was written through, naming the first pixel found.
 bool wall_broken(struct RastPort *rp, const struct Wall *wall,
                  const char *name) {
-    const SHORT rect[2][4] = {
-        {wall->scene_w, 0, (SHORT)(wall->screen_w - wall->scene_w),
-         wall->screen_h},
-        {0, wall->scene_h, wall->scene_w,
-         (SHORT)(wall->screen_h - wall->scene_h)},
-    };
+    SHORT rect[2][4];
+
+    wall_strips(wall, rect);
 
     for (int i = 0; i < 2; i++) {
         const SHORT bx = rect[i][0], by = rect[i][1];
@@ -123,11 +169,10 @@ bool wall_broken(struct RastPort *rp, const struct Wall *wall,
             for (SHORT x = 0; x < bw; x++) {
                 const UBYTE *q = px + ((ULONG)y * bw + x) * wall->bpp;
                 const int s = wall_shade((SHORT)(bx + x), (SHORT)(by + y));
-                const ULONG rgb = WALL_SHADE[s].rgb;
 
-                if (wall->bpp == 3 ? q[0] == (UBYTE)(rgb >> 16) &&
-                                         q[1] == (UBYTE)(rgb >> 8) &&
-                                         q[2] == (UBYTE)rgb
+                if (wall->bpp == 3 ? q[0] == wall->shade_expect[s][0] &&
+                                         q[1] == wall->shade_expect[s][1] &&
+                                         q[2] == wall->shade_expect[s][2]
                                    : q[0] == WALL_SHADE[s].pen)
                     continue;
                 rpt_failure(name, "drew outside the scene at %d,%d",

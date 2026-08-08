@@ -68,12 +68,25 @@ void rtg_close(void) {
 // implementation of the same primitives, independent of any card driver and of
 // the blitter. Only the leftmost part is drawn on and read back; the rest is
 // there to make the allocation refuse the card.
+// 24-bit runs render the reference in R8G8B8 no matter the screen's channel
+// order: readback canonicalizes to R8G8B8 anyway, so the formats compare
+// equal. 15/16-bit screens quantize channels to 5 or 6 bits as they render,
+// so their reference must be in the screen's exact format -- rendered at the
+// same precision, not converted to it afterwards.
+static ULONG reference_format(struct Screen *scr, int depth) {
+    if (depth <= 8)
+        return RGBFB_CLUT;
+    if (depth <= 16)
+        return rtg_rgbformat(scr->RastPort.BitMap);
+    return RGBFB_R8G8B8;
+}
+
 static struct BitMap *p96_alloc_reference(struct Screen *scr, int height,
                                           int depth) {
     struct BitMap *bm = p96AllocBitMap(REFERENCE_WIDTH, height, depth,
                                        BMF_CLEAR | BMF_USERPRIVATE,
                                        scr->RastPort.BitMap,
-                                       depth > 8 ? RGBFB_R8G8B8 : RGBFB_CLUT);
+                                       reference_format(scr, depth));
 
     if (!bm) {
         rpt_errorf("p96AllocBitMap %dx%dx%d failed", REFERENCE_WIDTH, height,
@@ -100,10 +113,15 @@ static struct BitMap *p96_alloc_reference(struct Screen *scr, int height,
 // same anyway, so both paths produce a reference of identical geometry.
 static struct BitMap *gfx_alloc_reference(struct Screen *scr, int height,
                                           int depth) {
+    ULONG pixfmt = depth > 8 ? PIXFMT_RGB24 : PIXFMT_LUT8;
+
+    // Same reasoning as reference_format(): 15/16-bit references must render
+    // in the screen's own quantized format.
+    if (depth > 8 && depth <= 16)
+        pixfmt = GetCyberMapAttr(scr->RastPort.BitMap, CYBRMATTR_PIXFMT);
     struct BitMap *bm =
         AllocBitMap(REFERENCE_WIDTH, height, depth,
-                    BMF_CLEAR | BMF_SPECIALFMT |
-                        SHIFT_PIXFMT(depth > 8 ? PIXFMT_RGB24 : PIXFMT_LUT8),
+                    BMF_CLEAR | BMF_SPECIALFMT | SHIFT_PIXFMT(pixfmt),
                     scr->RastPort.BitMap);
 
     if (!bm)

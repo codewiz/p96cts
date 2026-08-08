@@ -319,12 +319,12 @@ static int parse_args(struct RunOpts *o) {
         return RETURN_ERROR;
     }
 
-    // 8 compares pen values; 24 compares R8G8B8, which any truecolor screen
-    // canonicalizes to on readback. 15/16-bit modes are the deliberate gap:
-    // their reference would have to be rendered in the same 5-6-5 precision,
-    // not just converted to it, so they need their own path.
-    if (o->depth != 8 && o->depth != 24) {
-        printf("depth %d is not supported (8 or 24)\n", o->depth);
+    // 8 compares pen values; truecolor depths compare R8G8B8, which readback
+    // canonicalizes to. 15/16-bit runs render their reference in the screen's
+    // own quantized format (see reference_format() in rtg.c), so both sides
+    // lose precision identically and keep their own golden sets.
+    if (o->depth != 8 && o->depth != 15 && o->depth != 16 && o->depth != 24) {
+        printf("depth %d is not supported (8, 15, 16 or 24)\n", o->depth);
         return RETURN_ERROR;
     }
     o->bpp = o->depth > 8 ? 3 : 1;
@@ -456,8 +456,8 @@ static bool run_test(const struct P96Test *t, const char *name,
     int bpp = o->bpp;
     ULONG pixels = (ULONG)o->w * o->h, bad = 0;
     SHORT gw, gh;
-    const struct Wall wall = {o->w, o->h, o->screen_w, o->screen_h, o->bpp,
-                              o->depth};
+    struct Wall wall = {o->w, o->h, o->screen_w, o->screen_h, o->bpp,
+                        o->depth, {{0}}};
 
     // Before reset_scene, so the testcase inherits its render state reset.
     build_walls(rp, &wall);
