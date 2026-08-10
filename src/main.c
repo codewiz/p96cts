@@ -165,9 +165,14 @@ struct RunOpts {
     int bpp; // bytes per compared pixel: 1 (pen) or 3 (R8G8B8)
     bool capture;
     bool layer; // draw through a Layer rather than a bare RastPort
+    bool all_depths; // no MODE given: run every depth the monitor offers
 
     bool list_modes;
     bool list_tests;
+
+    // GOLDENDIR/OUTDIR as given, kept apart from golden_dir/dir: those are
+    // recomposed per depth on an all-depths run and reapply the overrides.
+    const char *golden_override, *out_override;
 
     // Owned. The dir strings above may point into either of these, or into
     // rda's own storage, so all three outlive the run.
@@ -182,6 +187,43 @@ static void free_args(struct RunOpts *o) {
         FreeArgs(o->rda);
 }
 
+// Set the run's depth and (re)compose the directories that carry it. An
+// all-depths run calls this once per pass; the overrides win every time.
+//
+// Goldens are named for what they contain -- the scene, at a depth -- so a
+// differently sized scene cannot overwrite an existing set, and a deeper
+// one can sit beside it later. Not the MODE: the same scene drawn into the
+// corner of a larger screen must compare equal to it on a screen its own
+// size, which is why the two are separate.
+//
+// Depth is enough while palette is the only pen-addressed format. It stops
+// being enough at 16-bit, where r5g6b5 and r5g5b5 differ, so a wider
+// comparison path wants the format in the name too.
+//
+// Run output is per monitor, so several boards can be compared against the
+// one reference set.
+// A layered run renders the same scenes down a different path, so its
+// images get a directory of their own rather than overwriting the
+// unlayered ones: the two are meant to be compared against each other.
+static int set_depth(struct RunOpts *o, int depth) {
+    o->depth = depth;
+    o->bpp = depth > 8 ? 3 : 1;
+    free(o->golden_buf);
+    free(o->output_buf);
+    o->golden_buf = o->output_buf = NULL;
+    if (asprintf(&o->golden_buf, "golden/%dx%dx%d", o->w, o->h, depth) < 0 ||
+        asprintf(&o->output_buf, "output/%s/%dx%dx%d%s",
+                 o->monitor ? o->monitor : "softrast",
+                 o->w, o->h, depth, o->layer ? "-layered" : "") < 0) {
+        printf("out of memory\n");
+        return RETURN_FAIL;
+    }
+    o->golden_dir = o->golden_override ? o->golden_override : o->golden_buf;
+    o->dir = o->out_override ? o->out_override
+                             : (o->capture ? o->golden_dir : o->output_buf);
+    return RETURN_OK;
+}
+
 // AmigaDOS answers "?" from the template alone, which gives the argument names
 // but not what they mean. This is the rest of it.
 static void usage(void) {
@@ -189,7 +231,8 @@ static void usage(void) {
         "\n"
         "  MONITOR        board to render on, e.g. Z3660 or PAL; softrast for\n"
         "                 P96's own software rasterizer, which is the reference\n"
-        "  MODE           screen mode as WxHxD (default: the scene size at depth 8)\n"
+        "  MODE           screen mode as WxHxD; without one, every supported\n"
+        "                 depth runs at the smallest mode containing the scene\n"
         "  TEST/K         one testcase as <group>-<test>; all of them by default\n"
         "  CAPTURE/S      write the reference instead of comparing against it\n"
         "  LAYER/S        draw through a Layer covering the whole bitmap\n"
@@ -257,9 +300,8 @@ static int parse_args(struct RunOpts *o) {
         return RETURN_FAIL;
     }
 
-    printf("%s\n", VERSION_LINE);
-
     if (args[11]) {
+        printf("%s\n", VERSION_LINE);
         usage();
         return RETURN_WARN;
     }
@@ -283,16 +325,17 @@ static int parse_args(struct RunOpts *o) {
     if (o->monitor && !strcmp(o->monitor, "softrast"))
         o->monitor = NULL;
 
-    // MODE is not /A, though a run has to have one: /A is checked by ReadArgs
-    // before anything else, which would make even -h and LISTMODES demand a
-    // mode. So it is required here instead, where those have already been
-    // dealt with.
-    if (!o->list_modes && !o->list_tests && !args[1]) {
-        printf("MONITOR and MODE are required, "
-               "as in \"p96cts softrast 320x200x8\"\n");
+    // MONITOR is not /A, though a run has to have one: /A is checked by
+    // ReadArgs before anything else, which would make even -h and LISTMODES
+    // demand it. So it is required here instead, where those have already
+    // been dealt with. MODE is genuinely optional: without one, the run
+    // covers every depth the monitor offers.
+    if (!o->list_modes && !o->list_tests && !args[0]) {
+        printf("MONITOR is required, as in \"p96cts softrast\"\n");
         usage();
         return RETURN_ERROR;
     }
+    o->all_depths = !args[1];
 
     if (args[7] && !parse_scene((const char *)args[7], &o->w, &o->h)) {
         printf("SCENE must be WxH\n");
@@ -328,7 +371,6 @@ static int parse_args(struct RunOpts *o) {
         printf("depth %d is not supported (8, 15, 16 or 24)\n", o->depth);
         return RETURN_ERROR;
     }
-    o->bpp = o->depth > 8 ? 3 : 1;
 
     if (o->w & 15) {
         printf("width %d must be a multiple of 16\n", o->w);
@@ -337,32 +379,9 @@ static int parse_args(struct RunOpts *o) {
     if (!validate_test(o->test))
         return RETURN_ERROR;
 
-    // Goldens are named for what they contain -- the scene, at a depth -- so a
-    // differently sized scene cannot overwrite an existing set, and a deeper
-    // one can sit beside it later. Not the MODE: the same scene drawn into the
-    // corner of a larger screen must compare equal to it on a screen its own
-    // size, which is why the two are separate.
-    //
-    // Depth is enough while palette is the only pen-addressed format. It stops
-    // being enough at 16-bit, where r5g6b5 and r5g5b5 differ, so a wider
-    // comparison path wants the format in the name too.
-    //
-    // Run output is per monitor, so several boards can be compared against the
-    // one reference set.
-    // A layered run renders the same scenes down a different path, so its
-    // images get a directory of their own rather than overwriting the
-    // unlayered ones: the two are meant to be compared against each other.
-    if (asprintf(&o->golden_buf, "golden/%dx%dx%d", o->w, o->h, o->depth) < 0 ||
-        asprintf(&o->output_buf, "output/%s/%dx%dx%d%s",
-                 o->monitor ? o->monitor : "softrast",
-                 o->w, o->h, o->depth, o->layer ? "-layered" : "") < 0) {
-        printf("out of memory\n");
-        return RETURN_FAIL;
-    }
-    o->golden_dir = args[6] ? (const char *)args[6] : o->golden_buf;
-    o->dir = args[5] ? (const char *)args[5]
-                     : (o->capture ? o->golden_dir : o->output_buf);
-    return RETURN_OK;
+    o->golden_override = args[6] ? (const char *)args[6] : NULL;
+    o->out_override = args[5] ? (const char *)args[5] : NULL;
+    return set_depth(o, o->depth);
 }
 
 // Keep what a failing scene rendered, and a picture of where it went wrong:
@@ -557,34 +576,177 @@ static bool run_test(const struct P96Test *t, const char *name,
     return failed;
 }
 
-int main(void) {
-    struct RunOpts o;
-    int failures = 0, rc = 0;
-    ULONG id;
+// Open the screen for one mode, run every selected testcase on it, and tear
+// it back down. Returns the number of failures, or -1 on a user break.
+static int run_mode(struct RunOpts *o, ULONG id) {
+    int failures = 0;
+    bool broke = false;
     struct Screen *scr = NULL;
     struct BitMap *bm = NULL;
     struct RastPort rp_off, *rp;
+
+    gfx_truecolor = o->depth > 8;
+
+    // A screen is opened either way. The driver run renders into it, since
+    // that is the thing under test. The reference run only borrows it: a pen
+    // number is not a color on its own, and the mapping that turns it into one
+    // comes from the screen, reaching the reference bitmap through the friend
+    // argument below -- unfriended, a truecolor screen reads every pen as black.
+    //
+    // SA_Pens with an empty spec so Intuition reserves none of them: every pen
+    // belongs to the scenes. The whole palette is set explicitly, since
+    // Intuition seeds only pens 0-3 and 17-19 from Preferences and a truecolor
+    // reference would otherwise record the capture machine's colors. SA_Colors32
+    // rather than SetRGB32 afterwards, because it takes precedence over every
+    // other way the palette gets set.
+    {
+        static WORD no_pens[] = {~0};
+        const ULONG *colors = palette();
+
+        // The driver run is rendered on the screen, so it gets the size the
+        // mode was asked for. The reference run only borrows the screen and
+        // renders into its own bitmap, so it takes the mode's own dimensions:
+        // STDSCREENWIDTH/HEIGHT ask for the DisplayClip rectangle.
+        //
+        // SA_Behind for the reference run: it renders into its own bitmap and
+        // only borrows this screen, so there is nothing to see on it. Opening
+        // it in front would just black out the display for the whole run.
+        scr = OpenScreenTags(NULL, SA_DisplayID, id,
+                             SA_Width, o->monitor ? o->screen_w : STDSCREENWIDTH,
+                             SA_Height, o->monitor ? o->screen_h : STDSCREENHEIGHT,
+                             SA_Depth, o->depth, SA_Pens, (ULONG)no_pens,
+                             SA_Colors32, (ULONG)colors, SA_Quiet, TRUE,
+                             SA_Behind, o->monitor ? FALSE : TRUE,
+                             SA_ShowTitle, FALSE, TAG_DONE);
+    }
+    if (!scr) {
+        rpt_errorf("OpenScreen failed");
+        return 1;
+    }
+
+    if (o->monitor) {
+        rp = &scr->RastPort;
+    } else {
+        bm = rtg_alloc_reference(scr, o->screen_h, o->depth);
+        if (!bm) {
+            failures = 1;
+            goto cleanup;
+        }
+        // Copied, not InitRastPort'd, for the same reason as the friend
+        // bitmap: this RastPort belongs to the screen. Only the layer and the
+        // bitmap are replaced, so drawing lands offscreen and unclipped.
+        rp_off = scr->RastPort;
+        rp_off.Layer = NULL;
+        rp_off.BitMap = bm;
+        rp = &rp_off;
+    }
+
+    // Ask the bitmap what it actually is rather than assuming from depth. A
+    // depth-8 run compares pen values and so needs a pen-addressed bitmap;
+    // a deeper one reads back as R8G8B8 and so needs anything but.
+    {
+        const ULONG fmt = rtg_rgbformat(rp->BitMap);
+        const bool by_pen = rtg_format_by_pen(fmt);
+        const bool want_pen = o->depth <= 8;
+
+        if (by_pen != want_pen) {
+            rpt_errorf("mode is %s, which does not match depth %d",
+                          rtg_format_name(fmt), o->depth);
+            failures = 1;
+            goto cleanup;
+        }
+    }
+
+    // The mode asked for is not always the mode that opens, and drawing into
+    // scr->RastPort is unclipped.
+    if (o->monitor && (scr->Width < o->w || scr->Height < o->h)) {
+        rpt_errorf("screen opened %dx%d, smaller than the %dx%d scene",
+                      scr->Width, scr->Height, o->w, o->h);
+        failures = 1;
+        goto cleanup;
+    }
+
+    // Every scene so far is drawn through a RastPort with no Layer, which is
+    // the unclipped path. An application draws into a window, so its calls
+    // reach the driver split against a ClipRect list instead. This layer
+    // covers the whole bitmap and so clips nothing, which makes the same
+    // golden set the assertion: the two paths must produce identical pixels.
+    if (o->layer) {
+        struct RastPort *layer_rp = layer_install(rp->BitMap);
+
+        if (!layer_rp) {
+            failures = 1;
+            goto cleanup;
+        }
+        rp = layer_rp;
+    }
+
+    rpt(RPT_INFO, "");
+    rptf("testing %s %dx%dx%d %s, scene %dx%d%s",
+            o->monitor ? o->monitor : "softrast",
+            o->screen_w, o->screen_h, o->depth,
+            rtg_format_name(rtg_rgbformat(rp->BitMap)),
+            o->w, o->h, o->layer ? " (layered)" : "");
+    if (o->monitor && (scr->Width != o->screen_w || scr->Height != o->screen_h))
+        rptf("screen opened %dx%d instead", scr->Width, scr->Height);
+    // Where a comparison reads from is determined by the scene, so it is not
+    // worth a line; where a capture writes to is a side effect worth naming.
+    if (o->capture)
+        rptf("capturing to %s", o->golden_dir);
+
+    make_path(o->dir);
+
+    for (int g = 0; g < NGROUPS; g++) {
+        for (int i = 0; i < GROUPS[g]->count; i++) {
+            const struct P96Test *t = &GROUPS[g]->tests[i];
+            char full[64];
+
+            if (user_break()) {
+                broke = true;
+                goto cleanup;
+            }
+
+            test_name(full, sizeof full, GROUPS[g], t);
+            if (!selected(o->test, full))
+                continue;
+            if (gfx_truecolor && t->palette_only) {
+                rpt_skip(full, "palette only");
+                continue;
+            }
+            if (!gfx_truecolor && t->truecolor_only) {
+                rpt_skip(full, "truecolor only");
+                continue;
+            }
+            failures += run_test(t, full, rp, o);
+        }
+    }
+
+cleanup:
+    backdrop_free();
+    // Before the bitmap it was created over.
+    layer_free();
+    // The bitmap goes first: it was allocated with the screen's as friend.
+    rtg_free_bitmap(bm);
+    CloseScreen(scr);
+    return broke ? -1 : failures;
+}
+
+int main(void) {
+    struct RunOpts o;
+    int failures = 0, rc = 0;
 
     rc = parse_args(&o);
     if (rc != RETURN_OK) {
         free_args(&o);
         return rc;
     }
-    gfx_truecolor = o.depth > 8;
 
-    // Before the libraries, since it needs none of them.
-    if (o.list_tests) {
-        list_tests();
-        goto out;
-    }
-
-    // From here on every line is run output, so the report file gets all
-    // of it, including a failure to set the run up.
     if (o.report_file && !rpt_open(o.report_file)) {
         printf("cannot create %s\n", o.report_file);
         rc = RETURN_ERROR;
         goto out;
     }
+    rptf("%s", VERSION_LINE);
 
     IntuitionBase = (struct IntuitionBase *)OpenLibrary((STRPTR)"intuition.library", 39);
     if (!IntuitionBase) {
@@ -608,173 +770,89 @@ int main(void) {
         goto out;
     }
 
+    if (o.list_tests) {
+        list_tests();
+        goto out;
+    }
+
     if (o.list_modes) {
         list_modes();
         goto out;
     }
 
-    // A screen is opened either way. The driver run renders into it, since
-    // that is the thing under test. The reference run only borrows it: a pen
-    // number is not a color on its own, and the mapping that turns it into one
-    // comes from the screen, reaching the reference bitmap through the friend
-    // argument below -- unfriended, a truecolor screen reads every pen as black.
-    //
-    // The driver run needs the exact mode named. The reference run needs only
-    // some screen of the right depth, and the scene size it renders at is
-    // often not a real mode at all -- P96 publishes a 320x200 entry per pixel
-    // format, but they are mode prefs templates that never open.
-    if (o.monitor) {
-        id = find_mode(o.screen_w, o.screen_h, o.depth, o.monitor, NULL, 0);
-        if (id == INVALID_MODE) {
-            rpt_errorf("no %s mode %dx%dx%d in the display database",
-                          o.monitor, o.screen_w, o.screen_h, o.depth);
-            failures = 1;
-            goto out;
-        }
-    } else {
-        id = find_mode(0, 0, o.depth, NULL, NULL, 0);
-        if (id == INVALID_MODE) {
-            rpt_errorf("no %d-bit mode in the display database", o.depth);
-            failures = 1;
-            goto out;
-        }
-    }
-    // SA_Pens with an empty spec so Intuition reserves none of them: every pen
-    // belongs to the scenes. The whole palette is set explicitly, since
-    // Intuition seeds only pens 0-3 and 17-19 from Preferences and a truecolor
-    // reference would otherwise record the capture machine's colors. SA_Colors32
-    // rather than SetRGB32 afterwards, because it takes precedence over every
-    // other way the palette gets set.
-    {
-        static WORD no_pens[] = {~0};
-        const ULONG *colors = palette();
+    if (o.all_depths) {
+        // Every depth the run supports, each at the smallest mode that
+        // contains the scene. A depth the monitor does not offer is noted and
+        // skipped: boards legitimately lack pixel formats.
+        static const int DEPTHS[] = {8, 15, 16, 24};
 
-        // The driver run is rendered on the screen, so it gets the size the
-        // mode was asked for. The reference run only borrows the screen and
-        // renders into its own bitmap, so it takes the mode's own dimensions:
-        // STDSCREENWIDTH/HEIGHT ask for the DisplayClip rectangle.
-        //
-        // SA_Behind for the reference run: it renders into its own bitmap and
-        // only borrows this screen, so there is nothing to see on it. Opening
-        // it in front would just black out the display for the whole run.
-        scr = OpenScreenTags(NULL, SA_DisplayID, id,
-                             SA_Width, o.monitor ? o.screen_w : STDSCREENWIDTH,
-                             SA_Height, o.monitor ? o.screen_h : STDSCREENHEIGHT,
-                             SA_Depth, o.depth, SA_Pens, (ULONG)no_pens,
-                             SA_Colors32, (ULONG)colors, SA_Quiet, TRUE,
-                             SA_Behind, o.monitor ? FALSE : TRUE,
-                             SA_ShowTitle, FALSE, TAG_DONE);
-    }
-    if (!scr) {
-        rpt_errorf("OpenScreen failed");
-        failures = 1;
-        goto out;
-    }
+        for (int i = 0; i < (int)(sizeof DEPTHS / sizeof DEPTHS[0]); i++) {
+            const int depth = DEPTHS[i];
+            ULONG id;
 
-    if (o.monitor) {
-        rp = &scr->RastPort;
-    } else {
-        bm = rtg_alloc_reference(scr, o.screen_h, o.depth);
-        if (!bm) {
-            failures = 1;
-            goto cleanup;
-        }
-        // Copied, not InitRastPort'd, for the same reason as the friend
-        // bitmap: this RastPort belongs to the screen. Only the layer and the
-        // bitmap are replaced, so drawing lands offscreen and unclipped.
-        rp_off = scr->RastPort;
-        rp_off.Layer = NULL;
-        rp_off.BitMap = bm;
-        rp = &rp_off;
-    }
+            if (o.monitor) {
+                int mw = 0, mh = 0;
 
-    // Ask the bitmap what it actually is rather than assuming from depth. A
-    // depth-8 run compares pen values and so needs a pen-addressed bitmap;
-    // a deeper one reads back as R8G8B8 and so needs anything but.
-    {
-        const ULONG fmt = rtg_rgbformat(rp->BitMap);
-        const bool by_pen = rtg_format_by_pen(fmt);
-        const bool want_pen = o.depth <= 8;
+                id = pick_mode(o.w, o.h, depth, o.monitor, &mw, &mh);
+                if (id == INVALID_MODE) {
+                    rptf("no %d-bit %s mode, skipped", depth, o.monitor);
+                    continue;
+                }
+                o.screen_w = (SHORT)mw;
+                o.screen_h = (SHORT)mh;
+            } else {
+                o.screen_w = o.w;
+                o.screen_h = o.h;
+                id = find_mode(0, 0, depth, NULL, NULL, 0);
+                if (id == INVALID_MODE) {
+                    rptf("no %d-bit mode in the display database, skipped",
+                         depth);
+                    continue;
+                }
+            }
+            if (set_depth(&o, depth) != RETURN_OK) {
+                rc = RETURN_FAIL;
+                goto out;
+            }
 
-        if (by_pen != want_pen) {
-            rpt_errorf("mode is %s, which does not match depth %d",
-                          rtg_format_name(fmt), o.depth);
-            failures = 1;
-            goto cleanup;
-        }
-    }
-
-    // The mode asked for is not always the mode that opens, and drawing into
-    // scr->RastPort is unclipped.
-    if (o.monitor && (scr->Width < o.w || scr->Height < o.h)) {
-        rpt_errorf("screen opened %dx%d, smaller than the %dx%d scene",
-                      scr->Width, scr->Height, o.w, o.h);
-        failures = 1;
-        goto cleanup;
-    }
-
-    // Every scene so far is drawn through a RastPort with no Layer, which is
-    // the unclipped path. An application draws into a window, so its calls
-    // reach the driver split against a ClipRect list instead. This layer
-    // covers the whole bitmap and so clips nothing, which makes the same
-    // golden set the assertion: the two paths must produce identical pixels.
-    if (o.layer) {
-        struct RastPort *layer_rp = layer_install(rp->BitMap);
-
-        if (!layer_rp) {
-            failures = 1;
-            goto cleanup;
-        }
-        rp = layer_rp;
-    }
-
-    rptf("testing %s %dx%dx%d %s, scene %dx%d%s",
-            o.monitor ? o.monitor : "softrast",
-            o.screen_w, o.screen_h, o.depth,
-            rtg_format_name(rtg_rgbformat(rp->BitMap)),
-            o.w, o.h, o.layer ? " (layered)" : "");
-    if (o.monitor && (scr->Width != o.screen_w || scr->Height != o.screen_h))
-        rptf("screen opened %dx%d instead", scr->Width, scr->Height);
-    // Where a comparison reads from is determined by the scene, so it is not
-    // worth a line; where a capture writes to is a side effect worth naming.
-    if (o.capture)
-        rptf("capturing to %s", o.golden_dir);
-
-    make_path(o.dir);
-
-    for (int g = 0; g < NGROUPS; g++) {
-        for (int i = 0; i < GROUPS[g]->count; i++) {
-            const struct P96Test *t = &GROUPS[g]->tests[i];
-            char full[64];
-
-            if (user_break()) {
+            const int r = run_mode(&o, id);
+            if (r < 0) {
                 rc = RETURN_WARN;
-                goto cleanup;
+                goto out;
             }
-
-            test_name(full, sizeof full, GROUPS[g], t);
-            if (!selected(o.test, full))
-                continue;
-            if (gfx_truecolor && t->palette_only) {
-                rpt_skip(full, "palette only");
-                continue;
-            }
-            if (!gfx_truecolor && t->truecolor_only) {
-                rpt_skip(full, "truecolor only");
-                continue;
-            }
-            failures += run_test(t, full, rp, &o);
+            failures += r;
         }
+    } else {
+        ULONG id;
+
+        // The driver run needs the exact mode named. The reference run needs
+        // only some screen of the right depth, and the scene size it renders
+        // at is often not a real mode at all -- P96 publishes a 320x200 entry
+        // per pixel format, but they are mode prefs templates that never open.
+        if (o.monitor) {
+            id = find_mode(o.screen_w, o.screen_h, o.depth, o.monitor, NULL, 0);
+            if (id == INVALID_MODE) {
+                rpt_errorf("no %s mode %dx%dx%d in the display database",
+                              o.monitor, o.screen_w, o.screen_h, o.depth);
+                failures = 1;
+                goto out;
+            }
+        } else {
+            id = find_mode(0, 0, o.depth, NULL, NULL, 0);
+            if (id == INVALID_MODE) {
+                rpt_errorf("no %d-bit mode in the display database", o.depth);
+                failures = 1;
+                goto out;
+            }
+        }
+
+        const int r = run_mode(&o, id);
+        if (r < 0)
+            rc = RETURN_WARN;
+        else
+            failures += r;
     }
 
-cleanup:
-    backdrop_free();
-    // Before the bitmap it was created over.
-    layer_free();
-    // The bitmap goes first: it was allocated with the screen's as friend.
-    rtg_free_bitmap(bm);
-    if (scr)
-        CloseScreen(scr);
 out:
     timer_close();
     rtg_close();

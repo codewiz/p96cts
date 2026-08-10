@@ -14,6 +14,8 @@
 
 ULONG find_mode(int w, int h, int depth, const char *monitor, char *name_out,
                 int name_len);
+ULONG pick_mode(int min_w, int min_h, int depth, const char *monitor,
+                int *out_w, int *out_h);
 void list_modes(void);
 
 #endif

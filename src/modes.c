@@ -7,6 +7,7 @@
 
 #include <proto/graphics.h>
 #include <graphics/displayinfo.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -31,6 +32,14 @@ static const char *unavailable_reason(UWORD na) {
     if (na & DI_P96_INVALID)
         return " invalid";
     return " unavailable";
+}
+
+// Exact, not >=: a 15-bit request on P96's 16-bit entry opens a 16-bit
+// screen. Depth 24 also takes 32, which names the same screens.
+static bool depth_matches(int max_depth, int depth) {
+    if (depth == 24)
+        return max_depth >= 24;
+    return max_depth == depth;
 }
 
 // Find a display id of the given size/depth, or INVALID_MODE. A width of 0
@@ -70,7 +79,8 @@ ULONG find_mode(int w, int h, int depth, const char *monitor, char *name_out,
         if (GetDisplayInfoData(NULL, (UBYTE *)&dim, sizeof dim, DTAG_DIMS, id)) {
             int mw = dim.Nominal.MaxX - dim.Nominal.MinX + 1;
             int mh = dim.Nominal.MaxY - dim.Nominal.MinY + 1;
-            if ((w <= 0 || (mw == w && mh == h)) && dim.MaxDepth >= depth) {
+            if ((w <= 0 || (mw == w && mh == h)) &&
+                depth_matches(dim.MaxDepth, depth)) {
                 if (name_out) {
                     strncpy(name_out, (const char *)ni.Name, name_len - 1);
                     name_out[name_len - 1] = 0;
@@ -82,11 +92,63 @@ ULONG find_mode(int w, int h, int depth, const char *monitor, char *name_out,
     return INVALID_MODE;
 }
 
+// The smallest available mode (by area, then width) serving `depth` whose
+// nominal size contains min_w x min_h, or INVALID_MODE. Monitor selection is
+// find_mode()'s name prefix; the winning mode's size lands in *out_w/*out_h.
+//
+// Not BestModeIDA(), for two guarantees it does not give. Its BIDTAG_Depth
+// is documented as "minimum the returned ModeID must support", the >=
+// match depth_matches() exists to avoid. And BIDTAG_NominalWidth/Height
+// "together make the aspect ratio", with DesiredWidth/Height only breaking
+// ties, so nothing promises a mode large enough to contain the scene --
+// the result could be a scrolling screen. (Its monitor selection would be
+// fine: BIDTAG_MonitorID, with the id resolved from a matching mode.)
+ULONG pick_mode(int min_w, int min_h, int depth, const char *monitor,
+                int *out_w, int *out_h) {
+    ULONG id = INVALID_MODE, best = INVALID_MODE;
+    LONG best_area = 0;
+    size_t mlen = monitor ? strlen(monitor) : 0;
+
+    while ((id = NextDisplayInfo(id)) != INVALID_MODE) {
+        struct DisplayInfo dinfo;
+        struct NameInfo ni;
+        struct DimensionInfo dim;
+
+        if (!GetDisplayInfoData(NULL, (UBYTE *)&dinfo, sizeof dinfo, DTAG_DISP, id))
+            continue;
+        if (dinfo.NotAvailable)
+            continue;
+        if (mlen) {
+            if (!GetDisplayInfoData(NULL, (UBYTE *)&ni, sizeof ni, DTAG_NAME, id))
+                continue;
+            if (strncmp((const char *)ni.Name, monitor, mlen))
+                continue;
+        }
+        if (!GetDisplayInfoData(NULL, (UBYTE *)&dim, sizeof dim, DTAG_DIMS, id))
+            continue;
+
+        int mw = dim.Nominal.MaxX - dim.Nominal.MinX + 1;
+        int mh = dim.Nominal.MaxY - dim.Nominal.MinY + 1;
+        LONG area = (LONG)mw * mh;
+
+        if (!depth_matches(dim.MaxDepth, depth) || mw < min_w || mh < min_h)
+            continue;
+        if (best == INVALID_MODE || area < best_area ||
+            (area == best_area && mw < *out_w)) {
+            best = id;
+            best_area = area;
+            *out_w = mw;
+            *out_h = mh;
+        }
+    }
+    return best;
+}
+
 // Dump the display database to stdout so a usable mode can be picked.
 void list_modes(void) {
     ULONG id = INVALID_MODE;
 
-    printf("%-10s %-28s %-14s flags\n", "id", "name", "mode");
+    printf("%-10s %-28s %-14s Flags\n", "ID", "Name", "Mode");
     while ((id = NextDisplayInfo(id)) != INVALID_MODE) {
         struct DisplayInfo dinfo;
         struct DimensionInfo dim;

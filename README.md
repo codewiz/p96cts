@@ -81,19 +81,22 @@ purpose: it is the reproducer.
 
 ### Arguments
 
-`MONITOR` and `MODE` are positional and both required for a run, so the usual
-invocation is `p96cts <monitor> <WxHxD>`.
+`MONITOR` and `MODE` are positional, so the usual invocation is
+`p96cts <monitor> <WxHxD>`. `MODE` is optional: plain `p96cts <monitor>` runs
+every depth the monitor offers, each at the smallest mode that contains the
+scene, and notes the depths it lacks.
 
 | Argument | Meaning |
 |---|---|
 | `MONITOR` | Board to render on; `softrast` for the software rasterizer |
-| `MODE` | Screen mode as `WxHxD` |
+| `MODE` | Screen mode as `WxHxD` (default: every supported depth) |
 | `TEST/K` | One testcase as `<group>-<test>`; all of them by default |
 | `CAPTURE/S` | Write the reference instead of comparing against it |
 | `LAYER/S` | Draw through a Layer covering the whole bitmap (see below) |
 | `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
 | `GOLDENDIR/K` | Reference directory (default `golden/<scene>x<depth>`) |
 | `OUTDIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
+| `REPORTFILE/K` | Also write the report to this file |
 | `LISTMODES/S` | Dump the display database and exit |
 | `LISTTESTS/S` | List the testcase names `TEST` accepts and exit |
 | `HELP/S` | Print this table and exit; `-h` and `--help` work too |
