@@ -112,11 +112,11 @@ void rtg_close(void) {
 // equal. 15/16-bit screens quantize channels to 5 or 6 bits as they render,
 // so their reference must be in the screen's exact format -- rendered at the
 // same precision, not converted to it afterwards.
-static ULONG reference_format(struct Screen *scr, int depth) {
+static RGBFTYPE reference_format(struct Screen *scr, int depth) {
     if (depth <= 8)
         return RGBFB_CLUT;
     if (depth <= 16)
-        return rtg_rgbformat(scr->RastPort.BitMap);
+        return (RGBFTYPE)rtg_rgbformat(scr->RastPort.BitMap);
     return RGBFB_R8G8B8;
 }
 
@@ -197,7 +197,8 @@ struct BitMap *rtg_alloc_friend(struct BitMap *like, SHORT w, SHORT h) {
             flags |= BMF_USERPRIVATE;
         return p96AllocBitMap(w, h, p96GetBitMapAttr(like, P96BMA_DEPTH),
                               flags, like,
-                              p96GetBitMapAttr(like, P96BMA_RGBFORMAT));
+                              (RGBFTYPE)p96GetBitMapAttr(like,
+                                                         P96BMA_RGBFORMAT));
     }
     return AllocBitMap(w, h, GetBitMapAttr(like, BMA_DEPTH), BMF_CLEAR, like);
 }
@@ -278,7 +279,7 @@ void rtg_fill_rgb(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
 
 // Into a freshly AllocVec'd buffer the caller FreeVec's, or NULL.
 UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h) {
-    UBYTE *px = AllocVec((ULONG)w * h * 3, MEMF_ANY);
+    UBYTE *px = (UBYTE *)AllocVec((ULONG)w * h * 3, MEMF_ANY);
 
     if (!px)
         return NULL;
@@ -313,7 +314,7 @@ static void write_array(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w,
         ri.Memory = px;
         ri.BytesPerRow = stride;
         ri.pad = 0;
-        ri.RGBFormat = fmt;
+        ri.RGBFormat = (RGBFTYPE)fmt;
         p96WritePixelArray(&ri, sx, sy, rp, x0, y0, w, h);
         return;
     }

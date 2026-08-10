@@ -106,7 +106,7 @@ static void t_pens8(struct RastPort *rp, SHORT w, SHORT h) {
 
         // Rebuilt per blit: WritePixelArray8 converts in place and is
         // documented to destroy the array.
-        px = AllocVec((ULONG)stride * c->h, MEMF_ANY);
+        px = (UBYTE *)AllocVec((ULONG)stride * c->h, MEMF_ANY);
         if (!px)
             return;
 
@@ -127,7 +127,7 @@ static void t_pens8(struct RastPort *rp, SHORT w, SHORT h) {
 // source rectangle, so one buffer serves every blit. On truecolor screens the
 // pens resolve through the palette, a conversion nothing else here reaches.
 static void t_lut8(struct RastPort *rp, SHORT w, SHORT h) {
-    UBYTE *px = AllocVec((ULONG)SRC_W * SRC_H, MEMF_ANY);
+    UBYTE *px = (UBYTE *)AllocVec((ULONG)SRC_W * SRC_H, MEMF_ANY);
 
     checkerboard(rp, w, h);
     if (!px)
@@ -156,7 +156,7 @@ static void t_lut8(struct RastPort *rp, SHORT w, SHORT h) {
 // the CGX autodoc allows only RECTFMT_LUT8 at depths <= 8, and P96 hangs if
 // asked anyway.
 static void t_rgb(struct RastPort *rp, SHORT w, SHORT h) {
-    UBYTE *px = AllocVec((ULONG)SRC_W * SRC_H * 3, MEMF_ANY);
+    UBYTE *px = (UBYTE *)AllocVec((ULONG)SRC_W * SRC_H * 3, MEMF_ANY);
 
     checkerboard(rp, w, h);
     if (!px)

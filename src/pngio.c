@@ -142,7 +142,7 @@ UBYTE *read_png(const char *path, SHORT *w, SHORT *h, int bpp) {
     if (!pw || !ph || pw > (png_uint_32)SHRT_MAX || ph > (png_uint_32)SHRT_MAX)
         png_error(png, "image dimensions are too large");
 
-    idx = AllocVec((ULONG)pw * ph * bpp, MEMF_ANY);
+    idx = (UBYTE *)AllocVec((ULONG)pw * ph * bpp, MEMF_ANY);
     if (!idx)
         png_error(png, "out of memory");
     for (SHORT y = 0; y < (SHORT)ph; y++)

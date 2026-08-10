@@ -70,7 +70,7 @@ static void free_temp_rastport(struct RastPort *temprp) {
 UBYTE *gfx_read_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
                      int depth) {
     struct RastPort temprp;
-    UBYTE *idx = AllocVec((ULONG)w * h, MEMF_ANY);
+    UBYTE *idx = (UBYTE *)AllocVec((ULONG)w * h, MEMF_ANY);
 
     if (!idx)
         return NULL;

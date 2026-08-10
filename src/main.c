@@ -402,7 +402,7 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
         rptf("       captured %s", path);
     free(path);
 
-    UBYTE *d = AllocVec((ULONG)o->w * o->h * bpp, MEMF_CLEAR);
+    UBYTE *d = (UBYTE *)AllocVec((ULONG)o->w * o->h * bpp, MEMF_CLEAR);
     if (!d) {
         rpt_errorf("WARNING: failed to allocate diff buffer for %s", name);
         return failed;

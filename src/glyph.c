@@ -68,7 +68,7 @@ UBYTE glyph_pen(SHORT x, SHORT y) {
 // through the blitter, which cannot see fast RAM -- a template in fast memory
 // renders as garbage there while working fine on every RTG board.
 PLANEPTR glyph_template(void) {
-    UBYTE *tpl = AllocVec(P96CTS_GLYPH_H * P96CTS_GLYPH_MOD,
+    UBYTE *tpl = (UBYTE *)AllocVec(P96CTS_GLYPH_H * P96CTS_GLYPH_MOD,
                           MEMF_CHIP | MEMF_CLEAR);
 
     if (!tpl)

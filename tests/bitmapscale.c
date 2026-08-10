@@ -58,7 +58,7 @@ static struct BitMap *logo_source(struct RastPort *rp) {
     srp.BitMap = bm;
 
     if (gfx_truecolor) {
-        UBYTE *rgb = AllocVec((ULONG)w * h * 3, MEMF_ANY);
+        UBYTE *rgb = (UBYTE *)AllocVec((ULONG)w * h * 3, MEMF_ANY);
 
         if (!rgb) {
             rtg_free_friend(bm);

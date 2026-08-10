@@ -50,7 +50,8 @@
 // the blitter, which cannot see fast RAM -- a fast-memory pattern renders as
 // garbage there while working on every RTG board.
 static UWORD *build_pattern(void) {
-    UWORD *pat = AllocVec(PAT_H * sizeof(UWORD), MEMF_CHIP | MEMF_CLEAR);
+    UWORD *pat = (UWORD *)AllocVec(PAT_H * sizeof(UWORD),
+                                   MEMF_CHIP | MEMF_CLEAR);
 
     if (!pat)
         return NULL;
@@ -72,7 +73,7 @@ static SHORT mask_bytes(SHORT w) {
 // for a NULL mask. Chip memory for the same blitter reason as the pattern.
 static UBYTE *solid_mask(SHORT w, SHORT h) {
     SHORT bc = mask_bytes(w);
-    UBYTE *m = AllocVec((ULONG)h * bc, MEMF_CHIP);
+    UBYTE *m = (UBYTE *)AllocVec((ULONG)h * bc, MEMF_CHIP);
 
     if (m)
         for (LONG i = 0; i < (LONG)h * bc; i++)
@@ -168,7 +169,7 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
 // and its hypotenuse turns a wrong row stride into a visibly skewed edge. Chip
 // memory for the same blitter reason as the pattern.
 static UBYTE *build_triangle(SHORT mw, SHORT mh, SHORT bytecnt) {
-    UBYTE *m = AllocVec((ULONG)mh * bytecnt, MEMF_CHIP | MEMF_CLEAR);
+    UBYTE *m = (UBYTE *)AllocVec((ULONG)mh * bytecnt, MEMF_CHIP | MEMF_CLEAR);
 
     if (!m)
         return NULL;

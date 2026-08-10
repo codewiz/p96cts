@@ -112,7 +112,7 @@ void backdrop(struct RastPort *rp, SHORT w, SHORT h) {
     }
 
     backdrop_free();
-    px = AllocVec((ULONG)w * h * bpp, MEMF_ANY);
+    px = (UBYTE *)AllocVec((ULONG)w * h * bpp, MEMF_ANY);
     if (!px)
         return;
     cached = px;

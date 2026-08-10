@@ -94,6 +94,18 @@ HEADERS  = \
 clean:
 	rm -f $(OBJS) $(TARGET)
 
+# Keep the sources compilable as C++ too: no implicit conversions from
+# void * or into enums. Syntax-only, with the C-only warnings dropped, and
+# without g++'s complaint about designated initializers that leave trailing
+# fields to zero -- deliberate throughout the test tables.
+CXX = $(CC:gcc=g++)
+CXX_WARNINGS = $(filter-out -Wstrict-prototypes -Wmissing-prototypes \
+	-Wold-style-definition,$(WARNINGS)) -Wno-missing-field-initializers
+
+check-cxx:
+	$(CXX) -x c++ -fsyntax-only $(filter-out $(WARNINGS),$(ALL_CFLAGS)) \
+		$(CXX_WARNINGS) $(OBJS:.o=.c)
+
 # The git tag is "v0.1"; the archive is "p96cts-0.1.lha", matching both the
 # Aminet convention and the program's own "p96cts 0.1" banner.
 RELDIR = $(TARGET)-$(TAG:v%=%)
@@ -124,4 +136,4 @@ docker-thirdparty:
 docker-release:
 	$(DOCKER_RUN) make release TAG=$(TAG)
 
-.PHONY: all clean release docker-build docker-clean docker-thirdparty docker-release
+.PHONY: all clean check-cxx release docker-build docker-clean docker-thirdparty docker-release
