@@ -18,9 +18,11 @@
 #include <proto/Picasso96.h>
 #include <proto/cybergraphics.h>
 #include <cybergraphx/cybergraphics.h>
+#include <exec/execbase.h>
 #include <exec/memory.h>
 #include <graphics/rastport.h>
 #include <intuition/screens.h>
+#include <string.h>
 
 #include "countof.h"
 #include "report.h"
@@ -41,6 +43,42 @@ bool rtg_open(void) {
         return false;
     }
     return true;
+}
+
+// The RTG stack's lines of the report header. The two API libraries are
+// simple, but rtg.library and the .card drivers never pass through
+// OpenLibrary() -- P96 loads them privately -- so they are picked off
+// exec's library list by name instead. Collected under Forbid() and
+// printed after it, since rpt() can Wait().
+void rtg_versions(void) {
+    struct { char name[32]; UWORD ver, rev; } found[8];
+    int n = 0;
+
+    rpt_libver(P96Base);
+    rpt_libver(CyberGfxBase);
+
+    Forbid();
+    for (struct Node *node = SysBase->LibList.lh_Head; node->ln_Succ;
+         node = node->ln_Succ) {
+        const char *name = (const char *)node->ln_Name;
+        size_t len = name ? strlen(name) : 0;
+        struct Library *lib = (struct Library *)node;
+
+        if (n >= (int)countof(found))
+            break;
+        if (strcmp(name ? name : "", "rtg.library") &&
+            (len < 5 || strcmp(name + len - 5, ".card")))
+            continue;
+        strncpy(found[n].name, name, sizeof found[n].name - 1);
+        found[n].name[sizeof found[n].name - 1] = 0;
+        found[n].ver = lib->lib_Version;
+        found[n].rev = lib->lib_Revision;
+        n++;
+    }
+    Permit();
+    for (int i = 0; i < n; i++)
+        rptf("%s %u.%u", found[i].name, (unsigned)found[i].ver,
+             (unsigned)found[i].rev);
 }
 
 void rtg_close(void) {

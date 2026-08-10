@@ -765,6 +765,11 @@ int main(void) {
         rc = 20;
         goto out;
     }
+    // The rest of the report header: the versions of everything between the
+    // suite and the board, so a report is its own provenance record.
+    rpt_libver((struct Library *)SysBase);
+    rpt_libver((struct Library *)GfxBase);
+    rtg_versions();
     if (!timer_open()) {
         rpt_errorf("failed to open timer.device");
         rc = 20;

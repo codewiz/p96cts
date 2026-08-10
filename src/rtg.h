@@ -14,6 +14,7 @@ struct RastPort;
 struct Screen;
 
 bool rtg_open(void);
+void rtg_versions(void);
 void rtg_close(void);
 
 struct BitMap *rtg_alloc_reference(struct Screen *scr, int height, int depth);

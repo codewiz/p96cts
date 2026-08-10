@@ -9,6 +9,7 @@
 #ifndef P96CTS_REPORT_H
 #define P96CTS_REPORT_H
 
+#include <exec/libraries.h>
 #include <exec/types.h>
 #include <stdbool.h>
 
@@ -26,6 +27,7 @@ bool rpt_open(const char *path);
 void rpt_close(void);
 
 void rptf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void rpt_libver(struct Library *lib);
 void rpt_errorf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 void rpt_success(const char *name, ULONG micros);

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: 0BSD
 
+#include <exec/libraries.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,6 +71,15 @@ void rptf(const char *fmt, ...) {
     va_start(ap, fmt);
     vrptf(RPT_INFO, fmt, ap);
     va_end(ap);
+}
+
+// One report-header line, "name version.revision", the name taken from
+// the library node itself. Silent when the library is not around, so
+// optional libraries need no test at the call.
+void rpt_libver(struct Library *lib) {
+    if (lib)
+        rptf("%s %u.%u", (const char *)lib->lib_Node.ln_Name,
+             (unsigned)lib->lib_Version, (unsigned)lib->lib_Revision);
 }
 
 void rpt_errorf(const char *fmt, ...) {
