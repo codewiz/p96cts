@@ -33,6 +33,7 @@
 #include <proto/graphics.h>
 
 #include "p96cts.h"
+#include "countof.h"
 #include "gfx.h"
 #include "inline-macros-gcc16.h" // for BltPattern()
 
@@ -105,7 +106,7 @@ static const UBYTE MODES[COLS] = {
 };
 
 static const UBYTE MASKS[] = {0xFF, 0x0F, 0x55, 0x81};
-#define NMASKS ((SHORT)(sizeof MASKS / sizeof MASKS[0]))
+#define NMASKS ((SHORT)countof(MASKS))
 
 // One row of the grid: eight patterned tiles at one write mask, over a band of
 // a second tone. The band is what makes COMPLEMENT and the JAM2 background pen
@@ -274,5 +275,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup BltPatternGroup = {
-    "BltPattern", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "BltPattern", TESTS, (int)countof(TESTS)
 };

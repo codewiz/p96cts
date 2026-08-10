@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include "p96cts.h"
+#include "countof.h"
 #include "gfx.h"
 #include "glyph.h"
 #include "rtg.h"
@@ -271,7 +272,7 @@ static void t_sizes(struct RastPort *rp, SHORT w, SHORT h) {
 // only in a bit none of the four sets would compare equal however the driver
 // applied them.
 static const UBYTE MASKS[] = {0xFF, 0x0F, 0x55, 0x81};
-#define NMASKS ((SHORT)(sizeof MASKS / sizeof MASKS[0]))
+#define NMASKS ((SHORT)countof(MASKS))
 
 static void t_planemask(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT band = h / NMASKS;
@@ -477,5 +478,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup BltBitMapGroup = {
-    "BltBitMap", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "BltBitMap", TESTS, (int)countof(TESTS)
 };

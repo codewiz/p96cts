@@ -18,6 +18,7 @@
 #include <proto/graphics.h>
 
 #include "p96cts.h"
+#include "countof.h"
 #include "gfx.h"
 #include "backdrop.h"
 
@@ -162,7 +163,7 @@ static void t_backfill(struct RastPort *rp, SHORT w, SHORT h) {
 static const short AMOUNTS[] = {0, 1, -1, 15, -17, OVER_EXTENT, 4096};
 
 static void t_amounts(struct RastPort *rp, SHORT w, SHORT h) {
-    int n = (int)(sizeof AMOUNTS / sizeof AMOUNTS[0]);
+    int n = (int)countof(AMOUNTS);
     SHORT tw = w / n, th = h / 2;
     SHORT rectw = tw - 4, recth = h - 3 - (th + 2) + 1;
 
@@ -192,5 +193,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup ScrollRasterGroup = {
-    "ScrollRaster", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "ScrollRaster", TESTS, (int)countof(TESTS)
 };

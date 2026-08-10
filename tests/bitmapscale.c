@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "p96cts.h"
+#include "countof.h"
 #include "gfx.h"
 #include "palette.h"
 #include "pngio.h"
@@ -183,5 +184,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup BitMapScaleGroup = {
-    "BitMapScale", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "BitMapScale", TESTS, (int)countof(TESTS)
 };

@@ -22,6 +22,7 @@
 #include <graphics/rastport.h>
 #include <intuition/screens.h>
 
+#include "countof.h"
 #include "report.h"
 #include "rtg.h"
 
@@ -196,7 +197,7 @@ ULONG rtg_rgbformat(struct BitMap *bm) {
         return RGBFB_NONE;
 
     const ULONG pixfmt = GetCyberMapAttr(bm, CYBRMATTR_PIXFMT);
-    if (pixfmt >= sizeof FROM_PIXFMT / sizeof FROM_PIXFMT[0])
+    if (pixfmt >= countof(FROM_PIXFMT))
         return RGBFB_NONE;
     return FROM_PIXFMT[pixfmt];
 }
@@ -209,7 +210,7 @@ const char *rtg_format_name(ULONG fmt) {
         "yuv411",   "yuv411pc", "yuv422",   "yuv422pc", "yuv422pa",
         "yuv422papc",
     };
-    if (fmt >= (ULONG)(sizeof NAMES / sizeof NAMES[0]))
+    if (fmt >= countof(NAMES))
         return "unknown";
     return NAMES[fmt];
 }

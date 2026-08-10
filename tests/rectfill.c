@@ -13,6 +13,7 @@
 #include <proto/graphics.h>
 
 #include "p96cts.h"
+#include "countof.h"
 #include "gfx.h"
 
 // Tiles: 8 drawmode columns across, one row per write mask. Sized from the
@@ -39,7 +40,7 @@
 #define BAND_BG_RGB 0x10C0E0UL  // cyan
 
 static const UBYTE MASKS[] = {0xFF, 0x0F, 0x55, 0x81};
-#define NMASKS ((SHORT)(sizeof MASKS / sizeof MASKS[0]))
+#define NMASKS ((SHORT)countof(MASKS))
 
 // The eight mode combinations, in the order P96Tests renders them.
 static const UBYTE MODES[COLS] = {
@@ -161,5 +162,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup RectFillGroup = {
-    "RectFill", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "RectFill", TESTS, (int)countof(TESTS)
 };

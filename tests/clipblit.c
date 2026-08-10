@@ -15,6 +15,7 @@
 #include <proto/graphics.h>
 
 #include "p96cts.h"
+#include "countof.h"
 #include "gfx.h"
 #include "backdrop.h"
 
@@ -100,5 +101,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup ClipBlitGroup = {
-    "ClipBlit", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "ClipBlit", TESTS, (int)countof(TESTS)
 };

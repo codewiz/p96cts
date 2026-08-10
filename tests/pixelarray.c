@@ -12,6 +12,7 @@
 #include <proto/graphics.h>
 
 #include "p96cts.h"
+#include "countof.h"
 #include "gfx.h"
 #include "rtg.h"
 
@@ -31,7 +32,7 @@ static const struct Rect RECTS[] = {
     { 66, 22, 20,  1}, // a single row
     {  3, 40, 83, 20},
 };
-#define NRECTS ((int)(sizeof RECTS / sizeof RECTS[0]))
+#define NRECTS ((int)countof(RECTS))
 
 // Big enough for the furthest origin plus the widest rectangle; src_fits()
 // rechecks, since undersizing it reads off the end of every row.
@@ -190,5 +191,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup PixelArrayGroup = {
-    "PixelArray", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "PixelArray", TESTS, (int)countof(TESTS)
 };

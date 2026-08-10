@@ -11,6 +11,7 @@
 #include <graphics/rastport.h>
 
 #include "p96cts.h"
+#include "countof.h"
 #include "gfx.h"
 
 // Unit vectors * 1024 at 15-degree steps: every octant and both major axes,
@@ -123,5 +124,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup DrawLineGroup = {
-    "DrawLine", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "DrawLine", TESTS, (int)countof(TESTS)
 };

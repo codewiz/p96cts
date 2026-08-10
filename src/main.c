@@ -22,6 +22,7 @@
 
 #include "p96cts.h"
 #include "backdrop.h"
+#include "countof.h"
 #include "gfx.h"
 #include "layer.h"
 #include "modes.h"
@@ -62,7 +63,7 @@ static const struct P96TestGroup *const GROUPS[] = {
     &ScrollRasterGroup,
     &PixelArrayGroup,
 };
-#define NGROUPS ((int)(sizeof GROUPS / sizeof GROUPS[0]))
+#define NGROUPS ((int)countof(GROUPS))
 
 // "<dir>/<name><suffix>", freshly allocated, or NULL. On the heap rather than
 // in a buffer on the stack: a Shell gives a command 4K of stack by default,
@@ -786,7 +787,7 @@ int main(void) {
         // skipped: boards legitimately lack pixel formats.
         static const int DEPTHS[] = {8, 15, 16, 24};
 
-        for (int i = 0; i < (int)(sizeof DEPTHS / sizeof DEPTHS[0]); i++) {
+        for (int i = 0; i < (int)countof(DEPTHS); i++) {
             const int depth = DEPTHS[i];
             ULONG id;
 

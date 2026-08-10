@@ -22,6 +22,7 @@
 #include <proto/graphics.h>
 
 #include "p96cts.h"
+#include "countof.h"
 #include "gfx.h"
 #include "glyph.h"
 
@@ -134,7 +135,7 @@ static const UBYTE MODES[] = {
     JAM1,       JAM2,       JAM1 | INVERSVID,
     JAM2 | INVERSVID, COMPLEMENT, COMPLEMENT | INVERSVID,
 };
-#define NMODES ((SHORT)(sizeof MODES / sizeof MODES[0]))
+#define NMODES ((SHORT)countof(MODES))
 
 static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT cw = w / NMODES;
@@ -176,7 +177,7 @@ static void t_drawmodes(struct RastPort *rp, SHORT w, SHORT h) {
 // and the background alike. Planar only: the mask selects bitplanes, which a
 // chunky truecolor screen has no equivalent of.
 static const UBYTE MASKS[] = {0xFF, 0x0F, 0x55, 0x81};
-#define NMASKS ((SHORT)(sizeof MASKS / sizeof MASKS[0]))
+#define NMASKS ((SHORT)countof(MASKS))
 
 static void t_masks(struct RastPort *rp, SHORT w, SHORT h) {
     SHORT band = h / NMASKS;
@@ -214,5 +215,5 @@ static const struct P96Test TESTS[] = {
 };
 
 const struct P96TestGroup BltTemplateGroup = {
-    "BltTemplate", TESTS, (int)(sizeof TESTS / sizeof TESTS[0])
+    "BltTemplate", TESTS, (int)countof(TESTS)
 };
