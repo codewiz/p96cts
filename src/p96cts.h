@@ -30,6 +30,13 @@ struct P96Test {
     // solve for the nearest pen of every pixel, which is not what any of these
     // calls promise. PixelArray-lut8 covers the palette side instead.
     bool truecolor_only;
+    // The scene cannot run under CLIP, for one of two reasons: it draws at
+    // bitmap level (BltBitMap(), BitMapScale()), where clipping is the
+    // caller's job and the calls overwrite the clip layers by design; or it
+    // copies pixels within the RastPort (ClipBlit(), ScrollRaster()), where
+    // an obscured source turns into damage a simple-refresh layer never
+    // repaints, so no unclipped golden can describe the result.
+    bool no_clip;
 };
 
 struct P96TestGroup {

@@ -166,6 +166,7 @@ struct RunOpts {
     int bpp; // bytes per compared pixel: 1 (pen) or 3 (R8G8B8)
     bool capture;
     bool layer; // draw through a Layer rather than a bare RastPort
+    bool clip;  // lay two obscuring layers over the scene; implies layer
     bool all_depths; // no MODE given: run every depth the monitor offers
 
     bool list_modes;
@@ -206,6 +207,8 @@ static void free_args(struct RunOpts *o) {
 // A layered run renders the same scenes down a different path, so its
 // images get a directory of their own rather than overwriting the
 // unlayered ones: the two are meant to be compared against each other.
+// A clipped run compares against the same goldens: the pixels the clip
+// layers cover are excluded from the comparison instead.
 static int set_depth(struct RunOpts *o, int depth) {
     o->depth = depth;
     o->bpp = depth > 8 ? 3 : 1;
@@ -214,8 +217,8 @@ static int set_depth(struct RunOpts *o, int depth) {
     o->golden_buf = o->output_buf = NULL;
     if (asprintf(&o->golden_buf, "golden/%dx%dx%d", o->w, o->h, depth) < 0 ||
         asprintf(&o->output_buf, "output/%s/%dx%dx%d%s",
-                 o->monitor ? o->monitor : "softrast",
-                 o->w, o->h, depth, o->layer ? "-layered" : "") < 0) {
+                 o->monitor ? o->monitor : "softrast", o->w, o->h, depth,
+                 o->clip ? "-clipped" : o->layer ? "-layered" : "") < 0) {
         printf("out of memory\n");
         return RETURN_FAIL;
     }
@@ -237,6 +240,8 @@ static void usage(void) {
         "  TEST/K         one testcase as <group>-<test>; all of them by default\n"
         "  CAPTURE/S      write the reference instead of comparing against it\n"
         "  LAYER/S        draw through a Layer covering the whole bitmap\n"
+        "  CLIP/S         also lay two thin layers over the scene, so drawing\n"
+        "                 is genuinely split against ClipRects; implies LAYER\n"
         "  OUTDIR/K       output directory (default output/<monitor>/<scene>x<depth>)\n"
         "  GOLDENDIR/K    reference directory (default golden/<scene>x<depth>)\n"
         "  SCENE/K        region rendered and compared, as WxH (default 320x200)\n"
@@ -282,14 +287,15 @@ static int parse_args(struct RunOpts *o) {
         /* [2] = */ "TEST/K,"
         /* [3] = */ "CAPTURE/S,"
         /* [4] = */ "LAYER/S,"
-        /* [5] = */ "OUTDIR/K,"
-        /* [6] = */ "GOLDENDIR/K,"
-        /* [7] = */ "SCENE/K,"
-        /* [8] = */ "REPORTFILE/K,"
-        /* [9] = */ "LISTMODES/S,"
-        /* [10] = */ "LISTTESTS/S,"
-        /* [11] = */ "HELP=--help=-h/S";
-    LONG args[12];
+        /* [5] = */ "CLIP/S,"
+        /* [6] = */ "OUTDIR/K,"
+        /* [7] = */ "GOLDENDIR/K,"
+        /* [8] = */ "SCENE/K,"
+        /* [9] = */ "REPORTFILE/K,"
+        /* [10] = */ "LISTMODES/S,"
+        /* [11] = */ "LISTTESTS/S,"
+        /* [12] = */ "HELP=--help=-h/S";
+    LONG args[13];
 
     memset(o, 0, sizeof *o);
     memset(args, 0, sizeof args);
@@ -301,7 +307,7 @@ static int parse_args(struct RunOpts *o) {
         return RETURN_FAIL;
     }
 
-    if (args[11]) {
+    if (args[12]) {
         printf("%s\n", VERSION_LINE);
         usage();
         return RETURN_WARN;
@@ -314,10 +320,17 @@ static int parse_args(struct RunOpts *o) {
     o->depth = 8;
     o->test = args[2] ? (const char *)args[2] : NULL;
     o->capture = args[3] != 0;
-    o->layer = args[4] != 0;
-    o->report_file = args[8] ? (const char *)args[8] : NULL;
-    o->list_modes = args[9] != 0;
-    o->list_tests = args[10] != 0;
+    o->clip = args[5] != 0;
+    o->layer = args[4] != 0 || o->clip; // the clip layers need one to obscure
+    if (o->clip && o->capture) {
+        // The comparison excludes the covered pixels, so clipped runs use the
+        // ordinary goldens; a capture would record the clip layers into them.
+        printf("CAPTURE and CLIP do not combine; capture without CLIP\n");
+        return RETURN_ERROR;
+    }
+    o->report_file = args[9] ? (const char *)args[9] : NULL;
+    o->list_modes = args[10] != 0;
+    o->list_tests = args[11] != 0;
 
     // The reference run is the absence of a board, which as a positional
     // argument needs a name of its own. Internally it stays NULL, which is
@@ -338,7 +351,7 @@ static int parse_args(struct RunOpts *o) {
     }
     o->all_depths = !args[1];
 
-    if (args[7] && !parse_scene((const char *)args[7], &o->w, &o->h)) {
+    if (args[8] && !parse_scene((const char *)args[8], &o->w, &o->h)) {
         printf("SCENE must be WxH\n");
         return RETURN_ERROR;
     }
@@ -380,12 +393,14 @@ static int parse_args(struct RunOpts *o) {
     if (!validate_test(o->test))
         return RETURN_ERROR;
 
-    o->golden_override = args[6] ? (const char *)args[6] : NULL;
-    o->out_override = args[5] ? (const char *)args[5] : NULL;
+    o->golden_override = args[7] ? (const char *)args[7] : NULL;
+    o->out_override = args[6] ? (const char *)args[6] : NULL;
     return set_depth(o, o->depth);
 }
 
-// The comparison itself: how many pixels differ from the golden.
+// The comparison itself: how many pixels differ from the golden. Pixels under
+// the obscuring clip layers are excluded -- what a readback returns there is
+// not the scene's output -- as they are from the diff listing and diff image.
 static ULONG count_diffs(const UBYTE *idx, const UBYTE *gold,
                          const struct RunOpts *o) {
     ULONG bad = 0;
@@ -394,7 +409,8 @@ static ULONG count_diffs(const UBYTE *idx, const UBYTE *gold,
         for (SHORT x = 0; x < o->w; x++) {
             ULONG p = ((ULONG)y * o->w + x) * o->bpp;
 
-            if (memcmp(idx + p, gold + p, o->bpp))
+            if (!layer_point_obscured(x, y) &&
+                memcmp(idx + p, gold + p, o->bpp))
                 bad++;
         }
     return bad;
@@ -425,9 +441,11 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
     for (SHORT y = 0; y < o->h; y++)
         for (SHORT x = 0; x < o->w; x++) {
             ULONG p = ((ULONG)y * o->w + x) * bpp;
+            bool same = layer_point_obscured(x, y) ||
+                        !memcmp(idx + p, gold + p, bpp);
             if (bpp != 3) {
-                d[p] = (idx[p] != gold[p]) ? 2 : (gold[p] ? 5 : 0);
-            } else if (memcmp(idx + p, gold + p, 3)) {
+                d[p] = !same ? 2 : (gold[p] ? 5 : 0);
+            } else if (!same) {
                 d[p] = 255;
                 d[p + 1] = d[p + 2] = 0;
             } else {
@@ -447,9 +465,8 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
 }
 
 // Compare a rendered scene against its golden and report the result: PASS, or
-// the differing pixel count, the first few differing pixels by coordinate --
-// hunting a handful of single pixels in a 320x200 image by eye is hopeless --
-// and the failure images. Returns true when the scene fails.
+// the differing pixel count, the first few differing pixels by coordinate.
+// Returns true when the scene fails.
 static bool diff_scene(const char *name, ULONG us, const UBYTE *idx,
                        const UBYTE *gold, SHORT gw, SHORT gh,
                        const struct RunOpts *o) {
@@ -474,7 +491,7 @@ static bool diff_scene(const char *name, ULONG us, const UBYTE *idx,
     for (SHORT y = 0; y < o->h && shown < MAX_REPORTED_DIFFS; y++)
         for (SHORT x = 0; x < o->w && shown < MAX_REPORTED_DIFFS; x++) {
             ULONG p = ((ULONG)y * o->w + x) * bpp;
-            if (!memcmp(idx + p, gold + p, bpp))
+            if (layer_point_obscured(x, y) || !memcmp(idx + p, gold + p, bpp))
                 continue;
             if (bpp == 3)
                 rptf("       at %3d,%3d golden %02X%02X%02X, got %02X%02X%02X",
@@ -556,6 +573,8 @@ static bool run_test(const struct P96Test *t, const char *name,
     const ULONG us = eclock_micros(&t0, &t1);
 
     if (wall_broken(rp, &wall, name, us))
+        return true;
+    if (o->clip && layer_clip_broken(name, us))
         return true;
     UBYTE *idx = bpp == 3 ? rtg_read_rgb(rp, 0, 0, o->w, o->h)
                           : gfx_read_pens(rp, 0, 0, o->w, o->h, o->depth);
@@ -698,6 +717,13 @@ static int run_mode(struct RunOpts *o, ULONG id) {
             goto cleanup;
         }
         rp = layer_rp;
+        // The obscuring clip layers go up last, in front of the drawing
+        // layer, so every call a scene makes really is split against
+        // several ClipRects.
+        if (o->clip && !layer_clip(rp->BitMap, o->w, o->h)) {
+            failures = 1;
+            goto cleanup;
+        }
     }
 
     rpt(RPT_INFO, "");
@@ -705,7 +731,8 @@ static int run_mode(struct RunOpts *o, ULONG id) {
             o->monitor ? o->monitor : "softrast",
             o->screen_w, o->screen_h, o->depth,
             rtg_format_name(rtg_rgbformat(rp->BitMap)),
-            o->w, o->h, o->layer ? " (layered)" : "");
+            o->w, o->h,
+            o->clip ? " (clipped)" : o->layer ? " (layered)" : "");
     if (o->monitor && (scr->Width != o->screen_w || scr->Height != o->screen_h))
         rptf("screen opened %dx%d instead", scr->Width, scr->Height);
     // Where a comparison reads from is determined by the scene, so it is not
@@ -734,6 +761,10 @@ static int run_mode(struct RunOpts *o, ULONG id) {
             }
             if (!gfx_truecolor && t->truecolor_only) {
                 rpt_skip(full, "truecolor only");
+                continue;
+            }
+            if (o->clip && t->no_clip) {
+                rpt_skip(full, "not clippable");
                 continue;
             }
             failures += run_test(t, full, rp, o);

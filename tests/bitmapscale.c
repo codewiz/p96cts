@@ -178,9 +178,11 @@ static void t_ratios(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {.name = "down", .fn = t_down},
-    {.name = "up", .fn = t_up},
-    {.name = "ratios", .fn = t_ratios},
+    // no_clip: BitMapScale() takes bitmaps, not RastPorts -- clipping is the
+    // caller's job, and the scenes would scale straight over the clip layers.
+    {.name = "down", .fn = t_down, .no_clip = true},
+    {.name = "up", .fn = t_up, .no_clip = true},
+    {.name = "ratios", .fn = t_ratios, .no_clip = true},
 };
 
 const struct P96TestGroup BitMapScaleGroup = {

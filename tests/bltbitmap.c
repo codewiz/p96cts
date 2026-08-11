@@ -471,7 +471,9 @@ static const struct P96Test TESTS[] = {
     {.name = "friend", .fn = t_friend, .palette_only = true},
     {.name = "offsets", .fn = t_offsets},
     {.name = "sizes", .fn = t_sizes},
-    {.name = "planemask", .fn = t_planemask},
+    // no_clip: t_planemask blits with BltBitMap(), which takes bitmaps, not
+    // RastPorts -- it would write straight over the clip layers by design.
+    {.name = "planemask", .fn = t_planemask, .no_clip = true},
     {.name = "writemask", .fn = t_writemask, .palette_only = true},
     {.name = "stencil", .fn = t_stencil},
     {.name = "shallow", .fn = t_shallow},

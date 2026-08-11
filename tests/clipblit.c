@@ -96,8 +96,10 @@ static void t_disjoint(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {.name = "overlap", .fn = t_overlap},
-    {.name = "disjoint", .fn = t_disjoint},
+    // no_clip: ClipBlit copies within the RastPort, and a source the clip
+    // layers obscure turns into unrepainted damage at the destination.
+    {.name = "overlap", .fn = t_overlap, .no_clip = true},
+    {.name = "disjoint", .fn = t_disjoint, .no_clip = true},
 };
 
 const struct P96TestGroup ClipBlitGroup = {

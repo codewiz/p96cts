@@ -186,10 +186,12 @@ static void t_amounts(struct RastPort *rp, SHORT w, SHORT h) {
 }
 
 static const struct P96Test TESTS[] = {
-    {.name = "directions", .fn = t_directions},
-    {.name = "drawmodes", .fn = t_drawmodes},
-    {.name = "backfill", .fn = t_backfill},
-    {.name = "amounts", .fn = t_amounts},
+    // no_clip: scrolling copies within the RastPort, and a source the clip
+    // layers obscure turns into unrepainted damage at the destination.
+    {.name = "directions", .fn = t_directions, .no_clip = true},
+    {.name = "drawmodes", .fn = t_drawmodes, .no_clip = true},
+    {.name = "backfill", .fn = t_backfill, .no_clip = true},
+    {.name = "amounts", .fn = t_amounts, .no_clip = true},
 };
 
 const struct P96TestGroup ScrollRasterGroup = {

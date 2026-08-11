@@ -13,6 +13,9 @@ struct BitMap;
 struct RastPort;
 
 struct RastPort *layer_install(struct BitMap *bm);
+bool layer_clip(struct BitMap *bm, SHORT w, SHORT h);
+bool layer_point_obscured(SHORT x, SHORT y);
+bool layer_clip_broken(const char *name, ULONG micros);
 void layer_free(void);
 
 #endif

@@ -52,33 +52,6 @@ To generate all golden images for a particular scene size and depth, run:
     p96cts softrast 320x200x8 CAPTURE
 
 
-### Layered rendering
-
-By default a scene is drawn into a RastPort with no Layer, which is the
-unclipped path: graphics.library hands each rectangle straight to the driver.
-Applications draw into windows, so their calls arrive split against a ClipRect
-list instead. `LAYER/S` lays a single simple-refresh layer over the whole
-bitmap and draws through that:
-
-    p96cts PAL 320x256x8 LAYER
-
-The layer covers everything and so clips nothing, which is what makes the same
-golden set the assertion: both paths have to produce identical pixels. A
-layered run writes its images to `output/<monitor>/WxHxD-layered/`, so the two
-can be compared side by side.
-
-One scene does not agree. `ScrollRaster-amounts` includes distances that reach
-and exceed the extent of the rectangle being scrolled. Unlayered, AmigaOS 3.x
-leaves the rectangle untouched; layered, it fills the whole rectangle with
-BgPen. A native AGA bitmap and a P96 software-rasterized one give the same two
-answers, so the divergence is in graphics.library and not in any driver. The
-autodoc describes only the fill -- "The space vacated is RectFilled with
-BGPen", and when everything scrolls off the vacated space is the whole
-rectangle -- which makes the layered result the documented one and the golden,
-captured unlayered, the outlier. The scene is left failing under `LAYER` on
-purpose: it is the reproducer.
-
-
 ### Arguments
 
 `MONITOR` and `MODE` are positional, so the usual invocation is
@@ -93,6 +66,7 @@ scene, and notes the depths it lacks.
 | `TEST/K` | One testcase as `<group>-<test>`; all of them by default |
 | `CAPTURE/S` | Write the reference instead of comparing against it |
 | `LAYER/S` | Draw through a Layer covering the whole bitmap (see below) |
+| `CLIP/S` | Also lay two layers over the scene, so drawing is really clipped |
 | `SCENE/K` | Region rendered and compared, as `WxH` (default `320x200`) |
 | `GOLDENDIR/K` | Reference directory (default `golden/<scene>x<depth>`) |
 | `OUTDIR/K` | Output directory (default `output/<monitor>/<scene>x<depth>`) |
@@ -100,6 +74,32 @@ scene, and notes the depths it lacks.
 | `LISTMODES/S` | Dump the display database and exit |
 | `LISTTESTS/S` | List the testcase names `TEST` accepts and exit |
 | `HELP/S` | Print this table and exit; `-h` and `--help` work too |
+
+
+### Layered rendering
+
+By default scenes draw into a bare RastPort, the unclipped path. Applications
+draw into windows, so their calls arrive through a Layer instead. `LAYER/S`
+draws through one covering the whole bitmap, which clips nothing, so the same
+goldens apply -- both paths must produce identical pixels:
+
+    p96cts PAL 320x256x8 LAYER
+
+One scene disagrees on purpose: `ScrollRaster-amounts` scrolls by distances
+that exceed the rectangle's extent, which AmigaOS 3.x handles differently
+layered and unlayered -- in graphics.library itself, on native AGA and P96
+alike. The failure is the reproducer.
+
+
+### Clipping
+
+`CLIP/S` (which implies `LAYER`) goes further: two thin layers cross the
+scene, so every call reaches the driver genuinely split into fragments:
+
+    p96cts UAE CLIP
+
+The ordinary goldens stay the reference -- the comparison just excludes the
+covered pixels. Scenes that cannot run clipped skip as "not clippable".
 
 
 ## Test Results
