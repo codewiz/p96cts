@@ -136,9 +136,9 @@ board, please run the suite and open an issue to share your results.
 | BltBitMap-writemask | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ |
-| BitMapScale-down | - | ✅ | - | - |
-| BitMapScale-up | - | ✅ | - | - |
-| BitMapScale-ratios | - | ✅ | - | - |
+| BitMapScale-down | ✅ | ✅ | - | - |
+| BitMapScale-up | ✅ | ✅ | - | - |
+| BitMapScale-ratios | ✅ | ✅ | - | - |
 | ScrollRaster-directions | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-backfill | ✅ | ✅ | ✅ | ✅ |
@@ -212,15 +212,15 @@ AROS has no Picasso96API.library, so the suite falls back to
 `cybergraphics.library` and `graphics.library`. What a red cell finds here is a
 divergence in AROS itself rather than in a card driver. PAL is the native
 planar path; Z3660 (Copperline) and ZZ9000 (Amiberry) are RTG, red if the
-scene fails at either 8 or 24 bits.
+scene fails at any tested depth.
 
 | scene | PAL | Z3660 | ZZ9000 |
 |---|---|---|---|
-| DrawLine-solid | ❌ | ✅ | ✅ |
-| DrawLine-pattern | ❌ | ✅ | ❌ |
-| DrawLine-jam2 | ❌ | ✅ | ❌ |
-| DrawLine-inversvid | ❌ | ✅ | ❌ |
-| DrawLine-complement | ❌ | ❌ | ❌ |
+| DrawLine-solid | ✅ | ✅ | ✅ |
+| DrawLine-pattern | ✅ | ✅ | ✅ |
+| DrawLine-jam2 | ✅ | ✅ | ✅ |
+| DrawLine-inversvid | ✅ | ✅ | ✅ |
+| DrawLine-complement | ✅ | ✅ | ✅ |
 | RectFill-drawmodes | ✅ | ✅ | ✅ |
 | RectFill-edges | ✅ | ✅ | ✅ |
 | RectFill-invert | ✅ | ✅ | ✅ |
@@ -230,32 +230,45 @@ scene fails at either 8 or 24 bits.
 | BltTemplate-sizes | ✅ | ✅ | ✅ |
 | BltTemplate-drawmodes | ✅ | ✅ | ✅ |
 | BltTemplate-masks | ✅ | ✅ | ✅ |
-| BltPattern-drawmodes | ❌ | ❌ | ❌ |
-| BltPattern-mask | ❌ | ✅ | ✅ |
-| BltPattern-phase | ❌ | ✅ | ✅ |
-| BltBitMap-minterms | ❌ | ❌ | ❌ |
-| BltBitMap-friend | - | - | - |
+| BltPattern-drawmodes | ✅ | ✅ | ✅ |
+| BltPattern-mask | ✅ | ✅ | ✅ |
+| BltPattern-phase | ✅ | ✅ | ✅ |
+| BltBitMap-minterms | ✅ | ✅ | ✅ |
+| BltBitMap-friend | ✅ | ✅ | ✅ |
 | BltBitMap-offsets | ✅ | ✅ | ✅ |
 | BltBitMap-sizes | ✅ | ✅ | ✅ |
-| BltBitMap-planemask | ❌ | ❌ | ❌ |
-| BltBitMap-writemask | - | - | - |
+| BltBitMap-planemask | ✅ | ✅ | ✅ |
+| BltBitMap-writemask | ✅ | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ | ✅ |
-| BltBitMap-shallow | ✅ | ❌ | ❌ |
-| BitMapScale-down | - | - | - |
-| BitMapScale-up | - | - | - |
-| BitMapScale-ratios | - | - | - |
+| BltBitMap-shallow | ✅ | ✅ | ✅ |
+| BitMapScale-down | ✅ | ✅\* | ✅\* |
+| BitMapScale-up | ✅ | ✅ | ✅ |
+| BitMapScale-ratios | ✅ | ✅\* | ✅\* |
 | ScrollRaster-directions | ✅ | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ |
-| ScrollRaster-backfill | ✅ | ❌ | ✅ |
+| ScrollRaster-backfill | ✅ | ✅ | ✅ |
 | ScrollRaster-amounts | ✅ | ✅ | ✅ |
 | PixelArray-pens8 | ✅ | ✅ | ✅ |
 | PixelArray-lut8 | ✅ | ✅ | ✅ |
 | PixelArray-rgb | - | ✅ | ✅ |
 
-These failures are tracked in
+The failures this table found were tracked in
 [AROS issue #936](https://github.com/aros-development-team/AROS/issues/936),
-which has the per-mode breakdown. BitMapScale divergences are in
-[AROS issue #950](https://github.com/aros-development-team/AROS/issues/950).
+which has the per-fix breakdown, and in
+[AROS issue #950](https://github.com/aros-development-team/AROS/issues/950)
+for BitMapScale, fixed by
+[AROS PR #977](https://github.com/aros-development-team/AROS/pull/977).
+
+\* The truecolor down/ratios runs still count red pixels against the goldens,
+but every one of them is either a red flag square or the extra column that the
+goldens record from the reference's own truecolor overshoot (see Coverage
+below): AROS output is correct there, and the cells go fully green when the
+goldens are recaptured after the P96 fix.
+
+Two exceptions to the green above: the ZZ9000 16-bit runs currently fail most
+scenes wholesale (under investigation; Z3660 16-bit is clean, so it is the
+ZZ9000 path rather than core graphics.library), and the table says nothing
+about 15-bit modes, which these boards do not expose under AROS.
 
 
 ## Coverage
@@ -284,13 +297,13 @@ screen and the second on a truecolor one.
 prove it by comparing bit-identically on the software rasterizer and on a
 board. Each scale also cross-checks the autodoc rule that the size
 `BitMapScale()` reports equals what `ScalerDiv()` computes, and paints a red
-square at the destination origin where the two disagree. P96's 24-bit
+square at the destination origin where the two disagree. P96's truecolor
 scaler makes every downscale one pixel wider than `ScalerDiv` says -- the
 extra column samples one past the source row, which on a packed bitmap is
-the leftmost column of the next one -- so the 24-bit goldens carry those
-red flags: they record the reference faithfully, bug included, and get
-recaptured when it is fixed. The 15/16-bit paths agree with `ScalerDiv`,
-so those goldens carry none.
+the leftmost column of the next one -- so the 15, 16 and 24-bit goldens all
+carry those red flags: they record the reference faithfully, bug included,
+and get recaptured when it is fixed. The CLUT path agrees with `ScalerDiv`,
+so the 8-bit goldens carry none.
 
 Runs compare pens at depth 8 and canonical R8G8B8 readback at 15, 16 and 24.
 A 15/16-bit run renders its off-board reference in the screen's own quantized
