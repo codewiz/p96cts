@@ -13,7 +13,7 @@
 // Each scale also cross-checks the autodoc invariant that the output size
 // BitMapScale reports equals what ScalerDiv computes: a disagreement is
 // drawn as a red square at the destination origin. P96's truecolor scaler
-// fails this on every downscale (one extra pixel in each direction), so the
+// fails this on every downscale (one extra column), so the 15, 16 and
 // 24-bit goldens record red flags until iComp fixes it.
 
 #include <proto/exec.h>
@@ -154,7 +154,7 @@ static void t_up(struct RastPort *rp, SHORT w, SHORT h) {
 // and 5:10 all halve the logo. Whether they place identical pixels is the
 // reference's call; the golden records it.
 //
-// The source region is 318x198 rather than the whole logo: P96's 24-bit
+// The source region is 318x198 rather than the whole logo: P96's truecolor
 // scaler makes every downscale one pixel wider than ScalerDiv says (the
 // red flags record the disagreement), so a 159-wide result really comes
 // out 160 wide and four tiles fill the scene exactly. Sized from the
