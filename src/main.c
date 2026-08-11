@@ -33,7 +33,7 @@
 #include "rtg.h"
 
 // Standard AmigaOS version tag, readable with the Version command.
-static const char VERSTAG[] = "$VER: p96cts 0.15 (10.8.2026) by Bernie Innocenti";
+static const char VERSTAG[] = "$VER: p96cts 0.16 (12.8.2026) by Bernie Innocenti";
 #define VERSION_LINE (VERSTAG + 6)
 
 struct IntuitionBase *IntuitionBase;
