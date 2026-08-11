@@ -385,6 +385,21 @@ static int parse_args(struct RunOpts *o) {
     return set_depth(o, o->depth);
 }
 
+// The comparison itself: how many pixels differ from the golden.
+static ULONG count_diffs(const UBYTE *idx, const UBYTE *gold,
+                         const struct RunOpts *o) {
+    ULONG bad = 0;
+
+    for (SHORT y = 0; y < o->h; y++)
+        for (SHORT x = 0; x < o->w; x++) {
+            ULONG p = ((ULONG)y * o->w + x) * o->bpp;
+
+            if (memcmp(idx + p, gold + p, o->bpp))
+                bad++;
+        }
+    return bad;
+}
+
 // Keep what a failing scene rendered, and a picture of where it went wrong:
 // <test>.fail.png is the render itself, <test>.diff.png marks the differing
 // pixels in red over the golden dimmed to gray -- at full intensity the scene
@@ -431,6 +446,51 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
     return failed;
 }
 
+// Compare a rendered scene against its golden and report the result: PASS, or
+// the differing pixel count, the first few differing pixels by coordinate --
+// hunting a handful of single pixels in a 320x200 image by eye is hopeless --
+// and the failure images. Returns true when the scene fails.
+static bool diff_scene(const char *name, ULONG us, const UBYTE *idx,
+                       const UBYTE *gold, SHORT gw, SHORT gh,
+                       const struct RunOpts *o) {
+    int bpp = o->bpp;
+    int shown = 0;
+
+    if (gw != o->w || gh != o->h) {
+        rpt_failure(name, us, "golden is %dx%d, scene is %dx%d", gw, gh, o->w,
+                    o->h);
+        return true;
+    }
+
+    ULONG bad = count_diffs(idx, gold, o);
+    if (!bad) {
+        rpt_success(name, us);
+        return false;
+    }
+
+    rpt_failure(name, us, "%lu of %lu pixels differ", (unsigned long)bad,
+                (unsigned long)((ULONG)o->w * o->h));
+
+    for (SHORT y = 0; y < o->h && shown < MAX_REPORTED_DIFFS; y++)
+        for (SHORT x = 0; x < o->w && shown < MAX_REPORTED_DIFFS; x++) {
+            ULONG p = ((ULONG)y * o->w + x) * bpp;
+            if (!memcmp(idx + p, gold + p, bpp))
+                continue;
+            if (bpp == 3)
+                rptf("       at %3d,%3d golden %02X%02X%02X, got %02X%02X%02X",
+                     x, y, gold[p], gold[p + 1], gold[p + 2], idx[p],
+                     idx[p + 1], idx[p + 2]);
+            else
+                rptf("       at %3d,%3d golden %3d, got %3d", x, y, gold[p],
+                     idx[p]);
+            shown++;
+        }
+    if (bad > (ULONG)shown)
+        rptf("       ... and %lu more", (unsigned long)(bad - shown));
+    write_failure_images(name, idx, gold, o);
+    return true;
+}
+
 // Prepare the shared RastPort for a testcase: lay a loud checkerboard into the
 // scene, then reset the render state to a known default.
 //
@@ -475,7 +535,6 @@ static bool run_test(const struct P96Test *t, const char *name,
                      struct RastPort *rp, const struct RunOpts *o) {
     bool failed = false;
     int bpp = o->bpp;
-    ULONG pixels = (ULONG)o->w * o->h, bad = 0;
     SHORT gw, gh;
     struct EClockVal t0, t1;
     struct Wall wall = {o->w, o->h, o->screen_w, o->screen_h, o->bpp,
@@ -530,48 +589,7 @@ static bool run_test(const struct P96Test *t, const char *name,
         free(path);
     }
 
-    if (gw != o->w || gh != o->h) {
-        rpt_failure(name, us, "golden is %dx%d, scene is %dx%d", gw, gh,
-                       o->w, o->h);
-        failed = true;
-    } else {
-        for (SHORT y = 0; y < o->h; y++)
-            for (SHORT x = 0; x < o->w; x++) {
-                ULONG p = ((ULONG)y * o->w + x) * bpp;
-                if (memcmp(idx + p, gold + p, bpp))
-                    bad++;
-            }
-        if (!bad) {
-            rpt_success(name, us);
-        } else {
-            // Hunting a handful of single pixels in a 320x200 image by eye is
-            // hopeless, so name the first few outright.
-            int shown = 0;
-
-            rpt_failure(name, us, "%lu of %lu pixels differ",
-                           (unsigned long)bad, (unsigned long)pixels);
-            failed = true;
-
-            for (SHORT y = 0; y < o->h && shown < MAX_REPORTED_DIFFS; y++)
-                for (SHORT x = 0; x < o->w && shown < MAX_REPORTED_DIFFS; x++) {
-                    ULONG p = ((ULONG)y * o->w + x) * bpp;
-                    if (!memcmp(idx + p, gold + p, bpp))
-                        continue;
-                    if (bpp == 3)
-                        rptf("       at %3d,%3d golden %02X%02X%02X, "
-                                "got %02X%02X%02X", x, y,
-                                gold[p], gold[p + 1], gold[p + 2],
-                                idx[p], idx[p + 1], idx[p + 2]);
-                    else
-                        rptf("       at %3d,%3d golden %3d, got %3d", x, y,
-                                gold[p], idx[p]);
-                    shown++;
-                }
-            if (bad > (ULONG)shown)
-                rptf("       ... and %lu more", (unsigned long)(bad - shown));
-            failed |= write_failure_images(name, idx, gold, o);
-        }
-    }
+    failed = diff_scene(name, us, idx, gold, gw, gh, o);
     FreeVec(gold);
     FreeVec(idx);
     return failed;
