@@ -38,6 +38,7 @@ OBJS     = \
 	src/pngio.o \
 	src/report.o \
 	src/rtg.o \
+	src/runtest.o \
 	src/timer.o \
 	src/wall.o \
 	tests/bitmapscale.o \
@@ -85,6 +86,7 @@ HEADERS  = \
 	src/pngio.h \
 	src/report.h \
 	src/rtg.h \
+	src/runtest.h \
 	src/timer.h \
 	src/wall.h
 
