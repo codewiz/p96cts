@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h> // strcasecmp: POSIX rather than ISO C, but newlib has it
+#include <strings.h> // strcasecmp()
 
 #include "p96cts.h"
 #include "backdrop.h"
@@ -33,7 +33,8 @@
 #include "rtg.h"
 
 // Standard AmigaOS version tag, readable with the Version command.
-static const char VERSTAG[] = "$VER: p96cts 0.16 (12.8.2026) by Bernie Innocenti";
+static const char VERSTAG[] =
+        "$VER: p96cts " AMIGA_VERSION " (" AMIGA_DATE ") by Bernie Innocenti";
 #define VERSION_LINE (VERSTAG + 6)
 
 struct IntuitionBase *IntuitionBase;

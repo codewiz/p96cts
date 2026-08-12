@@ -11,23 +11,19 @@
 # With a toolchain that does not bundle them (e.g. bebbo's), point at an
 # unpacked P96Develop.lha instead:
 #
-#   make CC=/path/to/bin/m68k-amigaos-gcc \
-#        P96_CFLAGS=-I/path/to/Picasso96Develop/Include
-#
-# A toolchain that bundles them on its default include path wants
-# P96_CFLAGS= (empty).
+#   make CC=m68k-amigaos-gcc P96_CFLAGS=-I/path/to/Picasso96Develop/Include
 
 # Plain assignment, not ?=: make predefines CC as "cc". A command-line
 # CC=... still overrides this.
-CC       = m68k-amigaos-gcc
-P96_CFLAGS ?= -I/opt/amiga/m68k-amigaos/include
+CC = m68k-amigaos-gcc
 
 DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src stefanreinauer/amiga-gcc:gcc-v16.1
 
-TARGET   = p96cts
-# Testcase scenes live in tests/, one translation unit per group; the harness,
-# the graphics layer and the PNG codec live in src/.
-OBJS     = \
+TARGET = p96cts
+AMIGA_VERSION ?= $(shell git describe --tags --dirty | sed -r 's/^(release_|v)//')
+AMIGA_DATE := $(shell date '+%-d.%-m.%Y')
+
+OBJS = \
 	src/backdrop.o \
 	src/gfx.o \
 	src/glyph.o \
@@ -53,8 +49,8 @@ OBJS     = \
 
 # zlib and libpng, built for this target and committed. See
 # third_party/README.md for provenance and how to rebuild them.
-PNGINC   = -Ithird_party/libpng/include -Ithird_party/zlib/include
-PNGLIB   = third_party/libpng/lib/libpng16.a third_party/zlib/lib/libz.a
+PNG_CFLAGS = -Ithird_party/libpng/include -Ithird_party/zlib/include
+PNG_LIBS   = third_party/libpng/lib/libpng16.a third_party/zlib/lib/libz.a
 
 # Strict enough to catch the usual C mistakes without fighting the Amiga
 # headers. -Wstrict-prototypes and -Wold-style-definition matter here because
@@ -62,18 +58,19 @@ PNGLIB   = third_party/libpng/lib/libpng16.a third_party/zlib/lib/libz.a
 WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
 
+# Allow overriding code generation flags
 CFLAGS  ?= -O3 -fomit-frame-pointer -m68020 $(WARNINGS)
 
-# Kept apart from CFLAGS: a command-line CFLAGS= replaces the variable
-# entirely, and dropping -noixemul or the include path breaks the link.
-ALL_CFLAGS = $(CFLAGS) -noixemul -Isrc $(P96_CFLAGS) $(PNGINC)
+ALL_CFLAGS = $(CFLAGS) -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
+	-DAMIGA_VERSION=\"$(AMIGA_VERSION)\" \
+	-DAMIGA_DATE=\"$(AMIGA_DATE)\"
 
 all: $(TARGET)
 
 # libpng needs libm for its gamma arithmetic; both are software floating
 # point, so no FPU is required at runtime.
-$(TARGET): $(OBJS) $(PNGLIB)
-	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNGLIB) -lm
+$(TARGET): $(OBJS) $(PNG_LIBS)
+	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNG_LIBS) -lm
 
 HEADERS  = \
 	src/backdrop.h \

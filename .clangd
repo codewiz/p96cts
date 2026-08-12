@@ -41,6 +41,8 @@ CompileFlags:
     - -D__stdargs=
     - -D__regargs=
     - -D__saveds=
+    - -DAMIGA_VERSION="1.0"
+    - -DAMIGA_DATE="23.7.1985"
   Remove:
     - -m68*
     - -noixemul
