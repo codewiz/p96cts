@@ -327,13 +327,12 @@ only exercise AmigaOS.
 
 ## Building
 
-The default include path is where the amiga-gcc toolchain ships the P96
-headers, so a containerised build takes no arguments:
+If you have docker installed, this is a convenient way to build:
 
     make docker-build
 
-With a toolchain that does not bundle them, point at an unpacked
-`P96Develop.lha`:
+With a local Amiga toolchain that does not bundle the P96 SDK, point
+at an unpacked `P96Develop.lha`:
 
     make CC=/path/to/bin/m68k-amigaos-gcc \
          P96_CFLAGS=-I/path/to/Picasso96Develop/Include

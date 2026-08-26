@@ -13,11 +13,8 @@
 #
 #   make CC=m68k-amigaos-gcc P96_CFLAGS=-I/path/to/Picasso96Develop/Include
 
-# Plain assignment, not ?=: make predefines CC as "cc". A command-line
-# CC=... still overrides this.
 CC = m68k-amigaos-gcc
-
-DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src stefanreinauer/amiga-gcc:gcc-v16.1
+DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src berniecodewiz/m68k-amigaos-gcc:gcc-v16.2
 
 TARGET = p96cts
 AMIGA_VERSION ?= $(shell git describe --tags --dirty | sed -r 's/^(release_|v)//')
