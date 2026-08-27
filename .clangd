@@ -4,29 +4,28 @@
 #
 # Paths are absolute because clangd expands neither ~ nor $HOME, and because a
 # relative -I would resolve against each file's own directory, leaving
-# tests/*.c unable to find p96cts.h. Adjust them if your toolchain and
-# P96Develop live elsewhere.
+# tests/*.c unable to find p96cts.h. Adjust them if your toolchain lives
+# elsewhere.
 CompileFlags:
   Compiler: clang
   Add:
     # 32-bit pointers, so the ReadArgs casts in main.c do not warn. LLVM does
     # not know the "amigaos" OS field and ignores it; only the arch matters.
     - --target=m68k-unknown-amigaos
-    # -nostdinc plus -isystem, not -I: the host's /usr/include must not be
+    # -nostdlibinc plus -isystem, not -I: the host's /usr/include must not be
     # searched at all. glibc's sys/select.h defines struct timeval, and so does
     # the NDK's devices/timer.h, so any file reaching both fails to parse.
-    - -nostdinc
-    - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/m68k-amigaos/ndk-include
-    - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/m68k-amigaos/sys-include
-    - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/m68k-amigaos/include
-    - -isystem/home/bernie/emu/amiga/linux/m68k-amigaos-gcc-bin/lib/gcc/m68k-amigaos/6.5.0b/include
-    - -I/home/bernie/emu/amiga/src/p96cts/src
-    - -I/home/bernie/emu/amiga/devel/Picasso96Develop/Include
-    # bebbo's ndk-include has no cybergraphx/, unlike amiga-gcc's, so point at
-    # an unpacked CGraphX-DevKit (aminet dev/misc/CGraphX-DevKit) for it.
-    - -I/home/bernie/emu/amiga/devel/CGraphX/C/Include
-    - -I/home/bernie/emu/amiga/src/p96cts/third_party/libpng/include
-    - -I/home/bernie/emu/amiga/src/p96cts/third_party/zlib/include
+    # Not -nostdinc, which would also drop clang's own stddef.h/stdbool.h --
+    # newlib's headers include those and expect the compiler to supply them.
+    - -nostdlibinc
+    # ...but newlib's stdint.h defines max_align_t itself, so clang's stddef.h
+    # must be told to leave it alone.
+    - -D__CLANG_MAX_ALIGN_T_DEFINED
+    - -isystem/home/bernie/amiga/m68k-amigaos-gcc-16.2/m68k-amigaos/ndk-include
+    - -isystem/home/bernie/amiga/m68k-amigaos-gcc-16.2/m68k-amigaos/sys-include
+    # CyberGraphX and P96 headers live here, alongside the AmigaOS headers the
+    # toolchain adds on top of the NDK.
+    - -isystem/home/bernie/amiga/m68k-amigaos-gcc-16.2/m68k-amigaos/include
     # proto/Picasso96.h picks its inline glue on __GNUC__ alone, with no
     # _NO_INLINE escape hatch like the NDK's headers have, and that glue is
     # m68k register asm clang cannot parse. Pre-defining the inline header's
@@ -41,6 +40,8 @@ CompileFlags:
     - -D__stdargs=
     - -D__regargs=
     - -D__saveds=
+    - -Dmc68000=1
+    - -D__amiga__=1
     - -DAMIGA_VERSION="1.0"
     - -DAMIGA_DATE="23.7.1985"
   Remove:
