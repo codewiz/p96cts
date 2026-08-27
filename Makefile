@@ -2,23 +2,42 @@
 #
 # p96cts -- P96 driver conformance test suite (AmigaOS m68k target).
 #
-# Needs an m68k-amigaos-gcc and the Picasso96 developer includes. The default
-# P96_CFLAGS points where the amiga-gcc toolchain ships them, so a
-# containerised build needs no arguments at all:
-#
-#   make docker-build
-#
-# With a toolchain that does not bundle them (e.g. bebbo's), point at an
-# unpacked P96Develop.lha instead:
-#
-#   make CC=m68k-amigaos-gcc P96_CFLAGS=-I/path/to/Picasso96Develop/Include
 
-CC = m68k-amigaos-gcc
+# To build using the default containerized toolchain:
+#   make docker-build
 DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src berniecodewiz/m68k-amigaos-gcc:gcc-v16.2
+
+# Or build with a specified compiler:
+#
+#   make CC=m68k-amigaos-gcc
+CC = m68k-amigaos-gcc
+
+# With a toolchain that does not bundle the P96 headers (e.g. bebbo's),
+# unpack P96Develop.lha and point P96_CFLAGS at the headers:
+#
+#   make P96_CFLAGS=-I/path/to/Picasso96Develop/Include
+#
+P96_CFLAGS ?=
+
+# Allow overriding code generation flags
+CFLAGS ?= -O3 -fomit-frame-pointer -m68020-60 $(WARNINGS)
+
+# Normally bundled with AmigaPorts/m68k-amigaos-gcc
+PNG_CFLAGS ?=
+PNG_LIBS   ?= -lpng -lz -lm
 
 TARGET = p96cts
 AMIGA_VERSION ?= $(shell git describe --tags --dirty | sed -r 's/^(release_|v)//')
 AMIGA_DATE := $(shell date '+%-d.%-m.%Y')
+
+# Strict enough to catch the usual C mistakes without fighting the Amiga headers.
+WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
+	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
+# Not yet: -Wconversion
+
+ALL_CFLAGS = $(CFLAGS) -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
+	-DAMIGA_VERSION=\"$(AMIGA_VERSION)\" \
+	-DAMIGA_DATE=\"$(AMIGA_DATE)\"
 
 OBJS = \
 	src/backdrop.o \
@@ -44,30 +63,10 @@ OBJS = \
 	tests/rectfill.o \
 	tests/scrollraster.o
 
-# zlib and libpng, built for this target and committed. See
-# third_party/README.md for provenance and how to rebuild them.
-PNG_CFLAGS = -Ithird_party/libpng/include -Ithird_party/zlib/include
-PNG_LIBS   = third_party/libpng/lib/libpng16.a third_party/zlib/lib/libz.a
-
-# Strict enough to catch the usual C mistakes without fighting the Amiga
-# headers. -Wstrict-prototypes and -Wold-style-definition matter here because
-# these sources are otherwise easy to write in K&R style by accident.
-WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
-	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
-
-# Allow overriding code generation flags
-CFLAGS  ?= -O3 -fomit-frame-pointer -m68020 $(WARNINGS)
-
-ALL_CFLAGS = $(CFLAGS) -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
-	-DAMIGA_VERSION=\"$(AMIGA_VERSION)\" \
-	-DAMIGA_DATE=\"$(AMIGA_DATE)\"
-
 all: $(TARGET)
 
-# libpng needs libm for its gamma arithmetic; both are software floating
-# point, so no FPU is required at runtime.
-$(TARGET): $(OBJS) $(PNG_LIBS)
-	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNG_LIBS) -lm
+$(TARGET): $(OBJS)
+	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNG_LIBS)
 
 HEADERS  = \
 	src/backdrop.h \
@@ -126,10 +125,7 @@ docker-build:
 docker-clean:
 	$(DOCKER_RUN) make clean
 
-docker-thirdparty:
-	$(DOCKER_RUN) bash third_party/build.sh
-
 docker-release:
 	$(DOCKER_RUN) make release TAG=$(TAG)
 
-.PHONY: all clean check-cxx release docker-build docker-clean docker-thirdparty docker-release
+.PHONY: all clean check-cxx release docker-build docker-clean docker-release

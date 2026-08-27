@@ -327,26 +327,22 @@ only exercise AmigaOS.
 
 ## Building
 
-If you have docker installed, this is a convenient way to build:
+If you have docker installed, this is a convenient way to build using
+the "batteries included" m68k-amigaos toolchain:
 
     make docker-build
 
-With a local Amiga toolchain that does not bundle the P96 SDK, point
-at an unpacked `P96Develop.lha`:
+To use a local Amiga toolchain instead:
+
+    make CC=/path/to/bin/m68k-amigaos-gcc
+
+If your local toolchain does not bundle libpng and the P96 headers,
+you can specify them by hand:
 
     make CC=/path/to/bin/m68k-amigaos-gcc \
-         P96_CFLAGS=-I/path/to/Picasso96Develop/Include
-
-Images are read and written with zlib and libpng, which are committed under
-`third_party/` already built for this target, so nothing needs fetching or
-cross-building first. They rarely need rebuilding, but when they do, the same
-container runs their build script:
-
-    make docker-thirdparty
-
-The archives are reproducible, so a rebuild can be checked byte for byte
-against the committed ones. `third_party/README.md` has the upstream versions,
-checksums, and why both are built `-noixemul`.
+         P96_CFLAGS=-I/path/to/Picasso96Develop/Include \
+         PNG_CFLAGS=-I/path/to/libpng/include \
+         PNG_LIBS="/path/to/libpng16.a /path/to/libz.a -lm"
 
 
 ## Adding testcases
@@ -359,5 +355,3 @@ Scenes should be built so that a wrong driver cannot pass by accident. Drawing
 solid lines in one pen, for instance, cannot detect a pixel written twice --
 it takes a mode like `COMPLEMENT`, where writing twice is not the same as
 writing once, and a figure whose lines actually cross.
-
-
