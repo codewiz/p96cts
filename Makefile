@@ -31,9 +31,12 @@ AMIGA_VERSION ?= $(shell git describe --tags --dirty | sed -r 's/^(release_|v)//
 AMIGA_DATE := $(shell date '+%-d.%-m.%Y')
 
 # Strict enough to catch the usual C mistakes without fighting the Amiga headers.
+# -Wvla and -Walloca are policy: AmigaOS tasks run on a small fixed stack.
 WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
-	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition
-# Not yet: -Wconversion
+	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
+	-Wfloat-conversion -Wdouble-promotion -Wduplicated-cond \
+	-Wduplicated-branches -Wlogical-op -Wformat=2 -Wcast-align \
+	-Wnull-dereference -Wvla -Walloca
 
 ALL_CFLAGS = $(CFLAGS) -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
 	-DAMIGA_VERSION=\"$(AMIGA_VERSION)\" \
