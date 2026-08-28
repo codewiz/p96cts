@@ -1,5 +1,6 @@
 *.o
 /p96cts
+/p96cts_unstripped
 
 # Release archives built by "make release".
 /p96cts-*.lha

@@ -38,7 +38,7 @@ WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
 	-Wduplicated-branches -Wlogical-op -Wformat=2 -Wcast-align \
 	-Wnull-dereference -Wvla -Walloca
 
-ALL_CFLAGS = $(CFLAGS) -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
+ALL_CFLAGS = $(CFLAGS) -g -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
 	-DAMIGA_VERSION=\"$(AMIGA_VERSION)\" \
 	-DAMIGA_DATE=\"$(AMIGA_DATE)\"
 
@@ -68,8 +68,26 @@ OBJS = \
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
+# p96cts_unstripped is what to point m68k-amigaos-gdb at while bgdbserver runs
+# the stripped p96cts on the Amiga: 17k of that is the symbol table, which is
+# enough for breakpoints by name and named frames in a backtrace.
+#
+# Source-level debugging does not work yet. The compiler emits DWARF per
+# object, but linking to hunk drops every .debug_* section, so gdb has no line
+# table. -g is kept anyway -- it costs 16 bytes here, and the day the linker
+# carries DWARF this starts working on its own.
+UNSTRIPPED = $(TARGET)_unstripped
+STRIP = $(CC:gcc=strip)
+
+$(UNSTRIPPED): $(OBJS)
 	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNG_LIBS)
+
+# chmod because strip -o writes a fresh file with default permissions, and a
+# HOSTFS mount maps the unix x bit to the Amiga e bit: without it the guest
+# answers "Unknown command" even given the full path.
+$(TARGET): $(UNSTRIPPED)
+	$(STRIP) -o $@ $<
+	chmod +x $@
 
 HEADERS  = \
 	src/backdrop.h \
@@ -90,7 +108,7 @@ HEADERS  = \
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) $(UNSTRIPPED)
 
 # Keep the sources compilable as C++ too: no implicit conversions from
 # void * or into enums. Syntax-only, with the C-only warnings dropped, and
