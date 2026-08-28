@@ -109,101 +109,93 @@ board, please run the suite and open an issue to share your results.
 
 ### Amiberry
 
-| scene | PAL | uaegfx | CyberVision | ZZ9000 |
-|---|---|---|---|---|
-| DrawLine-solid | ✅ | ✅ | ❌ | ✅ |
-| DrawLine-pattern | ✅ | ✅ | ✅ | ✅ |
-| DrawLine-jam2 | ✅ | ✅ | ❌ | ✅ |
-| DrawLine-inversvid | ✅ | ✅ | ❌ | ✅ |
-| DrawLine-complement | ✅ | ✅ | ✅ | ✅ |
-| RectFill-drawmodes | ✅ | ✅ | ✅ | ✅ |
-| RectFill-edges | ✅ | ✅ | ✅ | ✅ |
-| RectFill-invert | ✅ | ✅ | ✅ | ✅ |
-| ClipBlit-overlap | ✅ | ✅ | ✅ | ✅ |
-| ClipBlit-disjoint | ✅ | ✅ | ✅ | ✅ |
-| BltTemplate-offsets | ✅ | ✅ | ✅ | ✅ |
-| BltTemplate-sizes | ✅ | ✅ | ✅ | ✅ |
-| BltTemplate-drawmodes | ✅ | ✅| ✅ | ✅ |
-| BltTemplate-masks | ✅ | ✅ | ✅ | ✅ |
-| BltPattern-drawmodes | ✅ | ✅ | ✅ | ✅ |
-| BltPattern-mask | ✅ | ✅ | ✅ | ✅ |
-| BltPattern-phase | ✅ | ✅ | ✅ | ✅ |
-| BltBitMap-minterms | ✅ | ✅ | ✅ | ✅ |
-| BltBitMap-friend | ✅ | ✅ | ✅ | ✅ |
-| BltBitMap-offsets | ✅ | ✅ | ✅ | ✅ |
-| BltBitMap-sizes | ✅ | ✅ | ✅ | ✅ |
-| BltBitMap-planemask | ✅ | ✅ | ✅ | ✅ |
-| BltBitMap-writemask | ✅ | ✅ | ✅ | ✅ |
-| BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ |
-| BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ |
-| BitMapScale-down | ✅ | ✅ | - | - |
-| BitMapScale-up | ✅ | ✅ | - | - |
-| BitMapScale-ratios | ✅ | ✅ | - | - |
-| ScrollRaster-directions | ✅ | ✅ | ✅ | ✅ |
-| ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ |
-| ScrollRaster-backfill | ✅ | ✅ | ✅ | ✅ |
-| ScrollRaster-amounts | ✅ | ✅ | ✅ | ✅ |
-| PixelArray-pens8 | ✅ | ✅ | ✅ | ✅ |
-| PixelArray-lut8 | ✅ | ✅ | ✅ | ✅ |
-| PixelArray-rgb | - | ✅ | ✅ | ✅ |
+| scene | PAL | uaegfx | CyberVision | ZZ9000 | PicassoII |
+|---|---|---|---|---|---|
+| DrawLine-solid | ✅ | ✅ | ❌ | ✅ | ✅ |
+| DrawLine-pattern | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-jam2 | ✅ | ✅ | ❌ | ✅ | ✅ |
+| DrawLine-inversvid | ✅ | ✅ | ❌ | ✅ | ✅ |
+| DrawLine-complement | ✅ | ✅ | ✅ | ✅ | ✅ |
+| RectFill-drawmodes | ✅ | ✅ | ✅ | ✅ | ✅ |
+| RectFill-edges | ✅ | ✅ | ✅ | ✅ | ✅ |
+| RectFill-invert | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ClipBlit-overlap | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ClipBlit-disjoint | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-offsets | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-sizes | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-drawmodes | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltTemplate-masks | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltPattern-drawmodes | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltPattern-mask | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltPattern-phase | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-minterms | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-friend | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-offsets | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-sizes | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-planemask | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-writemask | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BitMapScale-down | ✅ | ✅ | - | - | ✅ |
+| BitMapScale-up | ✅ | ✅ | - | - | ✅ |
+| BitMapScale-ratios | ✅ | ✅ | - | - | ✅ |
+| ScrollRaster-directions | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ScrollRaster-backfill | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ScrollRaster-amounts | ✅ | ✅ | ✅ | ✅ | ✅ |
+| PixelArray-pens8 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| PixelArray-lut8 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| PixelArray-rgb | - | ✅ | ✅ | ✅ | ✅ |
 
 A ❌ links to the bug it found. A `-` is untested.
 
 
 ### Copperline
 
-| scene | PAL | Z3660 |
-|---|---|---|
-| DrawLine-solid | ✅ | ✅ |
-| DrawLine-pattern | ✅ | ✅ |
-| DrawLine-jam2 | ✅ | ✅ |
-| DrawLine-inversvid | ✅ | ✅ |
-| DrawLine-complement | ✅ | ✅ |
-| RectFill-drawmodes | ✅ | ✅ |
-| RectFill-edges | ✅ | ✅ |
-| RectFill-invert | ✅ | ✅ |
-| ClipBlit-overlap | ✅ | ✅ |
-| ClipBlit-disjoint | ✅ | ✅ |
-| BltTemplate-offsets | ✅ | ✅ |
-| BltTemplate-sizes | ✅ | ✅ |
-| BltTemplate-drawmodes | ✅ | ✅ |
-| BltTemplate-masks | ✅ | ✅ |
-| BltPattern-drawmodes | ✅ | ✅ |
-| BltPattern-mask | ✅ | ✅ |
-| BltPattern-phase | ✅ | ✅ |
-| BltBitMap-minterms | ✅ | ✅ |
-| BltBitMap-friend | - | - |
-| BltBitMap-offsets | ✅ | ✅ |
-| BltBitMap-sizes | ✅ | ✅ |
-| BltBitMap-planemask | ✅ | ✅ |
-| BltBitMap-writemask | - | - |
-| BltBitMap-stencil | ✅ | ✅ |
-| BltBitMap-shallow | ✅ | ✅ |
-| BitMapScale-down | - | - |
-| BitMapScale-up | - | - |
-| BitMapScale-ratios | - | - |
-| ScrollRaster-directions | ✅ | ✅ |
-| ScrollRaster-drawmodes | ✅ | ✅ |
-| ScrollRaster-backfill | ✅ | ✅ |
-| ScrollRaster-amounts | ✅ | ✅ |
-| PixelArray-pens8 | - | ✅ |
-| PixelArray-lut8 | - | ✅ |
-| PixelArray-rgb | - | ✅ |
+| scene | PAL | Z3660 | PicassoII |
+|---|---|---|---|
+| DrawLine-solid | ✅ | ✅ | ✅ |
+| DrawLine-pattern | ✅ | ✅ | ✅ |
+| DrawLine-jam2 | ✅ | ✅ | ✅ |
+| DrawLine-inversvid | ✅ | ✅ | ✅ |
+| DrawLine-complement | ✅ | ✅ | ✅ |
+| RectFill-drawmodes | ✅ | ✅ | ✅ |
+| RectFill-edges | ✅ | ✅ | ✅ |
+| RectFill-invert | ✅ | ✅ | ✅ |
+| ClipBlit-overlap | ✅ | ✅ | ✅ |
+| ClipBlit-disjoint | ❌ | ✅ | ✅ |
+| BltTemplate-offsets | ✅ | ✅ | ✅ |
+| BltTemplate-sizes | ✅ | ✅ | ✅ |
+| BltTemplate-drawmodes | ✅ | ✅ | ✅ |
+| BltTemplate-masks | ✅ | ✅ | ✅ |
+| BltPattern-drawmodes | ✅ | ✅ | ✅ |
+| BltPattern-mask | ✅ | ✅ | ✅ |
+| BltPattern-phase | ✅ | ✅ | ✅ |
+| BltBitMap-minterms | ✅ | ✅ | ✅ |
+| BltBitMap-friend | - | - | ✅ |
+| BltBitMap-offsets | ✅ | ✅ | ✅ |
+| BltBitMap-sizes | ✅ | ✅ | ✅ |
+| BltBitMap-planemask | ✅ | ✅ | ✅ |
+| BltBitMap-writemask | - | - | ✅ |
+| BltBitMap-stencil | ✅ | ✅ | ✅ |
+| BltBitMap-shallow | ✅ | ✅ | ✅ |
+| BitMapScale-down | - | - | ✅ |
+| BitMapScale-up | - | - | ✅ |
+| BitMapScale-ratios | - | - | ✅ |
+| ScrollRaster-directions | ✅ | ✅ | ✅ |
+| ScrollRaster-drawmodes | ✅ | ✅ | ✅ |
+| ScrollRaster-backfill | ✅ | ✅ | ✅ |
+| ScrollRaster-amounts | ✅ | ✅ | ✅ |
+| PixelArray-pens8 | - | ✅ | ✅ |
+| PixelArray-lut8 | - | ✅ | ✅ |
+| PixelArray-rgb | - | ✅ | ✅ |
 
-Notes:
-* The Z3660 column needs a `Z3660.card` built from git: it depends on
-[Z3660#18](https://github.com/shanshe/Z3660/pull/18) and
-[Z3660#19](https://github.com/shanshe/Z3660/pull/19), merged after the last
-release.
-* Z3660#19 leaves `COMPLEMENT` lines to Picasso96, as the ZZ9000 driver already
-does. `struct Line` carries no `FRST_DOT`, so an accelerated `COMPLEMENT` line
-cannot tell a fresh `Draw()` from one continuing at a vertex, and inverting a
-shared vertex twice restores it.
-* Z3660#18 uploads the one template line a patterned blit reads. P96 sends the
-`JAM2 | COMPLEMENT` tiles as a template blit whose `Template->BytesPerRow` is 0,
-so sizing the upload as `BytesPerRow * h` copies nothing and leaves the board to
-blit whatever the previous operation left in the template buffer. Why P96 passes
-a zero stride here is unexplained.
+These results need Copperline and `Z3660.card` built from git; the last
+release of either still fails some scenes.
+
+`ClipBlit-disjoint` on PAL is
+[Copperline#573](https://github.com/CopperlineHQ/Copperline/issues/573), an
+intermittent chipset blitter fault that shows up on roughly six runs in ten.
 
 
 ### AROS
