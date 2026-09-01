@@ -27,6 +27,7 @@ PNG_CFLAGS ?=
 PNG_LIBS   ?= -lpng -lz -lm
 
 TARGET = p96cts
+BUILD ?= build
 AMIGA_VERSION ?= $(shell git describe --tags --dirty | sed -r 's/^(release_|v)//')
 AMIGA_DATE := $(shell date '+%-d.%-m.%Y')
 
@@ -42,29 +43,31 @@ ALL_CFLAGS = $(CFLAGS) -g -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
 	-DAMIGA_VERSION=\"$(AMIGA_VERSION)\" \
 	-DAMIGA_DATE=\"$(AMIGA_DATE)\"
 
-OBJS = \
-	src/backdrop.o \
-	src/gfx.o \
-	src/glyph.o \
-	src/layer.o \
-	src/main.o \
-	src/modes.o \
-	src/palette.o \
-	src/pngio.o \
-	src/report.o \
-	src/rtg.o \
-	src/runtest.o \
-	src/timer.o \
-	src/wall.o \
-	tests/bitmapscale.o \
-	tests/bltbitmap.o \
-	tests/bltpattern.o \
-	tests/blttemplate.o \
-	tests/clipblit.o \
-	tests/drawline.o \
-	tests/pixelarray.o \
-	tests/rectfill.o \
-	tests/scrollraster.o
+SRCS = \
+	src/backdrop.c \
+	src/gfx.c \
+	src/glyph.c \
+	src/layer.c \
+	src/main.c \
+	src/modes.c \
+	src/palette.c \
+	src/pngio.c \
+	src/report.c \
+	src/rtg.c \
+	src/runtest.c \
+	src/timer.c \
+	src/wall.c \
+	tests/bitmapscale.c \
+	tests/bltbitmap.c \
+	tests/bltpattern.c \
+	tests/blttemplate.c \
+	tests/clipblit.c \
+	tests/drawline.c \
+	tests/pixelarray.c \
+	tests/rectfill.c \
+	tests/scrollraster.c
+
+OBJS = $(SRCS:%.c=$(BUILD)/%.o)
 
 all: $(TARGET)
 
@@ -104,11 +107,12 @@ HEADERS  = \
 	src/timer.h \
 	src/wall.h
 
-%.o: %.c $(HEADERS)
+$(BUILD)/%.o: %.c $(HEADERS)
+	@mkdir -p $(@D)
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f $(OBJS) $(TARGET) $(UNSTRIPPED)
+	rm -rf $(BUILD) $(TARGET) $(UNSTRIPPED)
 
 # Keep the sources compilable as C++ too: no implicit conversions from
 # void * or into enums. Syntax-only, with the C-only warnings dropped, and
@@ -120,7 +124,7 @@ CXX_WARNINGS = $(filter-out -Wstrict-prototypes -Wmissing-prototypes \
 
 check-cxx:
 	$(CXX) -x c++ -fsyntax-only $(filter-out $(WARNINGS),$(ALL_CFLAGS)) \
-		$(CXX_WARNINGS) $(OBJS:.o=.c)
+		$(CXX_WARNINGS) $(SRCS)
 
 # The git tag is "v0.1"; the archive is "p96cts-0.1.lha", matching both the
 # Aminet convention and the program's own "p96cts 0.1" banner.

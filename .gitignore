@@ -1,4 +1,5 @@
 *.o
+/build*/
 /p96cts
 /p96cts_unstripped
 
