@@ -65,28 +65,6 @@ static const struct P96TestGroup *const GROUPS[] = {
 };
 #define NGROUPS ((int)countof(GROUPS))
 
-// CreateDir() makes one level, so walk the path creating each component.
-// Components that already exist fail harmlessly with ERROR_OBJECT_EXISTS.
-static void make_path(const char *path) {
-    char *buf = strdup(path);
-
-    if (!buf)
-        return;
-    for (int i = 0; buf[i]; i++) {
-        if (buf[i] != '/')
-            continue;
-        buf[i] = 0;
-        BPTR lock = CreateDir((STRPTR)buf);
-        if (lock)
-            UnLock(lock);
-        buf[i] = '/';
-    }
-    BPTR lock = CreateDir((STRPTR)buf);
-    if (lock)
-        UnLock(lock);
-    free(buf);
-}
-
 // --- run --------------------------------------------------------------------
 
 // Case-insensitively, so a testcase can be typed as it reads rather than as
@@ -521,8 +499,6 @@ static int run_mode(struct RunOpts *o, ULONG id) {
     // worth a line; where a capture writes to is a side effect worth naming.
     if (o->capture)
         rptf("capturing to %s", o->golden_dir);
-
-    make_path(o->dir);
 
     for (int g = 0; g < NGROUPS; g++) {
         for (int i = 0; i < GROUPS[g]->count; i++) {

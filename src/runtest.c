@@ -7,6 +7,7 @@
 // and hands in a struct TestOpts with just what one run needs.
 
 #include <proto/exec.h>
+#include <proto/dos.h>
 #include <proto/graphics.h>
 #include <graphics/gfxmacros.h>
 #include <graphics/rastport.h>
@@ -39,6 +40,41 @@ static char *image_path(const char *dir, const char *name, const char *suffix) {
     return path;
 }
 
+// CreateDir() makes one level, so walk the path creating each component.
+// Components that already exist fail harmlessly with ERROR_OBJECT_EXISTS.
+static void make_path(const char *path) {
+    char *buf = strdup(path);
+
+    if (!buf)
+        return;
+    for (int i = 0; buf[i]; i++) {
+        if (buf[i] != '/')
+            continue;
+        buf[i] = 0;
+        BPTR lock = CreateDir((STRPTR)buf);
+        if (lock)
+            UnLock(lock);
+        buf[i] = '/';
+    }
+    BPTR lock = CreateDir((STRPTR)buf);
+    if (lock)
+        UnLock(lock);
+    free(buf);
+}
+
+// As image_path(), for a file this run is about to write: the directory is
+// created here rather than up front, so a run that writes nothing -- every
+// scene passing, which is the common case -- leaves no empty output/<monitor>/
+// <mode> tree behind.
+static char *out_path(const struct TestOpts *o, const char *name,
+                      const char *suffix) {
+    char *path = image_path(o->dir, name, suffix);
+
+    if (path)
+        make_path(o->dir);
+    return path;
+}
+
 // The comparison itself: how many pixels differ from the golden. Pixels under
 // the obscuring clip layers are excluded -- what a readback returns there is
 // not the scene's output -- as they are from the diff listing and diff image.
@@ -67,7 +103,7 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
     bool failed = false;
     int bpp = o->bpp;
 
-    char *path = image_path(o->dir, name, ".fail.png");
+    char *path = out_path(o, name, ".fail.png");
     if (!path || write_png(path, idx, o->w, o->h, bpp))
         failed = true;
     else
@@ -95,7 +131,7 @@ static bool write_failure_images(const char *name, const UBYTE *idx,
             }
         }
 
-    path = image_path(o->dir, name, ".diff.png");
+    path = out_path(o, name, ".diff.png");
     if (!path || write_png(path, d, o->w, o->h, bpp))
         failed = true;
     else
@@ -224,7 +260,7 @@ bool run_test(const struct P96Test *t, const char *name, struct RastPort *rp,
         return true;
     }
     if (o->capture) {
-        char *path = image_path(o->dir, name, ".png");
+        char *path = out_path(o, name, ".png");
         if (!path || write_png(path, idx, o->w, o->h, bpp))
             failed = true;
         else
