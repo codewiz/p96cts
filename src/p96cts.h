@@ -30,6 +30,10 @@ struct P96Test {
     // solve for the nearest pen of every pixel, which is not what any of these
     // calls promise. PixelArray-lut8 covers the palette side instead.
     bool truecolor_only;
+    // The scene needs a format with bits that carry no color -- the alpha byte
+    // of the four-byte layouts, the top bit of the 15-bit ones. CLUT, the
+    // 5-6-5 layouts and packed 24-bit have none, so there is nothing to assert.
+    bool unused_bits_only;
     // The scene cannot run under CLIP, for one of two reasons: it draws at
     // bitmap level (BltBitMap(), BitMapScale()), where clipping is the
     // caller's job and the calls overwrite the clip layers by design; or it
@@ -55,5 +59,6 @@ extern const struct P96TestGroup BltBitMapGroup;
 extern const struct P96TestGroup BitMapScaleGroup;
 extern const struct P96TestGroup ScrollRasterGroup;
 extern const struct P96TestGroup PixelArrayGroup;
+extern const struct P96TestGroup UnusedBitsGroup;
 
 #endif

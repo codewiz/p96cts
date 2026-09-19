@@ -27,6 +27,11 @@ ULONG rtg_rgbformat(struct BitMap *bm);
 const char *rtg_format_name(ULONG fmt);
 bool rtg_format_by_pen(ULONG fmt);
 
+bool rtg_format_has_unused(ULONG fmt);
+int rtg_format_bytes(ULONG fmt);
+int rtg_compose_pixel(UBYTE *out, ULONG fmt, UBYTE r, UBYTE g, UBYTE b,
+                      bool spare);
+
 void rtg_fill_rgb(struct RastPort *rp, SHORT x1, SHORT y1, SHORT x2, SHORT y2,
                   ULONG rgb);
 UBYTE *rtg_read_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h);
@@ -35,5 +40,7 @@ void rtg_write_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
                    UBYTE *px, SHORT sx, SHORT sy, SHORT stride);
 void rtg_write_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
                     UBYTE *px, SHORT sx, SHORT sy, SHORT stride);
+void rtg_write_native(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                      UBYTE *px, SHORT sx, SHORT sy, SHORT stride, ULONG fmt);
 
 #endif

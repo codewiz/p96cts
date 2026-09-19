@@ -65,7 +65,8 @@ SRCS = \
 	tests/drawline.c \
 	tests/pixelarray.c \
 	tests/rectfill.c \
-	tests/scrollraster.c
+	tests/scrollraster.c \
+	tests/unusedbits.c
 
 OBJS = $(SRCS:%.c=$(BUILD)/%.o)
 

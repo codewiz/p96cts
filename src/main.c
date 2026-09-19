@@ -62,6 +62,7 @@ static const struct P96TestGroup *const GROUPS[] = {
     &BitMapScaleGroup,
     &ScrollRasterGroup,
     &PixelArrayGroup,
+    &UnusedBitsGroup,
 };
 #define NGROUPS ((int)countof(GROUPS))
 
@@ -101,6 +102,8 @@ static void list_tests(void) {
             test_name(full, sizeof full, GROUPS[g], t);
             if (t->palette_only)
                 printf("%-24s palette only\n", full);
+            else if (t->unused_bits_only)
+                printf("%-24s formats with unused bits only\n", full);
             else if (t->truecolor_only)
                 printf("%-24s truecolor only\n", full);
             else
@@ -519,6 +522,11 @@ static int run_mode(struct RunOpts *o, ULONG id) {
             }
             if (!gfx_truecolor && t->truecolor_only) {
                 rpt_skip(full, "truecolor only");
+                continue;
+            }
+            if (t->unused_bits_only &&
+                !rtg_format_has_unused(rtg_rgbformat(rp->BitMap))) {
+                rpt_skip(full, "no unused bits in this format");
                 continue;
             }
             if (o->clip && t->no_clip) {

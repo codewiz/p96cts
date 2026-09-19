@@ -260,6 +260,71 @@ bool rtg_format_by_pen(ULONG fmt) {
     return fmt == RGBFB_CLUT || fmt == RGBFB_NONE;
 }
 
+// --- formats with bits that carry no color ----------------------------------
+//
+// libraries/Picasso96.h documents the four-byte formats as "A unused alpha
+// channel" and writes the 15-bit layouts with a literal 0 in the spare bit
+// (0rrrrrgggggbbbbb). Unused means unused: nothing says what a driver leaves
+// there, so the scenes assert only that those bits do not reach the visible
+// color. Formats without spare bits -- CLUT, the 16-bit 5-6-5 layouts, packed
+// 24-bit -- have nothing to test and are skipped.
+
+// Bytes per pixel, or 0 for a format rtg_compose_pixel() cannot write.
+int rtg_format_bytes(ULONG fmt) {
+    switch (fmt) {
+    case RGBFB_A8R8G8B8:
+    case RGBFB_A8B8G8R8:
+    case RGBFB_R8G8B8A8:
+    case RGBFB_B8G8R8A8:
+        return 4;
+    case RGBFB_R5G5B5:
+    case RGBFB_R5G5B5PC:
+        return 2;
+    default:
+        return 0;
+    }
+}
+
+bool rtg_format_has_unused(ULONG fmt) {
+    return rtg_format_bytes(fmt) != 0;
+}
+
+// One pixel of `fmt` into `out`, in memory order so no endianness has to be
+// guessed, with every bit the format does not use set to `spare`. Returns the
+// bytes written, or 0 if the format has no spare bits to set.
+int rtg_compose_pixel(UBYTE *out, ULONG fmt, UBYTE r, UBYTE g, UBYTE b,
+                      bool spare) {
+    const UBYTE a = spare ? 0xff : 0x00;
+    // The 15-bit layouts carry one spare bit, the top bit of the 16-bit value.
+    const UWORD v = (UWORD)((spare ? 0x8000 : 0) | ((r >> 3) << 10) |
+                            ((g >> 3) << 5) | (b >> 3));
+
+    switch (fmt) {
+    case RGBFB_A8R8G8B8:
+        out[0] = a; out[1] = r; out[2] = g; out[3] = b;
+        return 4;
+    case RGBFB_A8B8G8R8:
+        out[0] = a; out[1] = b; out[2] = g; out[3] = r;
+        return 4;
+    case RGBFB_R8G8B8A8:
+        out[0] = r; out[1] = g; out[2] = b; out[3] = a;
+        return 4;
+    case RGBFB_B8G8R8A8:
+        out[0] = b; out[1] = g; out[2] = r; out[3] = a;
+        return 4;
+    // R5G5B5 is the value big-endian; the PC variant is the same value with
+    // the two bytes swapped, which is what moves the spare bit to 0x0080.
+    case RGBFB_R5G5B5:
+        out[0] = (UBYTE)(v >> 8); out[1] = (UBYTE)v;
+        return 2;
+    case RGBFB_R5G5B5PC:
+        out[0] = (UBYTE)v; out[1] = (UBYTE)(v >> 8);
+        return 2;
+    default:
+        return 0;
+    }
+}
+
 // --- truecolor primitives ---------------------------------------------------
 //
 // The pixel buffers below are R8G8B8, three bytes per pixel, whatever the
@@ -335,4 +400,11 @@ void rtg_write_rgb(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
 void rtg_write_pens(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
                     UBYTE *px, SHORT sx, SHORT sy, SHORT stride) {
     write_array(rp, x0, y0, w, h, px, sx, sy, stride, RGBFB_CLUT);
+}
+
+// Pixels already composed in the screen's own format, so they reach the bitmap
+// without conversion and the bits rtg_compose_pixel() set survive the trip.
+void rtg_write_native(struct RastPort *rp, SHORT x0, SHORT y0, SHORT w, SHORT h,
+                      UBYTE *px, SHORT sx, SHORT sy, SHORT stride, ULONG fmt) {
+    write_array(rp, x0, y0, w, h, px, sx, sy, stride, fmt);
 }
