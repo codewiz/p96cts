@@ -45,3 +45,7 @@ Usage
 Activate an RTG board's monitor first (DEVS:Monitors or SYS:Storage/Monitors);
 only uaegfx registers itself.
 
+Run it from inside the P96CTS drawer: the references in golden/ and the picture
+the BitMapScale scenes scale in logo/ are both found relative to the current
+directory.
+

@@ -137,6 +137,12 @@ RELNAME = $(TARGET)-$(TAG:v%=%)
 # has one unpacks the new release over it instead of beside it.
 AMINET_DIR = build-aminet/P96CTS
 
+# The BitMapScale scenes read their source picture at run time, by a path
+# relative to the current directory, so the archive is incomplete without it:
+# without the file every scale scene renders the cleared background and fails.
+# The other logos are documentation and stay out.
+LOGO = logo/p96cts-logo-320x200x8.png
+
 # Pack the binary, its documentation and the golden set built from the same
 # commit, so the archive drops onto an Amiga as a matched pair. The readme is
 # generated from aminet/p96cts.readme.in and goes both inside the drawer and
@@ -149,6 +155,8 @@ release: $(TARGET)
 	mkdir -p $(AMINET_DIR)
 	cp $(TARGET) README.md LICENSE $(AMINET_DIR)/
 	cp -r golden $(AMINET_DIR)/
+	@mkdir -p $(AMINET_DIR)/logo
+	cp $(LOGO) $(AMINET_DIR)/logo/
 	sed 's/@VERSION@/$(TAG:v%=%)/g' aminet/$(TARGET).readme.in > $(RELNAME).readme
 	cp $(RELNAME).readme $(AMINET_DIR)/$(TARGET).readme
 	cd build-aminet && lha aq ../$(RELNAME).lha P96CTS
