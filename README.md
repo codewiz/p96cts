@@ -24,7 +24,7 @@ Run all tests for a particular monitor and video mode (WxHxD):
 
 Output looks like:
 
-    p96cts 0.13 (1.8.2026) by Bernie Innocenti
+    p96cts 0.17 (14.10.2026) by Bernie Innocenti
     testing Z3660 640x480x8 clut, scene 320x200
     PASS DrawLine-solid
     PASS DrawLine-pattern
@@ -111,10 +111,10 @@ board, please run the suite and open an issue to share your results.
 
 | scene | PAL | uaegfx | CyberVision | ZZ9000 | PicassoII |
 |---|---|---|---|---|---|
-| DrawLine-solid | ✅ | ✅ | ❌ | ✅ | ✅ |
+| DrawLine-solid | ✅ | ✅ | ✅ | ✅ | ✅ |
 | DrawLine-pattern | ✅ | ✅ | ✅ | ✅ | ✅ |
-| DrawLine-jam2 | ✅ | ✅ | ❌ | ✅ | ✅ |
-| DrawLine-inversvid | ✅ | ✅ | ❌ | ✅ | ✅ |
+| DrawLine-jam2 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DrawLine-inversvid | ✅ | ✅ | ✅ | ✅ | ✅ |
 | DrawLine-complement | ✅ | ✅ | ✅ | ✅ | ✅ |
 | RectFill-drawmodes | ✅ | ✅ | ✅ | ✅ | ✅ |
 | RectFill-edges | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -136,9 +136,9 @@ board, please run the suite and open an issue to share your results.
 | BltBitMap-writemask | ✅ | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-stencil | ✅ | ✅ | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ | ✅ | ✅ | ✅ |
-| BitMapScale-down | ✅ | ✅ | - | - | ✅ |
-| BitMapScale-up | ✅ | ✅ | - | - | ✅ |
-| BitMapScale-ratios | ✅ | ✅ | - | - | ✅ |
+| BitMapScale-down | ✅ | ✅ | ✅ | - | ✅ |
+| BitMapScale-up | ✅ | ✅ | ✅ | - | ✅ |
+| BitMapScale-ratios | ✅ | ✅ | ✅ | - | ✅ |
 | ScrollRaster-directions | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ScrollRaster-backfill | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -163,7 +163,7 @@ A ❌ links to the bug it found. A `-` is untested.
 | RectFill-edges | ✅ | ✅ | ✅ |
 | RectFill-invert | ✅ | ✅ | ✅ |
 | ClipBlit-overlap | ✅ | ✅ | ✅ |
-| ClipBlit-disjoint | ❌ | ✅ | ✅ |
+| ClipBlit-disjoint | [❌](https://github.com/CopperlineHQ/Copperline/issues/573) | ✅ | ✅ |
 | BltTemplate-offsets | ✅ | ✅ | ✅ |
 | BltTemplate-sizes | ✅ | ✅ | ✅ |
 | BltTemplate-drawmodes | ✅ | ✅ | ✅ |
@@ -192,10 +192,6 @@ A ❌ links to the bug it found. A `-` is untested.
 
 These results need Copperline and `Z3660.card` built from git; the last
 release of either still fails some scenes.
-
-`ClipBlit-disjoint` on PAL is
-[Copperline#573](https://github.com/CopperlineHQ/Copperline/issues/573), an
-intermittent chipset blitter fault that shows up on roughly six runs in ten.
 
 
 ### AROS
@@ -244,13 +240,6 @@ scene fails at any tested depth.
 | PixelArray-lut8 | ✅ | ✅ | ✅ |
 | PixelArray-rgb | - | ✅ | ✅ |
 
-The failures this table found were tracked in
-[AROS issue #936](https://github.com/aros-development-team/AROS/issues/936),
-which has the per-fix breakdown, and in
-[AROS issue #950](https://github.com/aros-development-team/AROS/issues/950)
-for BitMapScale, fixed by
-[AROS PR #977](https://github.com/aros-development-team/AROS/pull/977).
-
 \* The truecolor down/ratios runs still count red pixels against the goldens,
 but every one of them is either a red flag square or the extra column that the
 goldens record from the reference's own truecolor overshoot (see Coverage
@@ -261,6 +250,32 @@ Two exceptions to the green above: the ZZ9000 16-bit runs currently fail most
 scenes wholesale (under investigation; Z3660 16-bit is clean, so it is the
 ZZ9000 path rather than core graphics.library), and the table says nothing
 about 15-bit modes, which these boards do not expose under AROS.
+
+
+### Picasso96 2.0
+
+The free Picasso96 2.0 from Aminet (`driver/video/Picasso96.lha`,
+`Picasso96API.library` 2.300 with `rtg.library` 40.3945) is probably still the
+most widely installed P96 release, and three `BltPattern` scenes fail on it
+whatever the board or the host -- the captures come out byte-identical across
+different machines, emulators and graphics.library versions. A later build of
+the same generation, `rtg.library` 40.3993, fails differently:
+
+| scene | 40.3945 | 40.3993 |
+|---|---|---|
+| BltPattern-drawmodes | ❌ | ❌ identical output |
+| BltPattern-mask | ❌ | ✅ |
+| BltPattern-phase | ❌ | ❌ differs |
+
+With a mask, `BltPattern()` on 40.3945 is a no-op: the scene ends as the
+cleared background. With a NULL mask it draws, but `JAM1 | INVERSVID` fills
+both pattern phases instead of leaving the unset one alone, so the fill is
+opaque where JAM1 must be transparent -- that one survives into 40.3993, which
+otherwise honours the mask. `BitMapScale-down` additionally wedges the machine
+with MuForce hits on 40.3945.
+
+Current P96 passes all of these; the analysis is in
+[issue #2](https://github.com/codewiz/p96cts/issues/2).
 
 
 ## Coverage
