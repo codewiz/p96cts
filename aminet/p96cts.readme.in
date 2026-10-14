@@ -1,0 +1,47 @@
+Short:        Conformance test suite for P96 RTG drivers
+Author:       Bernie Innocenti <bernie@codewiz.org>
+Uploader:     Bernie Innocenti <bernie@codewiz.org>
+Type:         dev/misc
+Version:      @VERSION@
+Architecture: m68k-amigaos >= 3.0
+Requires:     68020 or better; Picasso96 or CyberGraphX
+Distribution: Aminet
+Kurz:         Konformitaetstests fuer P96-RTG-Treiber
+
+p96cts checks what a graphics driver actually draws. Each testcase renders a
+scene -- lines, rectangles, patterned and masked fills, blits, scaled bitmaps,
+scrolls, pixel arrays -- and compares it pixel by pixel against a golden
+reference image captured from P96's own software rasterizer. A driver that
+gets the geometry, the draw modes, the write mask or the pattern phase wrong
+produces different pixels, and the suite says which pixels and by how much.
+
+Runs are non-interactive and the exit code reflects the result, so it works as
+an automated check. A failing testcase writes two PNGs beside the goldens:
+what it rendered, and the differing pixels in red over the golden dimmed to
+gray. A red result is evidence, so please report it -- failures found this way
+have been fixed in amiberry, Copperline, AROS and P96 itself.
+
+It also runs on native AGA screens, where the bitmaps are planar and the
+comparison puts graphics.library's own rendering against the same reference,
+and on AROS, where it falls back to cybergraphics.library.
+
+Project's home page with documentation, test results and issue tracker:
+
+  https://github.com/codewiz/p96cts
+
+Source of this release:
+
+  https://github.com/codewiz/p96cts/tree/v@VERSION@
+
+
+Usage
+-----
+
+  p96cts <monitor> <WxHxD>     one mode, e.g. p96cts PicassoII 640x480x8
+  p96cts <monitor>             every depth the monitor offers
+  p96cts softrast 320x200x8    P96's software rasterizer, the reference
+  p96cts -h                    the full argument list
+
+Activate an RTG board's monitor first (DEVS:Monitors or SYS:Storage/Monitors);
+only uaegfx registers itself.
+

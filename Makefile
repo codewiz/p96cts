@@ -114,6 +114,7 @@ $(BUILD)/%.o: %.c $(HEADERS)
 
 clean:
 	rm -rf $(BUILD) $(TARGET) $(UNSTRIPPED)
+	rm -rf build-aminet $(TARGET)-*.lha $(TARGET)-*.readme
 
 # Keep the sources compilable as C++ too: no implicit conversions from
 # void * or into enums. Syntax-only, with the C-only warnings dropped, and
@@ -127,23 +128,32 @@ check-cxx:
 	$(CXX) -x c++ -fsyntax-only $(filter-out $(WARNINGS),$(ALL_CFLAGS)) \
 		$(CXX_WARNINGS) $(SRCS)
 
-# The git tag is "v0.1"; the archive is "p96cts-0.1.lha", matching both the
-# Aminet convention and the program's own "p96cts 0.1" banner.
-RELDIR = $(TARGET)-$(TAG:v%=%)
+# The git tag is "v1.0"; the archive is "p96cts-1.0.lha" with its
+# "p96cts-1.0.readme" beside it, which is what an Aminet upload is, and the
+# program's own banner says "p96cts 1.0".
+RELNAME = $(TARGET)-$(TAG:v%=%)
+
+# The drawer inside the archive keeps a fixed name, so an Amiga that already
+# has one unpacks the new release over it instead of beside it.
+AMINET_DIR = build-aminet/P96CTS
 
 # Pack the binary, its documentation and the golden set built from the same
-# commit, so the archive drops onto an Amiga as a matched pair. Needs LHa for
-# UNIX: distributions now ship lhasa, which only extracts, so on most hosts
-# this wants the docker-release target below.
+# commit, so the archive drops onto an Amiga as a matched pair. The readme is
+# generated from aminet/p96cts.readme.in and goes both inside the drawer and
+# next to the archive, where Aminet reads it. Needs LHa for UNIX:
+# distributions now ship lhasa, which only extracts, so on most hosts this
+# wants the docker-release target below.
 release: $(TARGET)
-	@test -n "$(TAG)" || { echo "usage: make release TAG=v0.1" >&2; exit 2; }
-	rm -rf $(RELDIR) $(RELDIR).lha
-	mkdir -p $(RELDIR)
-	cp $(TARGET) README.md LICENSE $(RELDIR)/
-	cp -r golden $(RELDIR)/
-	lha a $(RELDIR).lha $(RELDIR)/
-	rm -rf $(RELDIR)
-	@echo "wrote $(RELDIR).lha"
+	@test -n "$(TAG)" || { echo "usage: make release TAG=v1.0" >&2; exit 2; }
+	rm -rf build-aminet $(RELNAME).lha $(RELNAME).readme
+	mkdir -p $(AMINET_DIR)
+	cp $(TARGET) README.md LICENSE $(AMINET_DIR)/
+	cp -r golden $(AMINET_DIR)/
+	sed 's/@VERSION@/$(TAG:v%=%)/g' aminet/$(TARGET).readme.in > $(RELNAME).readme
+	cp $(RELNAME).readme $(AMINET_DIR)/$(TARGET).readme
+	cd build-aminet && lha aq ../$(RELNAME).lha P96CTS
+	rm -rf build-aminet
+	@echo "wrote $(RELNAME).lha and $(RELNAME).readme"
 
 docker-build:
 	$(DOCKER_RUN) make all

@@ -252,16 +252,22 @@ ZZ9000 path rather than core graphics.library), and the table says nothing
 about 15-bit modes, which these boards do not expose under AROS.
 
 
-### Picasso96 2.0
+### Picasso96 2.x
 
-The free Picasso96 2.0 from Aminet (`driver/video/Picasso96.lha`,
-`Picasso96API.library` 2.300 with `rtg.library` 40.3945) is probably still the
-most widely installed P96 release, and three `BltPattern` scenes fail on it
-whatever the board or the host -- the captures come out byte-identical across
-different machines, emulators and graphics.library versions. A later build of
-the same generation, `rtg.library` 40.3993, fails differently:
+The two free P96 releases almost everyone runs:
 
-| scene | 40.3945 | 40.3993 |
+- **2.0**, [Aminet `driver/video/Picasso96.lha`](https://aminet.net/driver/video/Picasso96.lha):
+  `Picasso96API.library` 2.300 with `rtg.library` 40.3945 (16.11.1999).
+- **2.0 with a 2005 `rtg.library`**, 40.3993 (25.4.2005), which the abime.net
+  Workbench 3.1 install guide ships and the
+  [HstWB Installer package](https://github.com/henrikstengaard/picasso96-package)
+  drops in. The API and the rest of the tree are still 2.0.
+
+Three `BltPattern` scenes fail on both, whatever the board or the host -- the
+captures come out byte-identical across different machines, emulators and
+graphics.library versions -- but the two rtg builds fail differently:
+
+| scene | 2.0 (40.3945) | 2.0 + 40.3993 |
 |---|---|---|
 | BltPattern-drawmodes | ❌ | ❌ identical output |
 | BltPattern-mask | ❌ | ✅ |
