@@ -172,22 +172,22 @@ A ❌ links to the bug it found. A `-` is untested.
 | BltPattern-mask | ✅ | ✅ | ✅ |
 | BltPattern-phase | ✅ | ✅ | ✅ |
 | BltBitMap-minterms | ✅ | ✅ | ✅ |
-| BltBitMap-friend | - | - | ✅ |
+| BltBitMap-friend | ✅ | - | ✅ |
 | BltBitMap-offsets | ✅ | ✅ | ✅ |
 | BltBitMap-sizes | ✅ | ✅ | ✅ |
 | BltBitMap-planemask | ✅ | ✅ | ✅ |
-| BltBitMap-writemask | - | - | ✅ |
+| BltBitMap-writemask | ✅ | - | ✅ |
 | BltBitMap-stencil | ✅ | ✅ | ✅ |
 | BltBitMap-shallow | ✅ | ✅ | ✅ |
-| BitMapScale-down | - | - | ✅ |
-| BitMapScale-up | - | - | ✅ |
-| BitMapScale-ratios | - | - | ✅ |
+| BitMapScale-down | ✅ | - | ✅ |
+| BitMapScale-up | ✅ | - | ✅ |
+| BitMapScale-ratios | ✅ | - | ✅ |
 | ScrollRaster-directions | ✅ | ✅ | ✅ |
 | ScrollRaster-drawmodes | ✅ | ✅ | ✅ |
 | ScrollRaster-backfill | ✅ | ✅ | ✅ |
 | ScrollRaster-amounts | ✅ | ✅ | ✅ |
-| PixelArray-pens8 | - | ✅ | ✅ |
-| PixelArray-lut8 | - | ✅ | ✅ |
+| PixelArray-pens8 | ✅ | ✅ | ✅ |
+| PixelArray-lut8 | ✅ | ✅ | ✅ |
 | PixelArray-rgb | - | ✅ | ✅ |
 
 These results need Copperline and `Z3660.card` built from git; the last
