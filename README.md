@@ -263,9 +263,10 @@ The two free P96 releases almost everyone runs:
   [HstWB Installer package](https://github.com/henrikstengaard/picasso96-package)
   drops in. The API and the rest of the tree are still 2.0.
 
-Three `BltPattern` scenes fail on both, whatever the board or the host -- the
-captures come out byte-identical across different machines, emulators and
-graphics.library versions -- but the two rtg builds fail differently:
+Three `BltPattern` scenes fail on both when the scene is drawn through a Layer
+-- `LAYER` and `CLIP` -- while a bare run passes. The captures come out
+byte-identical across different machines, emulators and graphics.library
+versions, but the two rtg builds fail differently:
 
 | scene | 2.0 (40.3945) | 2.0 + 40.3993 |
 |---|---|---|
