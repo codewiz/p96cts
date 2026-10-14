@@ -272,13 +272,17 @@ graphics.library versions -- but the two rtg builds fail differently:
 | BltPattern-drawmodes | ❌ | ❌ identical output |
 | BltPattern-mask | ❌ | ✅ |
 | BltPattern-phase | ❌ | ❌ differs |
+| BitMapScale-down | 💀 | ✅ |
 
 With a mask, `BltPattern()` on 40.3945 is a no-op: the scene ends as the
 cleared background. With a NULL mask it draws, but `JAM1 | INVERSVID` fills
 both pattern phases instead of leaving the unset one alone, so the fill is
 opaque where JAM1 must be transparent -- that one survives into 40.3993, which
-otherwise honours the mask. `BitMapScale-down` additionally wedges the machine
-with MuForce hits on 40.3945.
+otherwise honours the mask.
+
+A 💀 is worse than wrong pixels: a layered `BitMapScale-down` on 40.3945
+wedges the machine, so the run stops there. Scaling is P96's own code, with no
+card hook to work around it.
 
 Current P96 passes all of these; the analysis is in
 [issue #2](https://github.com/codewiz/p96cts/issues/2).
