@@ -133,6 +133,11 @@ check-cxx:
 # of adding a second one. The version lives in the readme's Version: field and
 # in the program's own banner, both taken from TAG.
 RELNAME = $(TARGET)
+RELVER = $(TAG:v%=%)
+
+# GitHub releases list one asset per release, so that copy keeps the version
+# in its name.
+GITHUB_LHA = $(TARGET)-$(RELVER).lha
 
 # The drawer inside the archive keeps a fixed name, so an Amiga that already
 # has one unpacks the new release over it instead of beside it.
@@ -152,17 +157,19 @@ LOGO = logo/p96cts-logo-320x200x8.png
 # wants the docker-release target below.
 release: $(TARGET)
 	@test -n "$(TAG)" || { echo "usage: make release TAG=v1.0" >&2; exit 2; }
-	rm -rf build-aminet $(RELNAME).lha $(RELNAME).readme
+	rm -rf build-aminet $(RELNAME).lha $(RELNAME).readme $(GITHUB_LHA)
 	mkdir -p $(AMINET_DIR)
 	cp $(TARGET) README.md LICENSE $(AMINET_DIR)/
 	cp -r golden $(AMINET_DIR)/
 	@mkdir -p $(AMINET_DIR)/logo
 	cp $(LOGO) $(AMINET_DIR)/logo/
-	sed 's/@VERSION@/$(TAG:v%=%)/g' aminet/$(TARGET).readme.in > $(RELNAME).readme
+	sed 's/@VERSION@/$(RELVER)/g' aminet/$(TARGET).readme.in > $(RELNAME).readme
 	cp $(RELNAME).readme $(AMINET_DIR)/$(TARGET).readme
 	cd build-aminet && lha aq ../$(RELNAME).lha P96CTS
 	rm -rf build-aminet
-	@echo "wrote $(RELNAME).lha and $(RELNAME).readme"
+	cp $(RELNAME).lha $(GITHUB_LHA)
+	@echo "wrote $(RELNAME).lha and $(RELNAME).readme for Aminet,"
+	@echo "      $(GITHUB_LHA) for the GitHub release"
 
 docker-build:
 	$(DOCKER_RUN) make all
