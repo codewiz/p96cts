@@ -114,7 +114,7 @@ $(BUILD)/%.o: %.c $(HEADERS)
 
 clean:
 	rm -rf $(BUILD) $(TARGET) $(UNSTRIPPED)
-	rm -rf build-aminet $(TARGET)-*.lha $(TARGET)-*.readme
+	rm -rf build-aminet
 
 # Keep the sources compilable as C++ too: no implicit conversions from
 # void * or into enums. Syntax-only, with the C-only warnings dropped, and
@@ -128,10 +128,11 @@ check-cxx:
 	$(CXX) -x c++ -fsyntax-only $(filter-out $(WARNINGS),$(ALL_CFLAGS)) \
 		$(CXX_WARNINGS) $(SRCS)
 
-# The git tag is "v1.0"; the archive is "p96cts-1.0.lha" with its
-# "p96cts-1.0.readme" beside it, which is what an Aminet upload is, and the
-# program's own banner says "p96cts 1.0".
-RELNAME = $(TARGET)-$(TAG:v%=%)
+# Aminet names archives without a version: "p96cts.lha" with its
+# "p96cts.readme" beside it, so a new release overwrites the old entry instead
+# of adding a second one. The version lives in the readme's Version: field and
+# in the program's own banner, both taken from TAG.
+RELNAME = $(TARGET)
 
 # The drawer inside the archive keeps a fixed name, so an Amiga that already
 # has one unpacks the new release over it instead of beside it.
