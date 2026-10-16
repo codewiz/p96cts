@@ -128,6 +128,17 @@ check-cxx:
 	$(CXX) -x c++ -fsyntax-only $(filter-out $(WARNINGS),$(ALL_CFLAGS)) \
 		$(CXX_WARNINGS) $(SRCS)
 
+# Recompress the references in place, losslessly: zopflipng finds about 30%
+# that libpng cannot reach at any compression level. The next suite run
+# compares every golden again, so a bad result cannot hide. Run it when a
+# scene's references are regenerated anyway.
+optimize-goldens:
+	@command -v zopflipng >/dev/null 2>&1 || \
+		{ echo "optimize-goldens needs zopflipng" >&2; exit 2; }
+	for f in golden/*/*.png $(LOGO); do \
+		zopflipng -y --iterations=15 "$$f" "$$f" || exit 1; \
+	done
+
 # Aminet names archives without a version: "p96cts.lha" with its
 # "p96cts.readme" beside it, so a new release overwrites the old entry instead
 # of adding a second one. The version lives in the readme's Version: field and
@@ -180,4 +191,5 @@ docker-clean:
 docker-release:
 	$(DOCKER_RUN) make release TAG=$(TAG)
 
-.PHONY: all clean check-cxx release docker-build docker-clean docker-release
+.PHONY: all clean check-cxx optimize-goldens release docker-build docker-clean \
+	docker-release
