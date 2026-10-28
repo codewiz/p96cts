@@ -130,7 +130,7 @@ clean:
 	rm -rf $(BUILD) $(TARGET) $(UNSTRIPPED)
 	rm -rf build-aminet
 
-# Keep the sources compilable as C++ too: no implicit conversions from
+# Keep the sources compilable as strict C++23 too: no implicit conversions from
 # void * or into enums. Syntax-only, with the C-only warnings dropped, and
 # without g++'s complaint about designated initializers that leave trailing
 # fields to zero -- deliberate throughout the test tables.
@@ -138,9 +138,9 @@ CXX = $(CC:gcc=g++)
 CXX_WARNINGS = $(filter-out -Wstrict-prototypes -Wmissing-prototypes \
 	-Wold-style-definition,$(WARNINGS)) -Wno-missing-field-initializers
 
-check-cxx:
-	$(CXX) -x c++ -fsyntax-only $(filter-out $(WARNINGS) -std=%,$(ALL_CFLAGS)) \
-		$(CXX_WARNINGS) $(SRCS)
+check-c++:
+	$(CXX) -x c++ -std=c++23 -fsyntax-only \
+		$(filter-out $(WARNINGS) -std=%,$(ALL_CFLAGS)) $(CXX_WARNINGS) $(SRCS)
 
 # Recompress the references in place, losslessly: zopflipng finds about 30%
 # that libpng cannot reach at any compression level. The next suite run
@@ -207,5 +207,5 @@ docker-clean:
 docker-release:
 	$(DOCKER_RUN) make release TAG=$(TAG)
 
-.PHONY: all clean check-cxx optimize-goldens release docker-build docker-clean \
+.PHONY: all clean check-c++ optimize-goldens release docker-build docker-clean \
 	docker-release
