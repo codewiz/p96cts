@@ -5,7 +5,7 @@
 
 # To build using the default containerized toolchain:
 #   make docker-build
-DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src berniecodewiz/m68k-amigaos-gcc:gcc-v16.2
+DOCKER_RUN = docker run --rm --user $$(id -u):$$(id -g) -v .:/src -w /src berniecodewiz/m68k-amigaos-gcc:16.2-rc20
 
 # Or build with a specified compiler:
 #
