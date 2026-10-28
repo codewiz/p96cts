@@ -43,15 +43,13 @@ static bool depth_matches(int max_depth, int depth) {
 }
 
 // Find a display id of the given size/depth, or INVALID_MODE. A width of 0
-// matches any size, for when only the depth matters. When name_out is given,
-// the matched mode's name is copied into it.
+// matches any size, for when only the depth matters.
 //
 // `monitor` selects by mode-name prefix ("PAL", "Z3660", ...) and NULL matches
 // any. That prefix is the only unambiguous discriminator: plain OCS modes set
 // neither DIPF_IS_ECS nor DIPF_IS_AA, so the property flags cannot separate
 // native from RTG.
-ULONG find_mode(int w, int h, int depth, const char *monitor, char *name_out,
-                int name_len) {
+ULONG find_mode(int w, int h, int depth, const char *monitor) {
     ULONG id = INVALID_MODE;
     size_t mlen = monitor ? strlen(monitor) : 0;
 
@@ -69,7 +67,6 @@ ULONG find_mode(int w, int h, int depth, const char *monitor, char *name_out,
         if (dinfo.NotAvailable)
             continue;
 
-        ni.Name[0] = 0;
         if (mlen) {
             if (!GetDisplayInfoData(NULL, (UBYTE *)&ni, sizeof ni, DTAG_NAME, id))
                 continue;
@@ -80,13 +77,8 @@ ULONG find_mode(int w, int h, int depth, const char *monitor, char *name_out,
             int mw = dim.Nominal.MaxX - dim.Nominal.MinX + 1;
             int mh = dim.Nominal.MaxY - dim.Nominal.MinY + 1;
             if ((w <= 0 || (mw == w && mh == h)) &&
-                depth_matches(dim.MaxDepth, depth)) {
-                if (name_out) {
-                    strncpy(name_out, (const char *)ni.Name, name_len - 1);
-                    name_out[name_len - 1] = 0;
-                }
+                depth_matches(dim.MaxDepth, depth))
                 return id;
-            }
         }
     }
     return INVALID_MODE;

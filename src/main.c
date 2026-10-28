@@ -624,7 +624,7 @@ int main(void) {
             } else {
                 o.screen_w = o.w;
                 o.screen_h = o.h;
-                id = find_mode(0, 0, depth, NULL, NULL, 0);
+                id = find_mode(0, 0, depth, NULL);
                 if (id == INVALID_MODE) {
                     rptf("no %d-bit mode in the display database, skipped",
                          depth);
@@ -651,7 +651,7 @@ int main(void) {
         // at is often not a real mode at all -- P96 publishes a 320x200 entry
         // per pixel format, but they are mode prefs templates that never open.
         if (o.monitor) {
-            id = find_mode(o.screen_w, o.screen_h, o.depth, o.monitor, NULL, 0);
+            id = find_mode(o.screen_w, o.screen_h, o.depth, o.monitor);
             if (id == INVALID_MODE) {
                 rpt_errorf("no %s mode %dx%dx%d in the display database",
                               o.monitor, o.screen_w, o.screen_h, o.depth);
@@ -659,7 +659,7 @@ int main(void) {
                 goto out;
             }
         } else {
-            id = find_mode(0, 0, o.depth, NULL, NULL, 0);
+            id = find_mode(0, 0, o.depth, NULL);
             if (id == INVALID_MODE) {
                 rpt_errorf("no %d-bit mode in the display database", o.depth);
                 failures = 1;

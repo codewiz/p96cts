@@ -12,8 +12,7 @@
 // so comparing it against a ULONG display id is a signedness mismatch.
 #define INVALID_MODE ((ULONG)~0UL)
 
-ULONG find_mode(int w, int h, int depth, const char *monitor, char *name_out,
-                int name_len);
+ULONG find_mode(int w, int h, int depth, const char *monitor);
 ULONG pick_mode(int min_w, int min_h, int depth, const char *monitor,
                 int *out_w, int *out_h);
 void list_modes(void);
