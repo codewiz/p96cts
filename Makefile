@@ -32,12 +32,13 @@ AMIGA_VERSION ?= $(shell git describe --tags --dirty | sed -r 's/^(release_|v)//
 AMIGA_DATE := $(shell date '+%-d.%-m.%Y')
 
 # Strict enough to catch the usual C mistakes without fighting the Amiga headers.
-# -Wvla and -Walloca are policy: AmigaOS tasks run on a small fixed stack.
+# -Wvla, -Walloca and the stack limits are policy: AmigaOS tasks run on a small
+# fixed stack. The largest frame is about 340 bytes today.
 WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
 	-Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition \
 	-Wfloat-conversion -Wdouble-promotion -Wduplicated-cond \
 	-Wduplicated-branches -Wlogical-op -Wformat=2 -Wcast-align \
-	-Wnull-dereference -Wvla -Walloca
+	-Wnull-dereference -Wvla -Walloca -Wstack-usage=512 -Wframe-larger-than=512
 
 # Each step prints one short line, as the Linux kernel's build does; V=1
 # (or VERBOSE=1, as CMake and Automake spell it) shows the commands instead.
