@@ -49,7 +49,7 @@ else
 quiet = printf '  %-5s %s\n'
 endif
 
-ALL_CFLAGS = $(CFLAGS) -std=c23 -g -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
+ALL_CFLAGS = $(CFLAGS) -std=c23 -g -mcrt=nix20 -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
 	-DAMIGA_VERSION=\"$(AMIGA_VERSION)\" \
 	-DAMIGA_DATE=\"$(AMIGA_DATE)\"
 

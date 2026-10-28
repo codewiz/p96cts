@@ -46,4 +46,4 @@ CompileFlags:
     - -DAMIGA_DATE="23.7.1985"
   Remove:
     - -m68*
-    - -noixemul
+    - -mcrt=*
