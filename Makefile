@@ -39,6 +39,15 @@ WARNINGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wundef -Wwrite-strings \
 	-Wduplicated-branches -Wlogical-op -Wformat=2 -Wcast-align \
 	-Wnull-dereference -Wvla -Walloca
 
+# Each step prints one short line, as the Linux kernel's build does; V=1
+# (or VERBOSE=1, as CMake and Automake spell it) shows the commands instead.
+ifneq ($(filter 1,$(V) $(VERBOSE)),)
+quiet = @:
+else
+.SILENT:
+quiet = printf '  %-5s %s\n'
+endif
+
 ALL_CFLAGS = $(CFLAGS) -g -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
 	-DAMIGA_VERSION=\"$(AMIGA_VERSION)\" \
 	-DAMIGA_DATE=\"$(AMIGA_DATE)\"
@@ -82,16 +91,20 @@ all: $(TARGET)
 # carries DWARF this starts working on its own.
 UNSTRIPPED = $(TARGET)_unstripped
 STRIP = $(CC:gcc=strip)
+SIZE = $(CC:gcc=size)
 
 $(UNSTRIPPED): $(OBJS)
+	$(quiet) LINK $@
 	$(CC) $(ALL_CFLAGS) -o $@ $(OBJS) $(PNG_LIBS)
 
 # chmod because strip -o writes a fresh file with default permissions, and a
 # HOSTFS mount maps the unix x bit to the Amiga e bit: without it the guest
 # answers "Unknown command" even given the full path.
 $(TARGET): $(UNSTRIPPED)
+	$(quiet) STRIP $@
 	$(STRIP) -o $@ $<
 	chmod +x $@
+	$(SIZE) $@
 
 HEADERS  = \
 	src/backdrop.h \
@@ -110,6 +123,7 @@ HEADERS  = \
 
 $(BUILD)/%.o: %.c $(HEADERS)
 	@mkdir -p $(@D)
+	$(quiet) CC $@
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<
 
 clean:
@@ -172,10 +186,12 @@ release: $(TARGET)
 	mkdir -p $(AMINET_DIR)
 	cp $(TARGET) README.md LICENSE $(AMINET_DIR)/
 	cp -r golden $(AMINET_DIR)/
-	@mkdir -p $(AMINET_DIR)/logo
+	mkdir -p $(AMINET_DIR)/logo
 	cp $(LOGO) $(AMINET_DIR)/logo/
+	$(quiet) GEN $(RELNAME).readme
 	sed 's/@VERSION@/$(RELVER)/g' aminet/$(TARGET).readme.in > $(RELNAME).readme
 	cp $(RELNAME).readme $(AMINET_DIR)/$(TARGET).readme
+	$(quiet) LHA $(RELNAME).lha
 	cd build-aminet && lha aq ../$(RELNAME).lha P96CTS
 	rm -rf build-aminet
 	cp $(RELNAME).lha $(GITHUB_LHA)
