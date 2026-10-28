@@ -48,7 +48,7 @@ else
 quiet = printf '  %-5s %s\n'
 endif
 
-ALL_CFLAGS = $(CFLAGS) -g -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
+ALL_CFLAGS = $(CFLAGS) -std=c23 -g -noixemul -Isrc $(P96_CFLAGS) $(PNG_CFLAGS) \
 	-DAMIGA_VERSION=\"$(AMIGA_VERSION)\" \
 	-DAMIGA_DATE=\"$(AMIGA_DATE)\"
 
@@ -139,7 +139,7 @@ CXX_WARNINGS = $(filter-out -Wstrict-prototypes -Wmissing-prototypes \
 	-Wold-style-definition,$(WARNINGS)) -Wno-missing-field-initializers
 
 check-cxx:
-	$(CXX) -x c++ -fsyntax-only $(filter-out $(WARNINGS),$(ALL_CFLAGS)) \
+	$(CXX) -x c++ -fsyntax-only $(filter-out $(WARNINGS) -std=%,$(ALL_CFLAGS)) \
 		$(CXX_WARNINGS) $(SRCS)
 
 # Recompress the references in place, losslessly: zopflipng finds about 30%
